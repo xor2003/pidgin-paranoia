@@ -41,9 +41,33 @@
 #include "paranoia_config.h"
 #endif
 
+// ----------------- Key Management ------------------
 
-// TODO: check available keys
+struct key {
+   	char* account; // jabber id, icq#, ...
+	char* id; // the random number of the key pair
+	char* filename;
+	gboolean asked; // ask for plugin support
+	gboolean has_plugin; // the result
+	gboolean otp_enabled;
+	gboolean auto_enable;
+	struct key* next;
+};
 
+// keylist pointer
+struct key* keylist = NULL;
+
+// load available keys from a folder
+static gboolean generate_key_list() {
+
+	return TRUE;
+}
+
+// search a key
+static struct key* search_key(char* account, char* id) {
+
+	return NULL;
+}
 
 // ----------------- Siganl Handler ------------------
 
@@ -140,13 +164,7 @@ static PurplePluginInfo info = {
                                    It causes the plugin to NOT appear in the
                                    list of plugins.
                                  */
-    NULL,                   /* This is a GList of plugin dependencies.  In
-                                   other words, a GList of plugin id's that
-                                   your plugin depends on.  Set this value to
-                                   NULL no matter what.  If your plugin has
-                                   dependencies, set them at run-time in the
-                                   plugin_init function.
-                                 */
+    NULL,                   /* This is a GList of plugin dependencies. */
     PURPLE_PRIORITY_DEFAULT,/* This is the priority libpurple with give your
                                    plugin.  There are three possible values
                                    for this field, PURPLE_PRIORITY_DEFAULT,
@@ -154,14 +172,9 @@ static PurplePluginInfo info = {
                                    PURPLE_PRIORITY_LOWEST
                                  */
 
-    "core-one_time_pad",     /* This is your plugin's id.  There is a whole
-                                   page dedicated to this in the Related Pages
-                                   section of the API docs.
-                                 */
-    "One Time Pad Encryption",         /* This is your plugin's name.  This is what
-                                   will be displayed for your plugin in the UI.
-                                 */
-    OTP_VERSION,                    /* This is the version of your plugin. */
+    "core-one_time_pad",     /* plugin id */
+    "One Time Pad Encryption",         /* plugin name */
+    OTP_VERSION,                    /* version */
 
     "One Time Pad Encryption Plugin",   /* This is the summary of your plugin.  It
                                    should be a short little blurb.  The UI
@@ -174,13 +187,8 @@ static PurplePluginInfo info = {
                                    UI where, if at all, to display this (and
                                    how much to display).
                                  */
-    OTP_AUTHORS,                   /* This is where you can put your name and
-                                   e-mail address.
-                                 */
-    OTP_WEBSITE,/* This is the website for the plugin.  This
-                                   tells users where to find new versions,
-                                   report bugs, etc.
-                                 */
+    OTP_AUTHORS,                   /* name and e-mail address */
+    OTP_WEBSITE,		/* website */
 
     plugin_load,            /* This is a pointer to a function for
                                    libpurple to call when it is loading the
@@ -246,4 +254,4 @@ static PurplePluginInfo info = {
     NULL
 };
 
-PURPLE_INIT_PLUGIN(hello_world, init_plugin, info);
+PURPLE_INIT_PLUGIN(hello_world, init_plugin, info)
