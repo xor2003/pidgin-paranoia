@@ -1,0 +1,44 @@
+---------------------------------
+Installation (on Debian/Ubuntu)
+---------------------------------
+
+1. Pidgin
+==========
+
+Download and extract the newest pidgin source
+
+# aptitude install libgkt2.0-dev libgstreamer0.10-dev libgtkspell-dev
+libxml-perl libdbus-glib-1-dev g libgnutls-dev !!!!ADD_OTHER_USEFULL_LIBS!!!!
+
+$ cd pidgin-*
+$ ./configure
+$ make
+# make install
+
+run pidgin
+
+To see debug messages run pidgin like that:
+
+pidgin -d | grep one_time_pad
+
+
+2. Pidgin-Paranoia
+===================
+
+Get it from svn:
+$ svn co https://pidgin-paranoia.svn.sourceforge.net/svnroot/pidgin-paranoia/trunk pidgin-paranoia
+
+$ cd pidgin-paranoia
+$ ./autogen.sh
+$ ./configure
+$ make
+# make install
+
+Done. Activate it in the pidgin plug-in menu.
+
+
+uninstall: (who wants to do that anyway? ;) )
+$ cd pidgin-paranoia
+# make uninstall
+
+
