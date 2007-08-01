@@ -41,33 +41,47 @@
 #include "paranoia_config.h"
 #endif
 
-// ----------------- Key Management ------------------
+// ----------------- Paranoia Key Management ------------------
 
-struct key {
-   	char* account; // jabber id, icq#, ...
-	char* id; // the random number of the key pair
-	char* filename;
-	gboolean asked; // ask for plugin support
+// needs to be reseted for every chat session
+struct options {
+	gboolean asked; // already asked for plugin support?
 	gboolean has_plugin; // the result
 	gboolean otp_enabled;
-	gboolean auto_enable;
+	gboolean auto_enable; // to be able to force disable
+};
+
+// paranoia key struct (a linked list)
+struct key {
+	struct otp pad; // an otp struct
+	struct options opt; // key options
 	struct key* next;
 };
 
-// keylist pointer
+// paranoia keylist pointer
 struct key* keylist = NULL;
 
-// load available keys from a folder
+// loads all available keys from the global otp folder into the keylist
 static gboolean generate_key_list() {
 
 	return TRUE;
 }
 
-// search a key
+// frees all memory of the keylist
+static gboolean destroy_key_list() {
+
+	return TRUE;
+}
+
+// searches a key in the keylist
 static struct key* search_key(char* account, char* id) {
 
 	return NULL;
 }
+
+// ----------------- Paranoia CLI ------------------
+
+
 
 // ----------------- Siganl Handler ------------------
 

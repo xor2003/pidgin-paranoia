@@ -16,8 +16,47 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-// ----------------- Crypto Functions ------------------
+// ----------------- OTP Crypto Functions API ------------------
 
+// for testing only
 void encrypt(char **message);
-
+// for testing only
 void decrypt(char **message);
+
+
+// ---- some ideas -----
+
+struct otp {
+	char* name; // for pidgin: 'account' like a jabberadr, icq#... (generic, not always needed)
+	char* id; // the unique random number of the key pair (wouldn't be id enought?)
+	char* filename; // and we need a global otp path. always equal to name+id?
+	int position; // start positon for the next encryption
+	int size; // the size of the otp (low entropy problem)
+//	?maybe a mapped memory object?
+};
+
+/* returns true if it could encrypt the message */
+gboolean otp_encrypt(struct otp* mypad, char **message);
+
+/* returns true if it could decrypt the message */
+gboolean otp_decrypt(struct otp* mypad, char **message);
+
+/* creates an otp object with the data from a key file */
+struct otp* otp_get_from_file(char* filename);
+
+/* searches the first non zero values in the pad (maybe not a public function?) */
+gboolean otp_seek_start(struct otp* mypad);
+
+/* generates a new key pair (two files) with the name alice and bob 
+   and of 'size' MB.
+*/
+gboolean otp_generate_key_pair(char* alice, char* bob, int size);
+
+/* calculates if there is still enought non zero file content left.
+   returns percentage values (or other usefull numbers)
+*/
+int otp_check_entropy(struct otp* mypad);
+
+
+
+
