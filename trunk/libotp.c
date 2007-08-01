@@ -23,6 +23,10 @@
 #include <glib.h>
 
 // ----------------- Crypto Functions ------------------
+
+
+
+// ----------------- for testing only ------------------
 void encrypt(char **message) {
 
 	//HELP: http://irc.essex.ac.uk/www.iota-six.co.uk/c/g6_strcat_strncat.asp
@@ -53,5 +57,6 @@ void decrypt(char **message) {
 	//g_free(a_str);
 	*message = new_msg;
 }
+
 
 
