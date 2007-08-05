@@ -29,8 +29,8 @@
 #include "version.h"
 #include "signals.h"
 #include "debug.h"
-// hmm...
-#include "conversation.h"
+// commands
+#include "cmds.h"
 //debug only:
 #include "core.h"
 
@@ -47,8 +47,8 @@
 struct options {
 	gboolean asked; // already asked for plugin support?
 	gboolean has_plugin; // the result
-	gboolean otp_enabled;
-	gboolean auto_enable; // to be able to force disable
+	gboolean otp_enabled; // on/off
+	gboolean auto_enable; // needed to be able to force disable
 };
 
 // paranoia key struct (a linked list)
@@ -68,7 +68,7 @@ static gboolean generate_key_list() {
 }
 
 // frees all memory of the keylist
-static gboolean destroy_key_list() {
+static gboolean free_key_list() {
 
 	return TRUE;
 }
@@ -81,6 +81,32 @@ static struct key* search_key(char* account, char* id) {
 
 // ----------------- Paranoia CLI ------------------
 
+PurpleCmdId otp_cmd_id;
+
+char* otp_help_str = "Welcome to the One-Time Pad CLI.\notp help: shows this message \notp genkey &lt;size&gt;: generates a key pair of &lt;size&gt; MB\notp start: tries to start the encryption\notp stop: stops the encryption\n";
+
+
+/* otp commads callback function */
+static PurpleCmdRet OTP_check_command(PurpleConversation *conv, const gchar *cmd, gchar **args, gchar **error, void *data) {
+
+	// debug
+	purple_debug(PURPLE_DEBUG_MISC, "pidgin-paranoia", "the otp command was recived! sweet!\n");
+
+	if(args[0] == NULL){
+		// write stuff into the chat window
+		purple_conversation_write(conv, NULL, otp_help_str, PURPLE_MESSAGE_NO_LOG, time(NULL));
+		//void 	purple_conversation_write (PurpleConversation *conv, const char *who, const char *message, PurpleMessageFlags flags, time_t mtime)
+	}
+	else {
+		// write stuff into the chat window
+		purple_conversation_write(conv, NULL, "otp is ready to serve you! but it has no clue what to do with this (or any other) argument", PURPLE_MESSAGE_NO_LOG, time(NULL));
+	}
+
+	//PURPLE_CMD_RET_OK 		Everything's okay. Don't look for another command to call.
+	//PURPLE_CMD_RET_FAILED 	The command failed, but stop looking.
+	//PURPLE_CMD_RET_CONTINUE 	Continue, looking for other commands with the same name to cal
+	return PURPLE_CMD_RET_OK;
+}
 
 
 // ----------------- Siganl Handler ------------------
@@ -94,7 +120,7 @@ static gboolean OTP_receiving_im_msg(PurpleAccount *account, char **sender,
 	decrypt(message);
 
 	// debug
-	purple_debug(PURPLE_DEBUG_MISC, "pidgin-one_time_pad", "received a message!!! we should decrypt it :)\n");
+	purple_debug(PURPLE_DEBUG_MISC, "pidgin-paranoia", "received a message!!! we should decrypt it :)\n");
 
 	return FALSE; // TRUE drops the msg!
 }
@@ -108,32 +134,53 @@ static gboolean OTP_sending_im_msg(PurpleAccount *account, char **sender,
 	encrypt(message);
 
 	// debug
-	purple_debug(PURPLE_DEBUG_MISC, "pidgin-one_time_pad", "we want to send a message!!! we should encrypt it :)\n");
+	purple_debug(PURPLE_DEBUG_MISC, "pidgin-paranoia", "we want to send a message!!! we should encrypt it :)\n");
 
 	return FALSE; // TRUE drops the msg!
 }
 
+
+
 /* gets called when loading the plugin */
 static gboolean plugin_load(PurplePlugin *plugin) {
 	// debug
-	purple_debug(PURPLE_DEBUG_INFO, "pidgin-one_time_pad",
+	purple_debug(PURPLE_DEBUG_INFO, "pidgin-paranoia",
 		"Compiled with Purple '%d.%d.%d', running with Purple '%s'.\n",
 		PURPLE_MAJOR_VERSION, PURPLE_MINOR_VERSION, PURPLE_MICRO_VERSION, purple_core_get_version());
 
-	// stuff I don't understand yet TODO: read doc! Bad code too! (WARNING: ISO C90 forbids mixed declarations and code)
+	// stuff I don't understand yet TODO: read doc!
 	void *conv_handle;
 	conv_handle = purple_conversations_get_handle();
 
-	// signals
+	// connect to signals
 	// HELP: gulong purple_signal_connect (void *instance, const char *signal, void *handle, PurpleCallback func, void *data)
 	purple_signal_connect(conv_handle, "receiving-im-msg", plugin,
 		PURPLE_CALLBACK(OTP_receiving_im_msg), NULL);
 	purple_signal_connect(conv_handle, "sending-im-msg", plugin,
 		PURPLE_CALLBACK(OTP_sending_im_msg), NULL);
 
+	// register command(s)
+	// "/otp" + a string of args
+	otp_cmd_id = purple_cmd_register ("otp", "s", PURPLE_CMD_P_DEFAULT,
+		PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_ALLOW_WRONG_ARGS, NULL, PURPLE_CMD_FUNC(OTP_check_command), 
+		"otp help: this should help you :P", NULL);
+
 	// debug
-	purple_debug(PURPLE_DEBUG_MISC, "pidgin-one_time_pad", "done loading\n");
+	purple_debug(PURPLE_DEBUG_MISC, "pidgin-paranoia", "done loading\n");
 	
+	return TRUE;
+}
+
+/* gets called when disabling the plugin */
+gboolean plugin_unload(PurplePlugin *plugin) {
+
+	
+	// unregister command(s)
+	purple_cmd_unregister(otp_cmd_id);
+
+	// debug
+	purple_debug(PURPLE_DEBUG_MISC, "pidgin-paranoia", "done unloading\n");
+
 	return TRUE;
 }
 
@@ -142,6 +189,7 @@ static void init_plugin(PurplePlugin *plugin)
 {
 	// TODO: needed?
 }
+
 
 // ----------------- Plugin definition & init ------------------
 
@@ -186,16 +234,16 @@ static PurplePluginInfo info = {
                                    PURPLE_PRIORITY_LOWEST
                                  */
 
-    "core-one_time_pad",     /* plugin id */
-    "One Time Pad Encryption",         /* plugin name */
+    "core-paranoia",     /* plugin id */
+    "One-Time Pad Encryption",         /* plugin name */
     OTP_VERSION,                    /* version */
 
-    "One Time Pad Encryption Plugin",   /* This is the summary of your plugin.  It
+    "One-Time Pad Encryption Plugin",   /* This is the summary of your plugin.  It
                                    should be a short little blurb.  The UI
                                    determines where, if at all, to display
                                    this.
                                  */
-    "One Time Pad Encryption Plugin. Bla bla... TODO",   /* This is the description of your plugin. It
+    "One-Time Pad Encryption Plugin. Bla bla... TODO",   /* This is the description of your plugin. It
                                    can be as long and as descriptive as you
                                    like.  And like the summary, it's up to the
                                    UI where, if at all, to display this (and
@@ -214,7 +262,7 @@ static PurplePluginInfo info = {
                                    plugin.  Anything else would evaluate as
                                    TRUE and the plugin will continue to load.
                                  */
-    NULL,                   /* Same as above except it is called when
+    plugin_unload,                   /* Same as above except it is called when
                                    libpurple tries to unload your plugin.  It
                                    should be of the type:
 
