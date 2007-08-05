@@ -17,11 +17,6 @@ $ make
 
 run pidgin
 
-To see debug messages run pidgin like that:
-
-pidgin -d | grep one_time_pad
-
-
 2. Pidgin-Paranoia
 ===================
 
@@ -35,6 +30,10 @@ $ make
 # make install
 
 Done. Activate it in the pidgin plug-in menu.
+
+To see the debug messages of the plugin run pidgin like that:
+
+$ pidgin -d | grep paranoia
 
 
 uninstall: (who wants to do that anyway? ;) )
