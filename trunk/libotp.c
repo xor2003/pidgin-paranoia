@@ -17,10 +17,8 @@
 */
 
 // glibc includes
+#include <stdlib.h>
 #include <string.h>
-
-// GNOMElibc
-#include <glib.h>
 
 // ----------------- Crypto Functions ------------------
 
@@ -32,11 +30,11 @@ void encrypt(char **message) {
 	//HELP: http://irc.essex.ac.uk/www.iota-six.co.uk/c/g6_strcat_strncat.asp
 	char *new_msg;
 	char *a_str = " << this message is encryptet";
-	new_msg = (char *) g_malloc((strlen(*message) + strlen(a_str) + 1) * sizeof(char));
+	new_msg = (char *) malloc((strlen(*message) + strlen(a_str) + 1) * sizeof(char));
 	strcpy(new_msg, *message);
 	strcat(new_msg, a_str);
 
-	g_free(*message);
+	free(*message);
 	//REM: Warum darf ich nicht g_free(a_str); machen?
 	*message = new_msg;
 	
@@ -49,11 +47,11 @@ void decrypt(char **message) {
 	//HELP: http://irc.essex.ac.uk/www.iota-six.co.uk/c/g6_strcat_strncat.asp
 	char *new_msg;
 	char *a_str = " << this message is decryptet";
-	new_msg = (char *) g_malloc((strlen(*message) + strlen(a_str) + 1) * sizeof(char));
+	new_msg = (char *) malloc((strlen(*message) + strlen(a_str) + 1) * sizeof(char));
 	strcpy(new_msg, *message);
 	strcat(new_msg, a_str);
 
-	g_free(*message);
+	free(*message);
 	//g_free(a_str);
 	*message = new_msg;
 }
