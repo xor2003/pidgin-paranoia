@@ -19,9 +19,9 @@
 // ----------------- OTP Crypto Functions API ------------------
 
 // for testing only
-void encrypt(char **message);
+void aaaa_encrypt(char **message);
 // for testing only
-void decrypt(char **message);
+void aaaa_decrypt(char **message);
 
 
 // ---- some ideas -----

@@ -109,7 +109,7 @@ static PurpleCmdRet OTP_check_command(PurpleConversation *conv, const gchar *cmd
 }
 
 
-// ----------------- Siganl Handler ------------------
+// ----------------- Siganl Handlers ------------------
 
 /* signal handler for "receiving-im-msg" */
 static gboolean OTP_receiving_im_msg(PurpleAccount *account, char **sender,
@@ -117,10 +117,10 @@ static gboolean OTP_receiving_im_msg(PurpleAccount *account, char **sender,
                              PurpleMessageFlags *flags) {
 	// TODO: many many checks!
 
-	decrypt(message);
+	aaaa_decrypt(message);
 
 	// debug
-	purple_debug(PURPLE_DEBUG_MISC, "pidgin-paranoia", "received a message!!! we should decrypt it :)\n");
+	purple_debug(PURPLE_DEBUG_MISC, "pidgin-paranoia", "received a message!!! we should decrypt it.\n");
 
 	return FALSE; // TRUE drops the msg!
 }
@@ -131,15 +131,28 @@ static gboolean OTP_sending_im_msg(PurpleAccount *account, char **sender,
                              PurpleMessageFlags *flags) {
 	// TODO: many many checks!
 
-	encrypt(message);
+	aaaa_encrypt(message);
 
 	// debug
-	purple_debug(PURPLE_DEBUG_MISC, "pidgin-paranoia", "we want to send a message!!! we should encrypt it :)\n");
+	purple_debug(PURPLE_DEBUG_MISC, "pidgin-paranoia", "we want to send a message!!! we should encrypt it.\n");
 
 	return FALSE; // TRUE drops the msg!
 }
 
+/* signal handler for "writing-im-msg", needed to change the displayed msg 
+static gboolean OTP_change_displayed_msg(PurpleAccount *account, char **sender,
+                             char **message, PurpleConversation *conv,
+                             PurpleMessageFlags *flags) {
 
+	// TODO: add "<secure>" to the message
+
+	// debug
+	purple_debug(PURPLE_DEBUG_MISC, "pidgin-paranoia", "wrote msg, here we could do usefull stuff.\n");
+
+	//TRUE if the message should be canceled, or FALSE otherwise.
+	return FALSE;
+}
+*/
 
 /* gets called when loading the plugin */
 static gboolean plugin_load(PurplePlugin *plugin) {
@@ -158,12 +171,14 @@ static gboolean plugin_load(PurplePlugin *plugin) {
 		PURPLE_CALLBACK(OTP_receiving_im_msg), NULL);
 	purple_signal_connect(conv_handle, "sending-im-msg", plugin,
 		PURPLE_CALLBACK(OTP_sending_im_msg), NULL);
+	/* purple_signal_connect(conv_handle, "writing-im-msg", plugin,
+		PURPLE_CALLBACK(OTP_change_displayed_msg), NULL); */
 
 	// register command(s)
 	// "/otp" + a string of args
 	otp_cmd_id = purple_cmd_register ("otp", "s", PURPLE_CMD_P_DEFAULT,
 		PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_ALLOW_WRONG_ARGS, NULL, PURPLE_CMD_FUNC(OTP_check_command), 
-		"otp help: this should help you :P", NULL);
+		"otp &lt;command&gt: type /otp to get help", NULL);
 
 	// debug
 	purple_debug(PURPLE_DEBUG_MISC, "pidgin-paranoia", "done loading\n");
@@ -174,6 +189,7 @@ static gboolean plugin_load(PurplePlugin *plugin) {
 /* gets called when disabling the plugin */
 gboolean plugin_unload(PurplePlugin *plugin) {
 
+	//purple_signals_disconnect_by_handle(h);
 	
 	// unregister command(s)
 	purple_cmd_unregister(otp_cmd_id);
@@ -263,15 +279,7 @@ static PurplePluginInfo info = {
                                    TRUE and the plugin will continue to load.
                                  */
     plugin_unload,                   /* Same as above except it is called when
-                                   libpurple tries to unload your plugin.  It
-                                   should be of the type:
-
-                                   gboolean plugin_unload(PurplePlugin *plugin)
-
-                                   Returning TRUE will tell libpurple to
-                                   continue unloading while FALSE will stop
-                                   the unloading of your plugin.
-                                 */
+                                   libpurple tries to unload your plugin.  */
     NULL,                   /* Similar to the two above members, except
                                    this is called when libpurple tries to
                                    destory the plugin.  This is generally only
@@ -316,4 +324,4 @@ static PurplePluginInfo info = {
     NULL
 };
 
-PURPLE_INIT_PLUGIN(hello_world, init_plugin, info)
+PURPLE_INIT_PLUGIN(paranoia, init_plugin, info)
