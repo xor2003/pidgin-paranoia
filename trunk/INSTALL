@@ -7,8 +7,11 @@ Installation (on Debian/Ubuntu)
 
 Download and extract the newest pidgin source
 
-# aptitude install libgkt2.0-dev libgstreamer0.10-dev libgtkspell-dev
-libxml-perl libdbus-glib-1-dev g libgnutls-dev !!!!ADD_OTHER_USEFULL_LIBS!!!!
+# aptitude install libgkt2.0-dev libgstreamer0.10-dev libgtkspell-dev libdbus-glib-1-dev libgnutls-dev
+libxss-dev libmeanwhile-dev libgadu-dev libnss3-dev tcl8.4-dev tk8.4-dev libltdl3-dev libperl-dev libstartup-notification0-dev libzephyr-dev libxml2-dev libebook1.2-dev libedata-book1.2-dev libcamel1.2-dev libxml-parser-perl libncursesw5-dev libsasl2-dev libsilc-1.1-2-dev
+
+optional:
+libavahi-compat-howl-dev doxygen
 
 $ cd pidgin-*
 $ ./configure

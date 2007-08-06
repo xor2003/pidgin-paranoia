@@ -25,7 +25,7 @@
 
 
 // ----------------- for testing only ------------------
-void encrypt(char **message) {
+void aaaa_encrypt(char **message) {
 
 	//HELP: http://irc.essex.ac.uk/www.iota-six.co.uk/c/g6_strcat_strncat.asp
 	char *new_msg;
@@ -42,7 +42,7 @@ void encrypt(char **message) {
 	//(*message)[0] = 'A';
 }
 
-void decrypt(char **message) {
+void aaaa_decrypt(char **message) {
 
 	//HELP: http://irc.essex.ac.uk/www.iota-six.co.uk/c/g6_strcat_strncat.asp
 	char *new_msg;
