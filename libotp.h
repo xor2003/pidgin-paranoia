@@ -30,27 +30,27 @@ struct otp {
 	char* name; // for pidgin: 'account' like a jabberadr, icq#... (generic, not always needed)
 	char* id; // the unique random number of the key pair (wouldn't be id enought?)
 	char* filename; // and we need a global otp path. always equal to name+id?
-	int position; // start positon for the next encryption
-	int size; // the size of the otp (low entropy problem)
+	uint position; // start positon for the next encryption
+	uint size; // the size (bytes) of the otp (low entropy problem)
 //	?maybe a mapped memory object?
 };
 
 /* returns true if it could encrypt the message */
-gboolean otp_encrypt(struct otp* mypad, char **message);
+uint otp_encrypt(struct otp* mypad, char **message);
 
 /* returns true if it could decrypt the message */
-gboolean otp_decrypt(struct otp* mypad, char **message);
+uint otp_decrypt(struct otp* mypad, char **message);
 
 /* creates an otp object with the data from a key file */
 struct otp* otp_get_from_file(char* filename);
 
 /* searches the first non zero values in the pad (maybe not a public function?) */
-gboolean otp_seek_start(struct otp* mypad);
+uint otp_seek_start(struct otp* mypad);
 
 /* generates a new key pair (two files) with the name alice and bob 
-   and of 'size' MB.
+   and of 'size' bytes.
 */
-gboolean otp_generate_key_pair(char* alice, char* bob, int size);
+uint otp_generate_key_pair(char* alice, char* bob, char* filename_alice, char* filename_bob, uint size);
 
 /* calculates if there is still enought non zero file content left.
    returns percentage values (or other usefull numbers)
