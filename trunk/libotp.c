@@ -20,7 +20,32 @@
 #include <stdlib.h>
 #include <string.h>
 
+// great stuff
+#include "libotp.h"
+
 // ----------------- Lib One-Time Pad Functions ------------------
+
+/* decrypt the message  */
+static int OTP_decrypt(char **message) {
+	// TODO: many many checks!
+
+	printf(message);
+	printf("received a message!!! we should decrypt it :)\n");
+
+	return 0; 
+}
+
+/* encrypt the message  */
+static int OTP_encrypt(char **message) {
+	// TODO: many many checks!
+
+	aaaa_encrypt(message);
+
+	// debug
+	printf("we want to send a message!!! we should encrypt it :)\n");
+
+	return 0;
+}
 
 
 

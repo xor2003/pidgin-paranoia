@@ -27,16 +27,17 @@
 // great stuff
 #include "libotp.h"
 
-static int OTP_decrypt(char *message);
-static int OTP_encrypt(char **message);
 
 int main(void) {
-	char **pmessage=NULL;
-	char *message="Hello World!\n";
-	printf(message);
-	pmessage=&message;
+	char **pmessage;
+	//char *msg="Hello World!"; <<<<< Das scheint sich nicht mit free() zu vertragen.
+	char *msg = (char *) malloc((strlen("Hello World!") + 1) * sizeof(char));
+	strcpy(msg, "Hello World!");
+	printf(msg);
+	pmessage=&msg;
 	printf(*pmessage);
 	aaaa_decrypt(pmessage);
+	printf(*pmessage);
 	
 	//char *msg;
 	//char *tmp_str = "hallo";
@@ -49,31 +50,6 @@ int main(void) {
 	//char **message = msg;
 	//aaaa_encrypt(message);
 //	OTP_decrypt(message);
-}
-
-// ----------------- Siganl Handler ------------------
-
-/* decrypt the message with libotp */
-static int OTP_decrypt(char *message) {
-	// TODO: many many checks!
-
-	printf(message);
-	printf("received a message!!! we should decrypt it :)\n");
-
-	return 0; 
-}
-
-/* encrypt the message with libotp */
-static int OTP_encrypt(char **message) {
-	// TODO: many many checks!
-
-	aaaa_encrypt(message);
-
-	// debug
-	printf("we want to send a message!!! we should encrypt it :)\n");
-
 	return 0;
 }
-
-
 
