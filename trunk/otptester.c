@@ -24,32 +24,34 @@
 #include <stdio.h>
 
 
+
 // great stuff
 #include "libotp.h"
 
 
 int main(void) {
-	char **pmessage;
+	//char m[]="123455678"; 
+	char m[]="TWVQPPSR]";  // wurde aus "12345678" erzeugt. zum testen.
+	char p[]="eeeeeeeee";
+	char **message;
 	//char *msg="Hello World!"; <<<<< Das scheint sich nicht mit free() zu vertragen.
-	char *msg = (char *) malloc((strlen("Hello World!") + 1) * sizeof(char));
-	strcpy(msg, "Hello World!");
-	printf(msg);
-	pmessage=&msg;
-	printf(*pmessage);
-	aaaa_decrypt(pmessage);
-	printf(*pmessage);
-	
-	//char *msg;
-	//char *tmp_str = "hallo";
-	//msg = (char *) malloc((strlen(tmp_str) + 1) * sizeof(char));
-	//strcpy(tmp_str, msg);
-	//char **message = msg;
-	//aaaa_encrypt(message);	
+	char *vmessage = (char *) malloc((strlen(m) + 1) * sizeof(char));
+	strcpy(vmessage, m);
+	message=&vmessage;
 
-	//char *msg = "hallo";
-	//char **message = msg;
-	//aaaa_encrypt(message);
-//	OTP_decrypt(message);
+	char **pad;
+	char *vpad = (char *) malloc((strlen(p) + 1) * sizeof(char));
+	strcpy(vpad, p);
+	pad=&vpad;
+
+
+	printf("Message before      :%s\n",*message);
+
+	//aaaa_decrypt(pmessage);
+	otp_xor(message,pad);
+
+	printf("Message after       :%s\n",*message);
+	
 	return 0;
 }
 

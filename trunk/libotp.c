@@ -48,7 +48,37 @@ static int OTP_encrypt(char **message) {
 }
 
 
+/* xor message and pad and return the result in message 
+The function needs the message and the pad to have the same size.*/
+int otp_xor(char **message,char **pad) {
+	char *m,*p;
+	int i;
+	int mlen,plen;
+	mlen = strlen(*message);
+	plen = strlen(*pad);
 
+	printf("Length: %d\t%d\n",mlen,plen);  //
+	//Stop if not the same size.
+	if ( mlen != plen) {
+		return 0;
+	}
+
+
+//	presult = malloc((34+1) * sizeof(char));
+//	p = presult;
+
+	m = *message;
+	p = *pad;
+	for (i = 0;i < mlen;i++) {
+		//printf("%c\t%d\t%c\t%d\t%d\n",m[i],m[i],p[i],p[i],m[i]^p[i]); //debug
+		m[i]=m[i]^p[i];
+	}
+	
+	//printf("doing xor :)\n"); //debugm
+	return 1;
+}
+
+// ----------------- Public One-Time Pad Functions ------------
 
 // ----------------- TODO: REMOVE ME ------------------
 void aaaa_encrypt(char **message) {

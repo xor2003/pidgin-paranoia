@@ -23,6 +23,9 @@ void aaaa_encrypt(char **message);
 // for testing only
 void aaaa_decrypt(char **message);
 
+// public for development only
+int otp_xor(char **message,char **key);
+
 
 // ----------------- OTP Crypto Functions API ------------------
 
