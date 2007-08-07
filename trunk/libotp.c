@@ -85,13 +85,12 @@ void aaaa_encrypt(char **message) {
 
 	//HELP: http://irc.essex.ac.uk/www.iota-six.co.uk/c/g6_strcat_strncat.asp
 	char *new_msg;
-	char *a_str = " << this message is encryptet";
+	char *a_str = " << this message is encryptet"; // can't be free()-d
 	new_msg = (char *) malloc((strlen(*message) + strlen(a_str) + 1) * sizeof(char));
 	strcpy(new_msg, *message);
 	strcat(new_msg, a_str);
 
 	free(*message);
-	//REM: Warum darf ich nicht free(a_str); machen?
 	*message = new_msg;
 	
 	//HELP: change single elements of the char array
@@ -102,13 +101,12 @@ void aaaa_decrypt(char **message) {
 
 	//HELP: http://irc.essex.ac.uk/www.iota-six.co.uk/c/g6_strcat_strncat.asp
 	char *new_msg;
-	char *a_str = " << this message is decryptet";
+	char *a_str = " << this message is decryptet"; // kann nicht ge-free-t werden
 	new_msg = (char *) malloc((strlen(*message) + strlen(a_str) + 1) * sizeof(char));
 	strcpy(new_msg, *message);
 	strcat(new_msg, a_str);
 
 	free(*message);
-	//free(a_str);
 	*message = new_msg;
 }
 
