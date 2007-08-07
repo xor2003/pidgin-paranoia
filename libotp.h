@@ -29,20 +29,23 @@ int otp_xor(char **message,char **key);
 
 // ----------------- OTP Crypto Functions API ------------------
 
+// path to the otp key files
+char* global_otp_path;
+
 struct otp {
 	char* src; // for pidgin: 'account' like a jabberadr, icq#...
 	char* dest; // for pidgin: 'account' like a jabberadr, icq#...
 	char* id; // the unique random number of the key pair
-	char* filename; // TODO: and we need a global otp path, or should we save the path here too?
+	char* filename; // the filename defined in the libotp spec
 	unsigned int position; // start positon for the next encryption
 	unsigned int size; // the size (in bytes) of the otp (low entropy problem)
 //	TODO: maybe a mapped memory object?
 };
 
-/* returns 1 if it could encrypt the message */
+/* returns 0 if it could encrypt the message */
 unsigned int otp_encrypt(struct otp* mypad, char **message);
 
-/* returns 1 if it could decrypt the message */
+/* returns 0 if it could decrypt the message */
 unsigned int otp_decrypt(struct otp* mypad, char **message);
 
 /* creates an otp object with the data from a key file */
