@@ -95,7 +95,7 @@ static PurpleCmdRet OTP_check_command(PurpleConversation *conv, const gchar *cmd
 	if(args[0] == NULL){
 		// write stuff into the chat window
 		purple_conversation_write(conv, NULL, otp_help_str, PURPLE_MESSAGE_NO_LOG, time(NULL));
-		//void 	purple_conversation_write (PurpleConversation *conv, const char *who, const char *message, PurpleMessageFlags flags, time_t mtime)
+		//HELP: void purple_conversation_write (PurpleConversation *conv, const char *who, const char *message, PurpleMessageFlags flags, time_t mtime)
 	}
 	else {
 		// write stuff into the chat window
@@ -189,7 +189,8 @@ static gboolean plugin_load(PurplePlugin *plugin) {
 /* gets called when disabling the plugin */
 gboolean plugin_unload(PurplePlugin *plugin) {
 
-	//purple_signals_disconnect_by_handle(h);
+	// Disconnect all signals
+	//purple_signals_disconnect_by_handle(plugin);
 	
 	// unregister command(s)
 	purple_cmd_unregister(otp_cmd_id);
@@ -242,17 +243,17 @@ static PurplePluginInfo info = {
                                    It causes the plugin to NOT appear in the
                                    list of plugins.
                                  */
-    NULL,                   /* This is a GList of plugin dependencies. */
-    PURPLE_PRIORITY_DEFAULT,/* This is the priority libpurple with give your
+    NULL,                   	/* This is a GList of plugin dependencies. */
+    PURPLE_PRIORITY_DEFAULT,	/* This is the priority libpurple with give your
                                    plugin.  There are three possible values
                                    for this field, PURPLE_PRIORITY_DEFAULT,
                                    PURPLE_PRIORITY_HIGHEST, and
                                    PURPLE_PRIORITY_LOWEST
                                  */
 
-    "core-paranoia",     /* plugin id */
+    "core-paranoia",     	/* plugin id */
     "One-Time Pad Encryption",         /* plugin name */
-    OTP_VERSION,                    /* version */
+    OTP_VERSION,                /* version */
 
     "One-Time Pad Encryption Plugin",   /* This is the summary of your plugin.  It
                                    should be a short little blurb.  The UI

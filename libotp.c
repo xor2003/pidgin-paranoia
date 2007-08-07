@@ -16,15 +16,16 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-// glibc includes
+// GNUlibc includes
 #include <stdlib.h>
 #include <string.h>
 
-// ----------------- Crypto Functions ------------------
+// ----------------- Lib One-Time Pad Functions ------------------
 
 
 
-// ----------------- for testing only ------------------
+
+// ----------------- TODO: REMOVE ME ------------------
 void aaaa_encrypt(char **message) {
 
 	//HELP: http://irc.essex.ac.uk/www.iota-six.co.uk/c/g6_strcat_strncat.asp
@@ -35,7 +36,7 @@ void aaaa_encrypt(char **message) {
 	strcat(new_msg, a_str);
 
 	free(*message);
-	//REM: Warum darf ich nicht g_free(a_str); machen?
+	//REM: Warum darf ich nicht free(a_str); machen?
 	*message = new_msg;
 	
 	//HELP: change single elements of the char array
@@ -52,7 +53,7 @@ void aaaa_decrypt(char **message) {
 	strcat(new_msg, a_str);
 
 	free(*message);
-	//g_free(a_str);
+	//free(a_str);
 	*message = new_msg;
 }
 
