@@ -85,27 +85,57 @@ PurpleCmdId otp_cmd_id;
 
 #define OTP_HELP_STR "Welcome to the One-Time Pad CLI.\notp help: shows this message \notp genkey &lt;size&gt;: generates a key pair of &lt;size&gt; MB\notp start: tries to start the encryption\notp stop: stops the encryption\notp keys: lists all available keys\n"
 
-#define OTP_ERROR_STR "Wrong argument(s). Type /otp help for help."
+#define OTP_ERROR_STR "Wrong argument(s). Type '/otp help' for help."
 
-/* otp commads callback function */
+/* otp commads super function */
 static PurpleCmdRet OTP_check_command(PurpleConversation *conv, const gchar *cmd, gchar **args, gchar **error, void *data) {
 
 	// debug
 	purple_debug(PURPLE_DEBUG_MISC, "pidgin-paranoia", "the otp command was recived! sweet!\n");
 
 	if(args[0] == NULL){
-		// write stuff into the chat window
-		purple_conversation_write(conv, NULL, OTP_HELP_STR, PURPLE_MESSAGE_NO_LOG, time(NULL));
-		//HELP: void purple_conversation_write (PurpleConversation *conv, const char *who, const char *message, PurpleMessageFlags flags, time_t mtime)
+		// no arguments
+		char *tmp_error = (char *) malloc((strlen(OTP_ERROR_STR) + 1) * sizeof(char));
+		strcpy(tmp_error, OTP_ERROR_STR);
+		free(*error);
+		*error = tmp_error;
+		return PURPLE_CMD_RET_FAILED;
+
 	}
 	else {
-		// write stuff into the chat window
-		purple_conversation_write(conv, NULL, "otp is ready to serve you! but it has no clue what to do with this (or any other) argument", PURPLE_MESSAGE_NO_LOG, time(NULL));
+		if(strcmp("help", *args) == 0){
+			// otp help
+			//HELP: void purple_conversation_write (PurpleConversation *conv, const char *who, const char *message, PurpleMessageFlags flags, time_t mtime)
+			purple_conversation_write(conv, NULL, OTP_HELP_STR, PURPLE_MESSAGE_NO_LOG, time(NULL));
+		}
+		else if(strncmp("genkey ", *args, 7) == 0){
+			// otp genkey
+			purple_conversation_write(conv, NULL, "This should generate two key files.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+			//TODO: check size value
+		}
+		else if(strcmp("start", *args) == 0){
+			// otp start
+			purple_conversation_write(conv, NULL, "This should start the encryption.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+		}
+		else if(strcmp("stop", *args) == 0){
+			// otp start
+			purple_conversation_write(conv, NULL, "This should stop the encryption.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+		}
+		else if(strcmp("keys", *args) == 0){
+			// otp start
+			purple_conversation_write(conv, NULL, "This should list all available keys.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+		 }
+		// TODO: add more commands
+		else {
+			// unknown arg
+			char *tmp_error = (char *) malloc((strlen(OTP_ERROR_STR) + 1) * sizeof(char));
+			strcpy(tmp_error, OTP_ERROR_STR);
+			free(*error);
+			*error = tmp_error;
+			return PURPLE_CMD_RET_FAILED;
+		}
 	}
 
-	//PURPLE_CMD_RET_OK 		Everything's okay. Don't look for another command to call.
-	//PURPLE_CMD_RET_FAILED 	The command failed, but stop looking.
-	//PURPLE_CMD_RET_CONTINUE 	Continue, looking for other commands with the same name to cal
 	return PURPLE_CMD_RET_OK;
 }
 

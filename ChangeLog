@@ -6,6 +6,7 @@
 Simon Wenner:
  * Basic plugin structure
  * A build system 'from hell'! (but it seems to work)
+ * Basic CLI functionality
 
 Christan Wäckerlin:
  * OTP documentation
