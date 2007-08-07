@@ -27,7 +27,8 @@ void aaaa_decrypt(char **message);
 // ----------------- OTP Crypto Functions API ------------------
 
 struct otp {
-	char* name; // for pidgin: 'account' like a jabberadr, icq#... (generic, not always needed)
+	char* src; // for pidgin: 'account' like a jabberadr, icq#...
+	char* dest; // for pidgin: 'account' like a jabberadr, icq#...
 	char* id; // the unique random number of the key pair
 	char* filename; // TODO: and we need a global otp path, or should we save the path here too?
 	unsigned int position; // start positon for the next encryption

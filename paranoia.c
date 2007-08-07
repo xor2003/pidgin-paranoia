@@ -83,8 +83,9 @@ static struct key* search_key(char* account, char* id) {
 
 PurpleCmdId otp_cmd_id;
 
-char* otp_help_str = "Welcome to the One-Time Pad CLI.\notp help: shows this message \notp genkey &lt;size&gt;: generates a key pair of &lt;size&gt; MB\notp start: tries to start the encryption\notp stop: stops the encryption\n";
+#define OTP_HELP_STR "Welcome to the One-Time Pad CLI.\notp help: shows this message \notp genkey &lt;size&gt;: generates a key pair of &lt;size&gt; MB\notp start: tries to start the encryption\notp stop: stops the encryption\notp keys: lists all available keys\n"
 
+#define OTP_ERROR_STR "Wrong argument(s). Type /otp help for help."
 
 /* otp commads callback function */
 static PurpleCmdRet OTP_check_command(PurpleConversation *conv, const gchar *cmd, gchar **args, gchar **error, void *data) {
@@ -94,7 +95,7 @@ static PurpleCmdRet OTP_check_command(PurpleConversation *conv, const gchar *cmd
 
 	if(args[0] == NULL){
 		// write stuff into the chat window
-		purple_conversation_write(conv, NULL, otp_help_str, PURPLE_MESSAGE_NO_LOG, time(NULL));
+		purple_conversation_write(conv, NULL, OTP_HELP_STR, PURPLE_MESSAGE_NO_LOG, time(NULL));
 		//HELP: void purple_conversation_write (PurpleConversation *conv, const char *who, const char *message, PurpleMessageFlags flags, time_t mtime)
 	}
 	else {
