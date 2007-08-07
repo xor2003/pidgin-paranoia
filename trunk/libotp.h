@@ -16,7 +16,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-// ----------------- OTP Crypto Functions API ------------------
+// ----------------- TODO: REMOVE ME ------------------
 
 // for testing only
 void aaaa_encrypt(char **message);
@@ -24,36 +24,36 @@ void aaaa_encrypt(char **message);
 void aaaa_decrypt(char **message);
 
 
-// ---- some ideas -----
+// ----------------- OTP Crypto Functions API ------------------
 
 struct otp {
 	char* name; // for pidgin: 'account' like a jabberadr, icq#... (generic, not always needed)
-	char* id; // the unique random number of the key pair (wouldn't be id enought?)
-	char* filename; // and we need a global otp path. always equal to name+id?
+	char* id; // the unique random number of the key pair
+	char* filename; // TODO: and we need a global otp path, or should we save the path here too?
 	uint position; // start positon for the next encryption
-	uint size; // the size (bytes) of the otp (low entropy problem)
-//	?maybe a mapped memory object?
+	uint size; // the size (in bytes) of the otp (low entropy problem)
+//	TODO: maybe a mapped memory object?
 };
 
-/* returns true if it could encrypt the message */
+/* returns 1 if it could encrypt the message */
 uint otp_encrypt(struct otp* mypad, char **message);
 
-/* returns true if it could decrypt the message */
+/* returns 1 if it could decrypt the message */
 uint otp_decrypt(struct otp* mypad, char **message);
 
 /* creates an otp object with the data from a key file */
 struct otp* otp_get_from_file(char* filename);
 
-/* searches the first non zero values in the pad (maybe not a public function?) */
+/* searches the position of the first non zero value in the pad (maybe not a public function?) */
 uint otp_seek_start(struct otp* mypad);
 
 /* generates a new key pair (two files) with the name alice and bob 
-   and of 'size' bytes.
+   of 'size' bytes.
 */
 uint otp_generate_key_pair(char* alice, char* bob, char* filename_alice, char* filename_bob, uint size);
 
 /* calculates if there is still enought non zero file content left.
-   returns percentage values (or other usefull numbers)
+   returns a meaningfull numeric value (TODO: details?)
 */
 int otp_check_entropy(struct otp* mypad);
 
