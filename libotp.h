@@ -42,10 +42,10 @@ struct otp {
 //	TODO: maybe a mapped memory object?
 };
 
-/* returns 0 if it could encrypt the message */
+/* returns 1 if it could encrypt the message */
 unsigned int otp_encrypt(struct otp* mypad, char **message);
 
-/* returns 0 if it could decrypt the message */
+/* returns 1 if it could decrypt the message */
 unsigned int otp_decrypt(struct otp* mypad, char **message);
 
 /* creates an otp object with the data from a key file */
