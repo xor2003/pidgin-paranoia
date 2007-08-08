@@ -21,6 +21,8 @@
 
 // GNUlibc stuff
 #include <string.h>
+#include <errno.h>
+#include <ctype.h>
 
 // libpurple
 #define PURPLE_PLUGINS
@@ -41,7 +43,13 @@
 #include "paranoia_config.h"
 #endif
 
+// TODO: move to autoconf
+#define OTP_ID "core-paranoia"
+
 // ----------------- Paranoia Key Management ------------------
+
+//set global folder
+// g_get_home_dir()
 
 // needs to be reseted for every chat session
 struct options {
@@ -64,6 +72,10 @@ struct key* keylist = NULL;
 // loads all available keys from the global otp folder into the keylist
 static gboolean generate_key_list() {
 
+	//REM: make a test key struct
+	
+
+
 	return TRUE;
 }
 
@@ -83,24 +95,29 @@ static struct key* search_key(char* account, char* id) {
 
 PurpleCmdId otp_cmd_id;
 
-#define OTP_HELP_STR "Welcome to the One-Time Pad CLI.\notp help: shows this message \notp genkey &lt;size&gt;: generates a key pair of &lt;size&gt; MB\notp start: tries to start the encryption\notp stop: stops the encryption\notp keys: lists all available keys\n"
+#define OTP_HELP_STR "Welcome to the One-Time Pad CLI.\notp help: shows this message \notp genkey &lt;size&gt;: generates a key pair of &lt;size&gt; MB\notp start: tries to start the encryption\notp stop: stops the encryption\notp keys: lists all available keys"
 
 #define OTP_ERROR_STR "Wrong argument(s). Type '/otp help' for help."
+
+/* sets the default otp cli error */
+static void set_default_cli_error(gchar **error) {
+	char *tmp_error = (char *) malloc((strlen(OTP_ERROR_STR) + 1) * sizeof(char));
+	strcpy(tmp_error, OTP_ERROR_STR);
+	free(*error);
+	*error = tmp_error;
+	return;
+}
 
 /* otp commads super function */
 static PurpleCmdRet OTP_check_command(PurpleConversation *conv, const gchar *cmd, gchar **args, gchar **error, void *data) {
 
 	// debug
-	purple_debug(PURPLE_DEBUG_MISC, "pidgin-paranoia", "the otp command was recived! sweet!\n");
+	purple_debug(PURPLE_DEBUG_MISC, OTP_ID, "the otp command was recived! sweet!\n");
 
 	if(args[0] == NULL){
 		// no arguments
-		char *tmp_error = (char *) malloc((strlen(OTP_ERROR_STR) + 1) * sizeof(char));
-		strcpy(tmp_error, OTP_ERROR_STR);
-		free(*error);
-		*error = tmp_error;
+		set_default_cli_error(error);
 		return PURPLE_CMD_RET_FAILED;
-
 	}
 	else {
 		if(strcmp("help", *args) == 0){
@@ -110,8 +127,43 @@ static PurpleCmdRet OTP_check_command(PurpleConversation *conv, const gchar *cmd
 		}
 		else if(strncmp("genkey ", *args, 7) == 0){
 			// otp genkey
-			purple_conversation_write(conv, NULL, "This should generate two key files.", PURPLE_MESSAGE_NO_LOG, time(NULL));
-			//TODO: check size value
+
+			//skip "genkey "
+			*args += 7;
+			int size;
+
+			// Skip whitespaces or detect the end.
+			while (isspace (**args)) {
+				*args++;
+				if (**args == 0)
+					break;
+			}
+         		// Parse it
+			errno = 0;
+         		size = strtol(*args, 0, 0);
+         		// overflow detection
+			if (errno){
+				// OVERFLOW!
+				// TODO: Display a special error?
+				purple_debug(PURPLE_DEBUG_MISC, OTP_ID, "The size value caused an int overflow!\n");
+				set_default_cli_error(error);
+				return PURPLE_CMD_RET_FAILED;
+
+			} else {
+				// integer detection
+				if (size <= 0) {
+					// no positive integer found!
+					purple_debug(PURPLE_DEBUG_MISC, OTP_ID, "The size value is not a positive int!\n");
+					set_default_cli_error(error);
+					return PURPLE_CMD_RET_FAILED;
+				} else {
+					// found a positive int -> DO IT!
+					// FIXME: additional garbage is just ignored, ok?
+					purple_conversation_write(conv, NULL, "This should generate two key files.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+					purple_debug(PURPLE_DEBUG_MISC, OTP_ID, "Generate two otp files of %d MB size.\n", (gint) size);
+				}
+			}
+
 		}
 		else if(strcmp("start", *args) == 0){
 			// otp start
@@ -124,14 +176,11 @@ static PurpleCmdRet OTP_check_command(PurpleConversation *conv, const gchar *cmd
 		else if(strcmp("keys", *args) == 0){
 			// otp start
 			purple_conversation_write(conv, NULL, "This should list all available keys.", PURPLE_MESSAGE_NO_LOG, time(NULL));
-		 }
+		}
 		// TODO: add more commands
 		else {
 			// unknown arg
-			char *tmp_error = (char *) malloc((strlen(OTP_ERROR_STR) + 1) * sizeof(char));
-			strcpy(tmp_error, OTP_ERROR_STR);
-			free(*error);
-			*error = tmp_error;
+			set_default_cli_error(error);
 			return PURPLE_CMD_RET_FAILED;
 		}
 	}
@@ -151,7 +200,7 @@ static gboolean OTP_receiving_im_msg(PurpleAccount *account, char **sender,
 	aaaa_decrypt(message);
 
 	// debug
-	purple_debug(PURPLE_DEBUG_MISC, "pidgin-paranoia", "received a message!!! we should decrypt it.\n");
+	purple_debug(PURPLE_DEBUG_MISC, OTP_ID, "received a message!!! we should decrypt it.\n");
 
 	return FALSE; // TRUE drops the msg!
 }
@@ -165,7 +214,7 @@ static gboolean OTP_sending_im_msg(PurpleAccount *account, char **sender,
 	aaaa_encrypt(message);
 
 	// debug
-	purple_debug(PURPLE_DEBUG_MISC, "pidgin-paranoia", "we want to send a message!!! we should encrypt it.\n");
+	purple_debug(PURPLE_DEBUG_MISC, OTP_ID, "we want to send a message!!! we should encrypt it.\n");
 
 	return FALSE; // TRUE drops the msg!
 }
@@ -178,7 +227,7 @@ static gboolean OTP_change_displayed_msg(PurpleAccount *account, char **sender,
 	// TODO: add "<secure>" to the message
 
 	// debug
-	purple_debug(PURPLE_DEBUG_MISC, "pidgin-paranoia", "wrote msg, here we could do usefull stuff.\n");
+	purple_debug(PURPLE_DEBUG_MISC, OTP_ID, "wrote msg, here we could do usefull stuff.\n");
 
 	//TRUE if the message should be canceled, or FALSE otherwise.
 	return FALSE;
@@ -188,7 +237,7 @@ static gboolean OTP_change_displayed_msg(PurpleAccount *account, char **sender,
 /* gets called when loading the plugin */
 static gboolean plugin_load(PurplePlugin *plugin) {
 	// debug
-	purple_debug(PURPLE_DEBUG_INFO, "pidgin-paranoia",
+	purple_debug(PURPLE_DEBUG_INFO, OTP_ID,
 		"Compiled with Purple '%d.%d.%d', running with Purple '%s'.\n",
 		PURPLE_MAJOR_VERSION, PURPLE_MINOR_VERSION, PURPLE_MICRO_VERSION, purple_core_get_version());
 
@@ -212,7 +261,7 @@ static gboolean plugin_load(PurplePlugin *plugin) {
 		"otp &lt;command&gt: type /otp to get help", NULL);
 
 	// debug
-	purple_debug(PURPLE_DEBUG_MISC, "pidgin-paranoia", "done loading\n");
+	purple_debug(PURPLE_DEBUG_MISC, OTP_ID, "done loading\n");
 	
 	return TRUE;
 }
@@ -227,7 +276,7 @@ gboolean plugin_unload(PurplePlugin *plugin) {
 	purple_cmd_unregister(otp_cmd_id);
 
 	// debug
-	purple_debug(PURPLE_DEBUG_MISC, "pidgin-paranoia", "done unloading\n");
+	purple_debug(PURPLE_DEBUG_MISC, OTP_ID, "done unloading\n");
 
 	return TRUE;
 }
@@ -282,7 +331,7 @@ static PurplePluginInfo info = {
                                    PURPLE_PRIORITY_LOWEST
                                  */
 
-    "core-paranoia",     	/* plugin id */
+    OTP_ID,     		/* plugin id */
     "One-Time Pad Encryption",         /* plugin name */
     OTP_VERSION,                /* version */
 
@@ -297,7 +346,7 @@ static PurplePluginInfo info = {
                                    UI where, if at all, to display this (and
                                    how much to display).
                                  */
-    OTP_AUTHORS,                   /* name and e-mail address */
+    OTP_AUTHORS,		/* name and e-mail address */
     OTP_WEBSITE,		/* website */
 
     plugin_load,            /* This is a pointer to a function for
