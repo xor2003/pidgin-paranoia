@@ -132,12 +132,6 @@ static PurpleCmdRet OTP_check_command(PurpleConversation *conv, const gchar *cmd
 			*args += 7;
 			int size;
 
-			// Skip whitespaces or detect the end.
-			while (isspace (**args)) {
-				*args++;
-				if (**args == 0)
-					break;
-			}
          		// Parse it
 			errno = 0;
          		size = strtol(*args, 0, 0);
@@ -145,6 +139,7 @@ static PurpleCmdRet OTP_check_command(PurpleConversation *conv, const gchar *cmd
 			if (errno){
 				// OVERFLOW!
 				// TODO: Display a special error?
+				// debug
 				purple_debug(PURPLE_DEBUG_MISC, OTP_ID, "The size value caused an int overflow!\n");
 				set_default_cli_error(error);
 				return PURPLE_CMD_RET_FAILED;
@@ -153,13 +148,16 @@ static PurpleCmdRet OTP_check_command(PurpleConversation *conv, const gchar *cmd
 				// integer detection
 				if (size <= 0) {
 					// no positive integer found!
+					// debug
 					purple_debug(PURPLE_DEBUG_MISC, OTP_ID, "The size value is not a positive int!\n");
 					set_default_cli_error(error);
 					return PURPLE_CMD_RET_FAILED;
 				} else {
 					// found a positive int -> DO IT!
-					// FIXME: additional garbage is just ignored, ok?
+					// FIXME: additional garbage is just ignored
+					// FIXME: size limit?
 					purple_conversation_write(conv, NULL, "This should generate two key files.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+					// debug
 					purple_debug(PURPLE_DEBUG_MISC, OTP_ID, "Generate two otp files of %d MB size.\n", (gint) size);
 				}
 			}
@@ -170,11 +168,11 @@ static PurpleCmdRet OTP_check_command(PurpleConversation *conv, const gchar *cmd
 			purple_conversation_write(conv, NULL, "This should start the encryption.", PURPLE_MESSAGE_NO_LOG, time(NULL));
 		}
 		else if(strcmp("stop", *args) == 0){
-			// otp start
+			// otp stop
 			purple_conversation_write(conv, NULL, "This should stop the encryption.", PURPLE_MESSAGE_NO_LOG, time(NULL));
 		}
 		else if(strcmp("keys", *args) == 0){
-			// otp start
+			// otp keys
 			purple_conversation_write(conv, NULL, "This should list all available keys.", PURPLE_MESSAGE_NO_LOG, time(NULL));
 		}
 		// TODO: add more commands
@@ -398,7 +396,7 @@ static PurplePluginInfo info = {
                                     It must return a GList of
                                     PurplePluginActions.
                                  */
-    /* padding */
+    /* reserved */
     NULL,
     NULL,
     NULL,
