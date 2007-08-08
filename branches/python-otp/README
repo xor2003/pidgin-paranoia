@@ -1,0 +1,41 @@
+A very short howto for this prototype:
+---------------------------------------
+
+Create a pad 100kb:
+---------------------------------------
+Create your pad:	
+dd if=/dev/urandom of=Alice.entropy bs=100k count=1
+
+Create the reversed pad:
+./pad.py reverse Alice Bob
+
+You have now a file called Alice.entropy and one called Bob.entropy. You keep the one called Bob.entropy and you send the one called Alice.entropy to Bob over a SECURE channel. You can delete the file Alice.entropy.
+
+
+Encrypt the message "Hello World!":
+---------------------------------------
+Alice: 	./pad.py encrypt Bob
+
+The encrypted message will look somehow like this: 33|7aYuzvnYCjVQXkaG
+
+
+Decrypt the message:
+---------------------------------------
+Bob:	./pad.py decrypt Alice
+
+
+Good luck!
+
+
+
+
+
+
+
+
+
+
+
+
+
+
