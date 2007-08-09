@@ -137,6 +137,19 @@ int otp_xor(char *m,char *p,int len) {
 
 // ----------------- Public One-Time Pad Functions ------------
 
+/* returns 1 if it could encrypt the message */
+unsigned int otp_encrypt(struct otp* mypad, char **message){
+
+	return otp_udecrypt(message);
+}
+
+/* returns 1 if it could decrypt the message */
+unsigned int otp_decrypt(struct otp* mypad, char **message){
+
+	return otp_uencrypt(message);
+}
+
+
 // ----------------- TODO: REMOVE ME ------------------
 void aaaa_encrypt(char **message) {
 
