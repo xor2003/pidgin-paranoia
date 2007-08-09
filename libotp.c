@@ -46,7 +46,7 @@ int otp_b64enc(char **message, int *size) {
 
 	*size = strlen(gmsg) + 1;
 	char *msg = (char *) malloc( *size * sizeof(char) );
-	strcpy(msg,gmsg);
+	memcpy(msg,gmsg,*size);
 	free(*message);
 	*message = msg;
 	//printf("b64enc:\t\tMessage:\t%s\n",*message);
@@ -66,7 +66,7 @@ int otp_b64dec(char **message, int *size) {
 	//g_print("b64dec:\t\tb64:\t\t%s\n",gumsg);
 
 	char *msg = (char *) malloc( *size * sizeof(char) );
-	strcpy(msg,gumsg);
+	memcpy(msg,gumsg,*size);
 	free(*message);
 	*message = msg;
 	//printf("b64dec:\t\tMessage:\t%s\n",*message);
@@ -78,11 +78,11 @@ int otp_udecrypt(char **message) {
 	int a=0; int *size=&a;
 	*size=strlen(*message)+1;				/* get length */
 
-	printf("udecrypt:\tSize:\t\t%d\n",*size);
+	//printf("udecrypt:\tSize:\t\t%d\n",*size);
 	//printf("udecrypt:\tMessage:\t%s\n",*message);
 
 	otp_b64dec( message, size );				/* decode base64 */
-	printf("udecrypt:\tSize:\t\t%d\n",*size);
+	//printf("udecrypt:\tSize:\t\t%d\n",*size);
 	char **pad=otp_getpad( size );				/* get pad */
 	//printf("udecrypt:\tMessage:\t%s\n",*message);
 	otp_xor( *message, *pad, *size );			/* xor */
@@ -96,7 +96,7 @@ int otp_uencrypt(char **message) {
 	int a=0; int *size=&a;
 	*size=strlen(*message) + 1;				/* get length */
 
-	printf("uencrypt:\tSize:\t\t%d\n",*size);
+	//printf("uencrypt:\tSize:\t\t%d\n",*size);
 	//printf("uencrypt:\tMessage:\t%s\n",*message);
 
 	char **pad=otp_getpad( size );				/* get pad */
@@ -109,9 +109,9 @@ int otp_uencrypt(char **message) {
 /* Creates a pointer to a char-array with the pad */
 char** otp_getpad(int *size) {
 	char **pad;
-	printf("xor:\t\tSize:\t\t%d\n",*size);
+	//printf("xor:\t\tSize:\t\t%d\n",*size);
 	//       "123456789012345"
-	char p[]="980909809809809";  
+	char p[]="j2938wdjlkdjhdjewrhlkewjfhewlkjrhewlrkjewhrlkwqj";  
 	char *vpad = (char *) malloc( (*size) * sizeof(char) );
 	memcpy(vpad,p,*size); //the pad could be anything... use memcyp
 	pad=&vpad;

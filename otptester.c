@@ -34,7 +34,7 @@ int main(void) {
 	//int a=0; int *size=&a;
 	//*size=10;
 	//       "123456789012345"
-	char m[]="Hallo World!..."; // IMPORTANT: (pad has to have the same length)
+	char m[]="it finally works!"; // IMPORTANT: (pad has to be longer)
 
 	char **message;
 	char *vmessage = (char *) malloc((strlen(m) + 1) * sizeof(char));
