@@ -212,6 +212,9 @@ static gboolean OTP_receiving_im_msg(PurpleAccount *account, char **sender,
                              char **message, PurpleConversation *conv,
                              PurpleMessageFlags *flags) {
 
+	// debug
+	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Inc. Msg: %s\n", *message);
+
 	// TODO: many many checks!
 
 	// TODO: remove the paranoia string
@@ -235,6 +238,9 @@ static gboolean OTP_receiving_im_msg(PurpleAccount *account, char **sender,
 static gboolean OTP_sending_im_msg(PurpleAccount *account, char **sender,
                              char **message, PurpleConversation *conv,
                              PurpleMessageFlags *flags) {
+	// debug
+	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Fresh Msg: %s\n", *message);
+
 	// TODO: many many checks!
 
 
