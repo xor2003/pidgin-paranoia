@@ -140,13 +140,13 @@ int otp_xor(char *m,char *p,int len) {
 /* returns 1 if it could encrypt the message */
 unsigned int otp_encrypt(struct otp* mypad, char **message){
 
-	return otp_udecrypt(message);
+	return otp_uencrypt(message);
 }
 
 /* returns 1 if it could decrypt the message */
 unsigned int otp_decrypt(struct otp* mypad, char **message){
 
-	return otp_uencrypt(message);
+	return otp_udecrypt(message);
 }
 
 
