@@ -48,7 +48,7 @@
 
 // ----------------- Paranoia Key Management ------------------
 
-//set global folder
+// set global key folder
 // g_get_home_dir()
 
 // needs to be reseted for every chat session
@@ -61,8 +61,8 @@ struct options {
 
 // paranoia key struct (a linked list)
 struct key {
-	struct otp pad; // an otp struct
-	struct options opt; // key options
+	struct otp* pad; // an otp struct
+	struct options* opt; // key options
 	struct key* next;
 };
 
@@ -72,9 +72,31 @@ struct key* keylist = NULL;
 // loads all available keys from the global otp folder into the keylist
 static gboolean generate_key_list() {
 
-	//REM: make a test key struct
-	
+	//REM: a test option struct
+	struct options {
+		gboolean asked; 
+		gboolean has_plugin; 
+		gboolean otp_enabled; 
+		gboolean auto_enable; 
+	} *test_opt;
 
+	test_opt->asked = FALSE;
+	test_opt->has_plugin = FALSE;
+	test_opt->otp_enabled = FALSE;
+	test_opt->auto_enable = TRUE;
+
+	//REM: make a test key struct
+	struct key {
+		struct otp* pad; 
+		struct options* opt;
+		struct key* next;
+	} *test_key1;
+
+	test_key1->pad = NULL;
+	test_key1->opt = test_opt;
+	test_key1->next = NULL;
+
+	keylist = test_key1;
 
 	return TRUE;
 }
@@ -108,11 +130,11 @@ static void set_default_cli_error(gchar **error) {
 	return;
 }
 
-/* otp commads super function */
+/* otp commads check function */
 static PurpleCmdRet OTP_check_command(PurpleConversation *conv, const gchar *cmd, gchar **args, gchar **error, void *data) {
 
 	// debug
-	purple_debug(PURPLE_DEBUG_MISC, OTP_ID, "the otp command was recived! sweet!\n");
+	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "the otp command was recived! sweet!\n");
 
 	if(args[0] == NULL){
 		// no arguments
@@ -131,7 +153,6 @@ static PurpleCmdRet OTP_check_command(PurpleConversation *conv, const gchar *cmd
 			//skip "genkey "
 			*args += 7;
 			int size;
-
          		// Parse it
 			errno = 0;
          		size = strtol(*args, 0, 0);
@@ -140,7 +161,7 @@ static PurpleCmdRet OTP_check_command(PurpleConversation *conv, const gchar *cmd
 				// OVERFLOW!
 				// TODO: Display a special error?
 				// debug
-				purple_debug(PURPLE_DEBUG_MISC, OTP_ID, "The size value caused an int overflow!\n");
+				purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "The size value caused an int overflow!\n");
 				set_default_cli_error(error);
 				return PURPLE_CMD_RET_FAILED;
 
@@ -149,7 +170,7 @@ static PurpleCmdRet OTP_check_command(PurpleConversation *conv, const gchar *cmd
 				if (size <= 0) {
 					// no positive integer found!
 					// debug
-					purple_debug(PURPLE_DEBUG_MISC, OTP_ID, "The size value is not a positive int!\n");
+					purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "The size value is not a positive int!\n");
 					set_default_cli_error(error);
 					return PURPLE_CMD_RET_FAILED;
 				} else {
@@ -158,7 +179,7 @@ static PurpleCmdRet OTP_check_command(PurpleConversation *conv, const gchar *cmd
 					// FIXME: size limit?
 					purple_conversation_write(conv, NULL, "This should generate two key files.", PURPLE_MESSAGE_NO_LOG, time(NULL));
 					// debug
-					purple_debug(PURPLE_DEBUG_MISC, OTP_ID, "Generate two otp files of %d MB size.\n", (gint) size);
+					purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Generate two otp files of %d MB size.\n", (gint) size);
 				}
 			}
 
@@ -193,12 +214,18 @@ static PurpleCmdRet OTP_check_command(PurpleConversation *conv, const gchar *cmd
 static gboolean OTP_receiving_im_msg(PurpleAccount *account, char **sender,
                              char **message, PurpleConversation *conv,
                              PurpleMessageFlags *flags) {
+
 	// TODO: many many checks!
+
+	// TODO: remove the paranoia string
+
+	// ENABLE LIBOTP HERE
+	//otp_decrypt(NULL, message);
 
 	aaaa_decrypt(message);
 
 	// debug
-	purple_debug(PURPLE_DEBUG_MISC, OTP_ID, "received a message!!! we should decrypt it.\n");
+	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "received a message!!! we should decrypt it.\n");
 
 	return FALSE; // TRUE drops the msg!
 }
@@ -209,10 +236,15 @@ static gboolean OTP_sending_im_msg(PurpleAccount *account, char **sender,
                              PurpleMessageFlags *flags) {
 	// TODO: many many checks!
 
+	// ENABLE LIBOTP HERE
+	//otp_encrypt(NULL, message);
+	
 	aaaa_encrypt(message);
 
+	// TODO: add a paranoia string
+
 	// debug
-	purple_debug(PURPLE_DEBUG_MISC, OTP_ID, "we want to send a message!!! we should encrypt it.\n");
+	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "we want to send a message!!! we should encrypt it.\n");
 
 	return FALSE; // TRUE drops the msg!
 }
@@ -225,7 +257,7 @@ static gboolean OTP_change_displayed_msg(PurpleAccount *account, char **sender,
 	// TODO: add "<secure>" to the message
 
 	// debug
-	purple_debug(PURPLE_DEBUG_MISC, OTP_ID, "wrote msg, here we could do usefull stuff.\n");
+	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "wrote msg, here we could do usefull stuff.\n");
 
 	//TRUE if the message should be canceled, or FALSE otherwise.
 	return FALSE;
@@ -259,7 +291,7 @@ static gboolean plugin_load(PurplePlugin *plugin) {
 		"otp &lt;command&gt: type /otp to get help", NULL);
 
 	// debug
-	purple_debug(PURPLE_DEBUG_MISC, OTP_ID, "done loading\n");
+	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "done loading\n");
 	
 	return TRUE;
 }
@@ -268,13 +300,13 @@ static gboolean plugin_load(PurplePlugin *plugin) {
 gboolean plugin_unload(PurplePlugin *plugin) {
 
 	// Disconnect all signals
-	//purple_signals_disconnect_by_handle(plugin);
+	purple_signals_disconnect_by_handle(plugin);
 	
 	// unregister command(s)
 	purple_cmd_unregister(otp_cmd_id);
 
 	// debug
-	purple_debug(PURPLE_DEBUG_MISC, OTP_ID, "done unloading\n");
+	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "done unloading\n");
 
 	return TRUE;
 }
