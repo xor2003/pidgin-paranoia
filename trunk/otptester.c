@@ -25,32 +25,39 @@
 
 
 
+
 // great stuff
 #include "libotp.h"
 
 
 int main(void) {
-	//char m[]="123455678"; 
-	char m[]="TWVQPPSR]";  // wurde aus "12345678" erzeugt. zum testen.
-	char p[]="eeeeeeeee";
+	//int a=0; int *size=&a;
+	//*size=10;
+	//       "123456789012345"
+	char m[]="Hallo World!..."; // IMPORTANT: (pad has to have the same length)
+
 	char **message;
-	//char *msg="Hello World!"; <<<<< Das scheint sich nicht mit free() zu vertragen.
 	char *vmessage = (char *) malloc((strlen(m) + 1) * sizeof(char));
 	strcpy(vmessage, m);
 	message=&vmessage;
 
-	char **pad;
-	char *vpad = (char *) malloc((strlen(p) + 1) * sizeof(char));
-	strcpy(vpad, p);
-	pad=&vpad;
 
 
-	printf("Message before      :%s\n",*message);
 
-	//aaaa_decrypt(pmessage);
-	otp_xor(message,pad);
+	printf("tester:\t\tMessage:\t%s\n",*message);
+	//printf("tester:\t\tSize:\t\t%d\n",*size);
 
-	printf("Message after       :%s\n",*message);
+	otp_uencrypt(message);
+	//otp_b64enc(message,size);
+
+	//printf("tester:\t\tSize:\t\t%d\n",*size);
+	printf("tester:\t\tMessage:\t%s\n",*message);
+
+	otp_udecrypt(message);
+	//otp_b64dec(message,size);
+
+	//printf("tester:\t\tSize:\t\t%d\n",*size);
+	printf("tester:\t\tMessage:\t%s\n",*message);
 	
 	return 0;
 }

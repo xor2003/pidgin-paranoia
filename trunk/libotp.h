@@ -18,13 +18,19 @@
 
 // ----------------- TODO: REMOVE ME ------------------
 
+// For Nowic (semistable)
 // for testing only
 void aaaa_encrypt(char **message);
 // for testing only
 void aaaa_decrypt(char **message);
 
-// public for development only
-int otp_xor(char **message,char **key);
+
+// public for development only (for boognu, unstable)
+int otp_xor(char *m,char *p,int len);
+int otp_uencrypt(char **message);
+int otp_udecrypt(char **message);
+int otp_b64enc(char **message, int *size);
+int otp_b64dec(char **message, int *size);
 
 
 // ----------------- OTP Crypto Functions API ------------------

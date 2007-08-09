@@ -10,3 +10,6 @@ Simon Wenner:
 
 Christan Wäckerlin:
  * OTP documentation
+ * Libotp: xor function
+ * Libotp: base64 encode and decode using gnomelib (maybe broken)
+ * Libotp: encrypt and decrypt
