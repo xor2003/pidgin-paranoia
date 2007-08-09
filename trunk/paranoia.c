@@ -64,36 +64,46 @@ struct key {
 };
 
 // paranoia keylist pointer
-struct key* keylist = NULL;
+void* keylist = NULL;
+
+
+// ----------------- Test Functions (should be removed) --------------------------
+void HELP_make_key(struct key* key, char* src, char* dest){
+	// a test otp object
+	struct otp tmp_pad = { src, dest, NULL, NULL, 0, 1024 };
+	struct otp* test_pad = NULL;
+	*test_pad = tmp_pad;
+
+	//a test option struct
+	struct options tmp_opt = { FALSE, FALSE, FALSE, TRUE };
+	struct options* test_opt= NULL;
+	*test_opt = tmp_opt;
+	//test_opt->asked = FALSE;
+	//test_opt->has_plugin = FALSE;
+	//test_opt->otp_enabled = FALSE;
+	//test_opt->auto_enable = TRUE;
+
+	//make a test key struct
+	struct key test_key;
+
+	test_key.pad = test_pad;
+	test_key.opt = test_opt;
+	test_key.next = NULL;
+
+	*key = test_key;
+
+	return;
+}
+
+
 
 // loads all available keys from the global otp folder into the keylist
 static gboolean generate_key_list() {
+	
+	struct key* test_key1 = NULL;
+	HELP_make_key(test_key1, "simon.wenner@gmail.com", "nowic@swissjabber.ch");
 
-	//REM: a test option struct
-	struct options {
-		gboolean asked; 
-		gboolean has_plugin; 
-		gboolean otp_enabled; 
-		gboolean auto_enable; 
-	} *test_opt;
-
-	test_opt->asked = FALSE;
-	test_opt->has_plugin = FALSE;
-	test_opt->otp_enabled = FALSE;
-	test_opt->auto_enable = TRUE;
-
-	//REM: make a test key struct
-	struct key {
-		struct otp* pad; 
-		struct options* opt;
-		struct key* next;
-	} *test_key1;
-
-	test_key1->pad = NULL;
-	test_key1->opt = test_opt;
-	test_key1->next = NULL;
-
-	//keylist = test_key1;
+	keylist = test_key1;
 
 	return TRUE;
 }
@@ -207,13 +217,36 @@ static PurpleCmdRet OTP_check_command(PurpleConversation *conv, const gchar *cmd
 
 // ----------------- Siganl Handlers ------------------
 
-/* signal handler for "receiving-im-msg" */
+/* ---- signal handler for "receiving-im-msg" ---- */
 static gboolean OTP_receiving_im_msg(PurpleAccount *account, char **sender,
                              char **message, PurpleConversation *conv,
                              PurpleMessageFlags *flags) {
 
+	//if ((message == NULL) || (*message == NULL)) {
+	//	return TRUE;
+	//}
+
+	//jabber ect: purple_account_get_protocol_id(account)
+
 	// debug
-	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Inc. Msg: %s\n", *message);
+	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "My account: %s\n", purple_account_get_username(account));
+	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "I received a message from %s\n", *sender);
+	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Rcv.Msg: %s\n", *message);
+
+	// Strip all the HTML crap (Jabber)
+//Jabber: <html xmlns='http://jabber.org/protocol/xhtml-im'><body xmlns='http://www.w3.org/1999/xhtml'>hi</body></html>
+	// TODO: does that hurt?
+	// TODO: only strip if ist is encryptet!!! Otherwise we loose links ect...
+	char *stripped_message = purple_markup_strip_html(*message);
+	char *tmp_message = (char *) malloc((strlen(stripped_message) + 1) * sizeof(char));
+	strcpy(tmp_message, stripped_message);
+
+	g_free(*message);
+
+	*message = tmp_message;
+
+	// debug
+	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Stripped Msg: %s\n", *message);
 
 	// TODO: many many checks!
 
@@ -228,18 +261,18 @@ static gboolean OTP_receiving_im_msg(PurpleAccount *account, char **sender,
 #endif
 
 	// debug
-	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "received a message!!! we should decrypt it.\n");
 	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Dec.Msg: %s\n", *message);
 
 	return FALSE; // TRUE drops the msg!
 }
 
-/* signal handler for "sending-im-msg" */
-static gboolean OTP_sending_im_msg(PurpleAccount *account, char **sender,
-                             char **message, PurpleConversation *conv,
-                             PurpleMessageFlags *flags) {
+/* ---- signal handler for "sending-im-msg" ---- */
+void OTP_sending_im_msg(PurpleAccount *account, const char *receiver,
+                             char **message) {
 	// debug
-	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Fresh Msg: %s\n", *message);
+	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "My account: %s\n", purple_account_get_username(account));
+	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "I want to send a message to %s\n", receiver);
+	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Orig Msg: %s\n", *message);
 
 	// TODO: many many checks!
 
@@ -255,26 +288,31 @@ static gboolean OTP_sending_im_msg(PurpleAccount *account, char **sender,
 	// TODO: add a paranoia string
 
 	// debug
-	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "we want to send a message!!! we should encrypt it.\n");	
 	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Enc.Msg: %s\n", *message);
 
-	return FALSE; // TRUE drops the msg!
+	return;
 }
 
-/* signal handler for "writing-im-msg", needed to change the displayed msg 
-static gboolean OTP_change_displayed_msg(PurpleAccount *account, char **sender,
-                             char **message, PurpleConversation *conv,
-                             PurpleMessageFlags *flags) {
+
+
+
+
+
+/* ---- signal handler for "writing-im-msg", needed to change the displayed msg ---- */
+static gboolean OTP_change_displayed_msg(PurpleAccount *account, const char *who,
+                           char **message, PurpleConversation *conv,
+                           PurpleMessageFlags flags) {
 
 	// TODO: add "<secure>" to the message
 
+	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "WritMsg: %s\n", *message);
 	// debug
-	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "wrote msg, here we could do usefull stuff.\n");
+	//purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "wrote msg, here we could do usefull stuff.\n");
 
 	//TRUE if the message should be canceled, or FALSE otherwise.
 	return FALSE;
 }
-*/
+
 
 /* gets called when loading the plugin */
 static gboolean plugin_load(PurplePlugin *plugin) {
