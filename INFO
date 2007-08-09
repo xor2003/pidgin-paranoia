@@ -1,0 +1,36 @@
+Abstract:
+--------------------------------
+The plug-in allows to use one-time-pads (see: http://de.wikipedia.org/wiki/One-Time-Pad) to encrypt conversations in the IM-client Pidgin.
+A key file with random content is created by Alice. Alice also creates the byte wise reverse version of its key file and sends it to Bob. 
+Alice and Bob both use the first half of their key file to encrypt and use the second part of their key file to decrypt. The message is encrypted and decrypted by XOR-ing it with the random bytes taken from the key file. The encrypted message is encoded in Base64 and transmitted together with the starting point of the bytes used in the key file. 
+The plug-in will be written in C and will be released under the GPL (version 3).
+The plug-in aims to give 'perfect' security with a encryption system that is a simple as possible and easy to understand.
+Currently, a proof-of-concept application exists (written in Python). 
+
+In detail:
+--------------------------------
+
+The key files:
+--------------------------------
+Alice creates a file consisting of perfectly random numbers (very hard to implement, (-;) of a size of i.e 1MB. Alice generates a random 8 characters long hexadecimal number (the ID), i.e: "34EF4588". This number must not be derived from the key file, because this would weaken the cryptosystem (at least in theory)! Alice calls her file "alice@jabber.org bob@jabber.org 34EF4588.pad". Alice creates the byte wise reverse version of its key file and calls it "bob@jabber.org alice@jabber.org 34EF4588.pad".
+
+Alice calls its own key file "alice@jabber.org bob@jabber.org 34EF4588.pad" because this key file will be used by her to communicate with Bob.
+
+Alice transfers Bob's key file "bob@jabber.org alice@jabber.org 34EF4588.pad" to Bob over a secure channel, i.e on CD. Alice does not need Bob's key file anymore and can delete it.
+
+Both Alice and Bob can use the first half of their key file for encryption. The second part of the key file is used to decrypt the message.
+
+
+Encryption:
+--------------------------------
+Alice finds the first byte in her key file that is not \0. Alice takes one byte from the key file for every byte of her message and creates her encrypted message using byte wise XOR. Alice writes \0 into the key file at the position were the pad was used to encrypt the message. This ensures that every part of the pad is only used once and the encryption is therefore secure! The encrypted message is converted into Base64 (i.e. "M+Rla2w=") to ensure compatibility with different transport layers.
+
+A string formed like "3EF9|34EF4588|M+Rla2w=" is transmitted.
+ * "3EF9" is the position (as a hexadecimal number) where Alice started reading in her key file.
+ * "34EF4588" is the ID used to check if both have compatible key files.
+ * "M+Rla2w=" is the Base64 encoded encrypted message.
+
+
+Decryption:
+--------------------------------
+Bob decodes the Base64 encoded message and decrypts it with that bytes read from the key file in reverse order at the position (counting from the end of the key file) described in the transmitted string.
