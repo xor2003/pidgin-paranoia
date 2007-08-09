@@ -43,9 +43,6 @@
 #include "paranoia_config.h"
 #endif
 
-// TODO: move to autoconf
-#define OTP_ID "core-paranoia"
-
 // ----------------- Paranoia Key Management ------------------
 
 // set global key folder
@@ -96,7 +93,7 @@ static gboolean generate_key_list() {
 	test_key1->opt = test_opt;
 	test_key1->next = NULL;
 
-	keylist = test_key1;
+	//keylist = test_key1;
 
 	return TRUE;
 }
@@ -220,7 +217,7 @@ static gboolean OTP_receiving_im_msg(PurpleAccount *account, char **sender,
 	// TODO: remove the paranoia string
 
 #ifdef REALOTP
-	// ENABLE LIBOTP HERE
+	// ENABLE LIBOTP
 	otp_decrypt(NULL, message);
 #else
 
@@ -229,6 +226,7 @@ static gboolean OTP_receiving_im_msg(PurpleAccount *account, char **sender,
 
 	// debug
 	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "received a message!!! we should decrypt it.\n");
+	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Dec.Msg: %s\n", *message);
 
 	return FALSE; // TRUE drops the msg!
 }
@@ -241,7 +239,7 @@ static gboolean OTP_sending_im_msg(PurpleAccount *account, char **sender,
 
 
 #ifdef REALOTP
-	// ENABLE LIBOTP HERE
+	// ENABLE LIBOTP
 	otp_encrypt(NULL, message);
 #else
 	
@@ -251,7 +249,8 @@ static gboolean OTP_sending_im_msg(PurpleAccount *account, char **sender,
 	// TODO: add a paranoia string
 
 	// debug
-	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "we want to send a message!!! we should encrypt it.\n");
+	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "we want to send a message!!! we should encrypt it.\n");	
+	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Enc.Msg: %s\n", *message);
 
 	return FALSE; // TRUE drops the msg!
 }
