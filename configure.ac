@@ -9,6 +9,21 @@ AC_CANONICAL_SYSTEM
 AC_GNU_SOURCE
 AM_CONFIG_HEADER(pre_config.h)
 
+
+# Swich for realotp support: 
+# See: http://sourceware.org/autobook/autobook/autobook_283.html#SEC283
+AC_MSG_CHECKING(for realotp support)
+AC_ARG_ENABLE(realotp,
+[  --enable-realop       Enable realotp support.],
+[
+  if test "$withval" != "yes"; then
+    AC_DEFINE([REALOTP],[1],[Define if realotp support is enabled in paranoia.c])
+  fi
+],[
+  AC_MSG_RESULT(no)
+])
+
+
 #
 # The third argument to AM_INIT_AUTOMAKE surpresses the PACKAGE and
 # VERSION macors

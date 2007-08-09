@@ -219,10 +219,13 @@ static gboolean OTP_receiving_im_msg(PurpleAccount *account, char **sender,
 
 	// TODO: remove the paranoia string
 
+#ifdef REALOTP
 	// ENABLE LIBOTP HERE
-	//otp_decrypt(NULL, message);
+	otp_decrypt(NULL, message);
+#else
 
 	aaaa_decrypt(message);
+#endif
 
 	// debug
 	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "received a message!!! we should decrypt it.\n");
@@ -236,10 +239,14 @@ static gboolean OTP_sending_im_msg(PurpleAccount *account, char **sender,
                              PurpleMessageFlags *flags) {
 	// TODO: many many checks!
 
+
+#ifdef REALOTP
 	// ENABLE LIBOTP HERE
-	//otp_encrypt(NULL, message);
+	otp_encrypt(NULL, message);
+#else
 	
 	aaaa_encrypt(message);
+#endif
 
 	// TODO: add a paranoia string
 
