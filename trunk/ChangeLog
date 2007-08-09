@@ -13,5 +13,5 @@ Christan Wäckerlin:
  * Libotp: xor function
  * Libotp: base64 encode and decode using gnomelib (maybe broken)
  * Libotp: encrypt and decrypt
- * Added support for the ./configure --enable-realotp=yes swich that enables otp support for testing.
+ * Added support for the ./configure --enable-realotp swich that enables otp support for testing.
  
