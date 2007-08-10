@@ -28,7 +28,7 @@
 // great stuff
 #include "libotp.h"
 
-// ----------------- Lib One-Time Pad Functions ------------------
+// ----------------- Lib One-Time Pad Functions (Internal)------------------
 int otp_getpad(int *size,char **pad);
 
 /* Encodes message into the base64 form */
@@ -50,7 +50,7 @@ int otp_b64enc(char **message, int *size) {
 	free(*message);
 	*message = msg;
 	//printf("b64enc:\t\tMessage:\t%s\n",*message);
-	return 0;
+	return 1;
 }
 
 /* Decodes message from the base64 form */
@@ -70,7 +70,7 @@ int otp_b64dec(char **message, int *size) {
 	free(*message);
 	*message = msg;
 	//printf("b64dec:\t\tMessage:\t%s\n",*message);
-	return 0;
+	return 1;
 }
 
 /* Decrypt the message  */
@@ -87,7 +87,7 @@ int otp_udecrypt(char **message) {
 	int padok = otp_getpad( size ,pad);			/* get pad */
 	otp_xor( message, pad, *size );				/* xor */
 	//printf("udecrypt:\tMessage:\t%s\n",*message);
-	return 0;
+	return 1;
 }
 
 
@@ -104,7 +104,7 @@ int otp_uencrypt(char **message) {
 	otp_xor( message , pad, *size );			/* xor */
 	//printf("uencrypt:\tMessage:\t%s\n",*message);
 	otp_b64enc( message , size );				/* encode base64 */
-	return 0;
+	return 1;
 }
 /* Creates a pointer to a char-array with the pad */
 int otp_getpad(int *size,char **pad) {
@@ -122,7 +122,7 @@ int otp_getpad(int *size,char **pad) {
 
 	//printf("pad:\t\tPad:\t\t%s\n",*pad);
 	//printf("pointerin2:\t\t\t%u\n",pad);
-	return 0;
+	return 1;
 }
 
 
@@ -146,7 +146,7 @@ int otp_xor(char **message,char **pad,int size) {
 	
 	//otp_printint(*message,size);
 
-	return 0;
+	return 1;
 }
 
 /* Helper function for debugging */
@@ -158,21 +158,71 @@ int otp_printint(char *m,int size) {
 		printf("%d ",m[i]);
 	}
 	printf("\n");
-	return 0;
+	return 1;
 }
+
 
 // ----------------- Public One-Time Pad Functions ------------
 
-/* returns 1 if it could encrypt the message */
+/* Creates the actual string of the encrypted message that is given to the application.
+returns 1 if it could encrypt the message 
+*/
 unsigned int otp_encrypt(struct otp* mypad, char **message){
+	char *pos_str = "3EF9";			/* Our position in the pad*/		
+	char *id_str = "34EF4588";		/* Our ID */
 
-	return otp_uencrypt(message);
+	int ret = otp_uencrypt(message);			/* Encrypt and base64 */
+
+	char *new_msg;				/* Create a new, bigger **message */
+	new_msg = (char *) malloc( (strlen(*message) + strlen(pos_str) + strlen(id_str) + 1 + 2) * sizeof(char) ); 
+	char *p = new_msg;	
+
+	p = stpcpy (p, pos_str);			/*Concatinate everything*/
+	p = stpcpy (p, "|");
+	p = stpcpy (p, id_str);
+	p = stpcpy (p, "|");
+	p = stpcpy (p, *message);
+	//printf("encrypt:\t\tMessage:\t%s\n",new_msg);
+
+	free(*message);
+	*message = new_msg;			/*Something like "3EF9|34EF4588|M+Rla2w=" */
+	return ret;
 }
 
-/* returns 1 if it could decrypt the message */
+/* Strips the encrypted message and decrypts it.
+returns 1 if it could decrypt the message  */
 unsigned int otp_decrypt(struct otp* mypad, char **message){
+	const char d[] = "|";
+     	char *m;
+     	m = strdup (*message);
+	if (m == NULL ) {
+		return 0;
+	}
+     	m = strtok (m, d);
+	if (m == NULL ) {
+		return 0;
+	}
+     	char *pos_str = strdup (*message);	/* Our position in the pad*/
+	//printf("decrypt:\tPos:\t%s\n",m);
+     	m = strtok (NULL, d);
+	if (m == NULL ) {
+		return 0;
+	}
+     	char *id_str = strdup (*message);	/* Our ID */
+	//printf("decrypt:\tID:\t%s\n",m);
+     	m = strtok (NULL, d);
+	if (m == NULL ) {
+		return 0;
+	}
+	//printf("decrypt:\tMessage:\t%s\n",m);
 
-	return otp_udecrypt(message);
+     	char *new_msg;				/* Create a new, smaller **message */
+	new_msg = (char *) malloc((strlen(m) + 1) * sizeof(char)); 
+	strcpy(new_msg, m);
+	free(*message);
+	*message = new_msg;
+
+	return 	otp_udecrypt(message);		/* Decrypt and debase64 */;
 }
 
 
@@ -191,6 +241,8 @@ void aaaa_encrypt(char **message) {
 	
 	//HELP: change single elements of the char array
 	//(*message)[0] = 'A';
+
+	return 1;
 }
 
 void aaaa_decrypt(char **message) {
@@ -204,6 +256,8 @@ void aaaa_decrypt(char **message) {
 
 	free(*message);
 	*message = new_msg;
+
+	return 1;
 }
 
 
