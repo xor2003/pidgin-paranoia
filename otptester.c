@@ -42,6 +42,13 @@ int main(void) {
 	char *vmessage = (char *) malloc((strlen(m) + 1) * sizeof(char));
 	strcpy(vmessage, m);
 	message=&vmessage;
+	
+	//long int i=384242343;
+	//printf("tester:\t\tint:\t\t%ld\n",i);
+	//char *c=l64a(i);
+	//printf("tester:\t\tint:\t\t%s\n",c);
+	//long int x=a64l (c);
+	//printf("tester:\t\tint:\t\t%ld\n",x);
 
 
 	printf("\n--------------------------------------\n\n");
