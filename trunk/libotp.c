@@ -168,10 +168,11 @@ int otp_printint(char *m,int size) {
 returns 1 if it could encrypt the message 
 */
 unsigned int otp_encrypt(struct otp* mypad, char **message){
-	char *pos_str = "3EF9";			/* Our position in the pad*/		
-	char *id_str = "34EF4588";		/* Our ID */
+	char *id_str = "42247524";			/* Our ID */
+	char *pos_str = "379879879";			/* Our position in the pad*/
 
-	int ret = otp_uencrypt(message);			/* Encrypt and base64 */
+
+	int ret = otp_uencrypt(message);		/* Encrypt and base64 */
 
 	char *new_msg;				/* Create a new, bigger **message */
 	new_msg = (char *) malloc( (strlen(*message) + strlen(pos_str) + strlen(id_str) + 1 + 2) * sizeof(char) ); 
@@ -193,27 +194,28 @@ unsigned int otp_encrypt(struct otp* mypad, char **message){
 returns 1 if it could decrypt the message  */
 unsigned int otp_decrypt(struct otp* mypad, char **message){
 	const char d[] = "|";
-     	char *m;
-     	m = strdup (*message);
+     	char *m,*mrun;
+     	mrun = strdup (*message);
 	if (m == NULL ) {
 		return 0;
 	}
-     	m = strtok (m, d);
+     	m = strsep (&mrun, d);
 	if (m == NULL ) {
 		return 0;
 	}
-     	char *pos_str = strdup (*message);	/* Our position in the pad*/
-	//printf("decrypt:\tPos:\t%s\n",m);
-     	m = strtok (NULL, d);
+     	char *pos_str = strdup (m);	/* Our position in the pad*/
+	printf("decrypt:\tpos:\t%s\n",pos_str);
+     	m = strsep (&mrun, d);
 	if (m == NULL ) {
 		return 0;
 	}
-     	char *id_str = strdup (*message);	/* Our ID */
-	//printf("decrypt:\tID:\t%s\n",m);
-     	m = strtok (NULL, d);
+     	char *id_str = strdup (m);	/* Our ID */
+
+	printf("decrypt:\tID:\t%s\n",id_str);
+     	m = strsep (&mrun, d);
 	if (m == NULL ) {
 		return 0;
-	}
+	}					/* Our Message */
 	//printf("decrypt:\tMessage:\t%s\n",m);
 
      	char *new_msg;				/* Create a new, smaller **message */
@@ -242,7 +244,7 @@ void aaaa_encrypt(char **message) {
 	//HELP: change single elements of the char array
 	//(*message)[0] = 'A';
 
-	return 1;
+	return;
 }
 
 void aaaa_decrypt(char **message) {
@@ -257,7 +259,7 @@ void aaaa_decrypt(char **message) {
 	free(*message);
 	*message = new_msg;
 
-	return 1;
+	return;
 }
 
 
