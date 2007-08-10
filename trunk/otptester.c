@@ -36,7 +36,7 @@ int main(void) {
 	//int a=0; int *size=&a;
 	//*size=10;
 	//       "123456789012345"
-	char m[]="12 456"; // IMPORTANT: (pad has to be longer)
+	char m[]="ziuziuiuz"; // IMPORTANT: (pad has to be longer)
 
 	char **message;
 	char *vmessage = (char *) malloc((strlen(m) + 1) * sizeof(char));
@@ -46,23 +46,25 @@ int main(void) {
 
 	printf("\n--------------------------------------\n\n");
 
-	printf("tester:\t\tMessage:\t%s\n",*message);
+	printf("tester message:\t\t\tMessage:\t%s\n",*message);
 	//otp_printint(*message);
 	//printf("tester:\t\tSize:\t\t%d\n",*size);
 	//otp_printint(*message,strlen(*message));
 
 
-	otp_uencrypt(message);
+	//otp_uencrypt(message);
 	//otp_b64enc(message,size);
+	otp_encrypt(NULL,message);
 
 	//printf("tester:\t\tSize:\t\t%d\n",*size);
-	printf("tester:\t\tMessage:\t%s\n",*message);
+	printf("tester encrypted:\t\tMessage:\t%s\n",*message);
 
-	otp_udecrypt(message);
+	//otp_udecrypt(message);
 	//otp_b64dec(message,size);
+	otp_decrypt(NULL,message);
 
 	//printf("tester:\t\tSize:\t\t%d\n",*size);
-	printf("tester:\t\tMessage:\t%s\n",*message);
+	printf("tester decrypted:\t\tMessage:\t%s\n",*message);
 	//printint(*message);
 
 	printf("\n--------------------------------------\n\n");
