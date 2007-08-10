@@ -4,12 +4,14 @@
 
 0.0.1
 Simon Wenner:
- * Basic plugin structure
+ * Paranoia: Basic plugin structure, libotp API
  * A build system 'from hell'! (but it seems to work)
- * Basic CLI functionality
+ * Session and key management documentation
+ * Paranoia: CLI functionality
+ * Paranoia: Key list search function
 
 Christan Wäckerlin:
- * OTP documentation
+ * One-time pad documentation
  * Libotp: xor function
  * Libotp: base64 encode and decode using gnomelib (maybe broken)
  * Libotp: encrypt and decrypt
