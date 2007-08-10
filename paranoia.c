@@ -21,6 +21,7 @@
 
 // GNUlibc stuff
 #include <string.h>
+#include <stddef.h>
 #include <errno.h>
 #include <ctype.h>
 
@@ -45,7 +46,7 @@
 
 // ----------------- Paranoia Key Management ------------------
 
-// set global key folder
+// TODO: set global key folder
 // g_get_home_dir()
 
 // needs to be reseted for every chat session
@@ -54,6 +55,7 @@ struct options {
 	gboolean has_plugin; // the result
 	gboolean otp_enabled; // on/off
 	gboolean auto_enable; // needed to be able to force disable
+	gboolean no_entropy; // if it is used completely: TRUE
 };
 
 // paranoia key struct (a linked list)
@@ -64,60 +66,136 @@ struct key {
 };
 
 // paranoia keylist pointer
-void* keylist = NULL;
+struct key* keylist = NULL;
 
 
 // ----------------- Test Functions (should be removed) --------------------------
-void HELP_make_key(struct key* key, char* src, char* dest){
+struct key* HELP_make_key(const char* src, const char* dest, const char* id) {
+
+	static struct key* key;
+   	key = (struct key *)malloc(sizeof(struct key));
+
 	// a test otp object
-	struct otp tmp_pad = { src, dest, NULL, NULL, 0, 1024 };
-	struct otp* test_pad = NULL;
-	*test_pad = tmp_pad;
+	static struct otp* test_pad;
+   	test_pad = (struct otp *)malloc(sizeof(struct otp));
 
 	//a test option struct
-	struct options tmp_opt = { FALSE, FALSE, FALSE, TRUE };
-	struct options* test_opt= NULL;
-	*test_opt = tmp_opt;
-	//test_opt->asked = FALSE;
-	//test_opt->has_plugin = FALSE;
-	//test_opt->otp_enabled = FALSE;
-	//test_opt->auto_enable = TRUE;
+	static struct options* test_opt;
+   	test_opt = (struct options *)malloc(sizeof(struct options));
 
-	//make a test key struct
-	struct key test_key;
+	key->pad = test_pad;
+	key->opt = test_opt;
+	key->next = NULL;
 
-	test_key.pad = test_pad;
-	test_key.opt = test_opt;
-	test_key.next = NULL;
+	char* test_src;
+	test_src = (char *) malloc((strlen(src) + 1) * sizeof(char));
+	strcpy(test_src, src);
 
-	*key = test_key;
+	char* test_dest;
+	test_dest = (char *) malloc((strlen(dest) + 1) * sizeof(char));
+	strcpy(test_dest, dest);
 
-	return;
+	char* test_id;
+	test_id = (char *) malloc((strlen(id) + 1) * sizeof(char));
+	strcpy(test_id, id);
+
+	key->pad->src = test_src;
+	key->pad->dest = test_dest;
+	key->pad->id = test_id;
+	key->pad->size = 1024;
+
+	return key;
 }
 
 
 
 // loads all available keys from the global otp folder into the keylist
-static gboolean generate_key_list() {
+static gboolean par_init_key_list() {
 	
+	// just a test TODO: read from files!
 	struct key* test_key1 = NULL;
-	HELP_make_key(test_key1, "simon.wenner@gmail.com", "nowic@swissjabber.ch");
+	test_key1 = HELP_make_key("simon.wenner@gmail.com", "nowic@swissjabber.ch", "AAAAAAAA");
 
 	keylist = test_key1;
+
+	struct key* test_key2 = NULL;
+	test_key2 = HELP_make_key("alexapfel@swissjabber.ch", "alexapfel@swissjabber.ch", "BBBBBBBB");
+	test_key1->next = test_key2;
+
+	struct key* test_key3 = NULL;
+	test_key3 = HELP_make_key("simon.wenner@gmail.com", "alexapfel@swissjabber.ch", "CCCCCCCC");
+	test_key2->next = test_key3;
+
+	struct key* test_key4 = NULL;
+	test_key4 = HELP_make_key("simon.wenner@gmail.com", "simon.wenner@gmail.com", "DDDDDDDD");
+	test_key3->next = test_key4;
+
+	struct key* test_key5 = NULL;
+	test_key5 = HELP_make_key("simon.wenner@gmail.com", "alexapfel@gmail.com", "EEEEEEEE");
+	test_key4->next = test_key5;
+
+	// debug
+	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Key list generated! YEEHAAA!\n");
 
 	return TRUE;
 }
 
 // frees all memory of the keylist
-static gboolean free_key_list() {
+static gboolean par_free_key_list() {
 
 	return TRUE;
 }
 
-// searches a key in the keylist
-static struct key* search_key(char* account, char* id) {
+// searches a key in the keylist, ID is optional, if no ID: searches first src/dest match
+static struct key* par_search_key(const char* src, const char* dest, const char* id) {
+
+	// strip the jabber resource from src (/home etc.)
+	const char d[] = "/";
+	char *src_copy, *token;
+     
+	src_copy = strdup(src);   // Make writable copy.
+	token = strsep(&src_copy, d);
+	printf("paranoia !!!!!!!!!!:\tResource remover: my_acc\t%s\n", token);
+	
+	if(token != NULL) {
+		src = token;
+		free(src_copy);
+	}
+
+	// strip the jabber resource from dest (/home etc.)
+	char *dest_copy;
+     	token = NULL;
+
+	dest_copy = strdup(dest);   // Make writable copy.
+	token = strsep(&dest_copy, d);
+	printf("paranoia !!!!!!!!!!:\tResource remover: other_acc\t%s\n", token);
+	
+	if(token != NULL) {
+		dest = token;
+		free(dest_copy);
+	}
+
+	// ---- end stripping -----
+
+
+	struct key* tmp_ptr = keylist;
+
+	while(!(tmp_ptr == NULL)) {
+	// possible edless loop! make sure the last otp->next == NULL
+		if ((strcmp(tmp_ptr->pad->src, src) == 0) && (strcmp(tmp_ptr->pad->dest, dest) == 0)) {
+			// TODO: add ID check
+			return tmp_ptr;
+		}
+		tmp_ptr = tmp_ptr->next;
+	}
 
 	return NULL;
+}
+
+// lists all keys in the im window for a certain src/dest combination 
+static gboolean par_list_keys(const char* src, const char* dest) {
+
+	return FALSE;
 }
 
 // ----------------- Paranoia CLI ------------------
@@ -128,7 +206,7 @@ PurpleCmdId otp_cmd_id;
 
 #define OTP_ERROR_STR "Wrong argument(s). Type '/otp help' for help."
 
-/* sets the default otp cli error */
+/* sets the default paranoia cli error */
 static void set_default_cli_error(gchar **error) {
 	char *tmp_error = (char *) malloc((strlen(OTP_ERROR_STR) + 1) * sizeof(char));
 	strcpy(tmp_error, OTP_ERROR_STR);
@@ -138,7 +216,7 @@ static void set_default_cli_error(gchar **error) {
 }
 
 /* otp commads check function */
-static PurpleCmdRet OTP_check_command(PurpleConversation *conv, const gchar *cmd, gchar **args, gchar **error, void *data) {
+static PurpleCmdRet par_check_command(PurpleConversation *conv, const gchar *cmd, gchar **args, gchar **error, void *data) {
 
 	// debug
 	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "the otp command was recived! sweet!\n");
@@ -218,20 +296,37 @@ static PurpleCmdRet OTP_check_command(PurpleConversation *conv, const gchar *cmd
 // ----------------- Siganl Handlers ------------------
 
 /* ---- signal handler for "receiving-im-msg" ---- */
-static gboolean OTP_receiving_im_msg(PurpleAccount *account, char **sender,
+static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
                              char **message, PurpleConversation *conv,
                              PurpleMessageFlags *flags) {
 
+	// TODO: if an other plugin destroyed the message
 	//if ((message == NULL) || (*message == NULL)) {
 	//	return TRUE;
 	//}
 
-	//jabber ect: purple_account_get_protocol_id(account)
+	// some vars
+	const char* my_acc_name = purple_account_get_username(account);
+
+	// TODO: detect jabber? or any protcol id
+	// purple_account_get_protocol_id(account)
 
 	// debug
 	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "My account: %s\n", purple_account_get_username(account));
 	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "I received a message from %s\n", *sender);
 	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Rcv.Msg: %s\n", *message);
+
+	// search in Key list
+	struct key* used_key = NULL;
+	used_key = par_search_key(my_acc_name, *sender, NULL);
+
+	// DEBUG
+	if(used_key != NULL) {
+		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Found a matching Key with pad ID: %s\n", used_key->pad->id);
+	} else {
+		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Found NO matching Key.\n");
+	}
+	// DEBUG end
 
 	// Strip all the HTML crap (Jabber)
 //Jabber: <html xmlns='http://jabber.org/protocol/xhtml-im'><body xmlns='http://www.w3.org/1999/xhtml'>hi</body></html>
@@ -248,9 +343,9 @@ static gboolean OTP_receiving_im_msg(PurpleAccount *account, char **sender,
 	// debug
 	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Stripped Msg: %s\n", *message);
 
-	// TODO: many many checks!
+	// TODO: check key options
 
-	// TODO: remove the paranoia string
+	// TODO: remove the paranoia header string
 
 #ifdef REALOTP
 	// ENABLE LIBOTP
@@ -266,16 +361,34 @@ static gboolean OTP_receiving_im_msg(PurpleAccount *account, char **sender,
 	return FALSE; // TRUE drops the msg!
 }
 
+
+
+
 /* ---- signal handler for "sending-im-msg" ---- */
-void OTP_sending_im_msg(PurpleAccount *account, const char *receiver,
+void par_sending_im_msg(PurpleAccount *account, const char *receiver,
                              char **message) {
+
+	// some vars
+	const char* my_acc_name = purple_account_get_username(account);
+
 	// debug
-	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "My account: %s\n", purple_account_get_username(account));
+	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "My account: %s\n", my_acc_name);
 	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "I want to send a message to %s\n", receiver);
 	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Orig Msg: %s\n", *message);
 
-	// TODO: many many checks!
+	// search in Key list, TODO: strip jabber ressources from own account (in search fn?)
+	struct key* used_key = NULL;
+	used_key = par_search_key(my_acc_name, receiver, NULL);
 
+	// DEBUG
+	if(used_key != NULL) {
+		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Found a matching Key with pad ID: %s\n", used_key->pad->id);
+	} else {
+		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Found NO matching Key.\n");
+	}
+	// DEBUG end
+
+	// TODO: check key options
 
 #ifdef REALOTP
 	// ENABLE LIBOTP
@@ -285,7 +398,7 @@ void OTP_sending_im_msg(PurpleAccount *account, const char *receiver,
 	aaaa_encrypt(message);
 #endif
 
-	// TODO: add a paranoia string
+	// TODO: add a paranoia header string
 
 	// debug
 	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Enc.Msg: %s\n", *message);
@@ -299,7 +412,7 @@ void OTP_sending_im_msg(PurpleAccount *account, const char *receiver,
 
 
 /* ---- signal handler for "writing-im-msg", needed to change the displayed msg ---- */
-static gboolean OTP_change_displayed_msg(PurpleAccount *account, const char *who,
+static gboolean par_change_displayed_msg(PurpleAccount *account, const char *who,
                            char **message, PurpleConversation *conv,
                            PurpleMessageFlags flags) {
 
@@ -325,19 +438,23 @@ static gboolean plugin_load(PurplePlugin *plugin) {
 	void *conv_handle;
 	conv_handle = purple_conversations_get_handle();
 
+
+	// Setup the Key List
+	par_init_key_list();
+
 	// connect to signals
 	// HELP: gulong purple_signal_connect (void *instance, const char *signal, void *handle, PurpleCallback func, void *data)
 	purple_signal_connect(conv_handle, "receiving-im-msg", plugin,
-		PURPLE_CALLBACK(OTP_receiving_im_msg), NULL);
+		PURPLE_CALLBACK(par_receiving_im_msg), NULL);
 	purple_signal_connect(conv_handle, "sending-im-msg", plugin,
-		PURPLE_CALLBACK(OTP_sending_im_msg), NULL);
+		PURPLE_CALLBACK(par_sending_im_msg), NULL);
 	/* purple_signal_connect(conv_handle, "writing-im-msg", plugin,
-		PURPLE_CALLBACK(OTP_change_displayed_msg), NULL); */
+		PURPLE_CALLBACK(par_change_displayed_msg), NULL); */
 
 	// register command(s)
 	// "/otp" + a string of args
 	otp_cmd_id = purple_cmd_register ("otp", "s", PURPLE_CMD_P_DEFAULT,
-		PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_ALLOW_WRONG_ARGS, NULL, PURPLE_CMD_FUNC(OTP_check_command), 
+		PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_ALLOW_WRONG_ARGS, NULL, PURPLE_CMD_FUNC(par_check_command), 
 		"otp &lt;command&gt: type /otp to get help", NULL);
 
 	// debug
@@ -354,6 +471,8 @@ gboolean plugin_unload(PurplePlugin *plugin) {
 	
 	// unregister command(s)
 	purple_cmd_unregister(otp_cmd_id);
+
+	// TODO: free key list
 
 	// debug
 	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "done unloading\n");
