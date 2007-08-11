@@ -56,7 +56,7 @@ unsigned int otp_encrypt(struct otp* mypad, char **message);
 unsigned int otp_decrypt(struct otp* mypad, char **message);
 
 /* creates an otp object with the data from a key file */
-struct otp* otp_get_from_file(char* filename);
+struct otp* otp_get_from_file(const char* filename);
 
 /* searches the position of the first non zero value in the pad (maybe not a public function?) */
 unsigned int otp_seek_start(struct otp* mypad);
