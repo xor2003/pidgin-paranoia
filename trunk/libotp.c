@@ -164,6 +164,70 @@ int otp_printint(char *m,int size) {
 
 // ----------------- Public One-Time Pad Functions ------------
 
+/* Creates the struct otp  
+HELP: How to signal a failure?!? Atm the strings are NULL in this case. */
+struct otp* otp_get_from_file(char* input_filename){
+	static struct otp* pad;
+   	pad = (struct otp *)malloc(sizeof(struct otp));
+	char *filename;
+	//char empty[]='';
+
+	filename = (char *) malloc( (sizeof(input_filename) + 1) * sizeof(char) );
+	filename = input_filename; 
+	pad->filename = filename;
+
+
+	const char d[] = " ";		/* The delimiter */
+     	char *c,*run;
+     	run = strdup (filename);
+	if (filename == NULL ) {
+		// return 0;
+	}
+
+
+     	c = strsep (&run, d);		/* Our source i.e alice@yabber.org */
+	if (c == NULL ) {
+		//return 0;
+	}
+	char *src;
+	src = (char *) malloc( (5 + 1) * sizeof(char) );
+	src = c; 
+	pad->src = src;
+
+
+     	c = strsep (&run, d);		/* Our dest i.e bob@yabber.org */
+	if (c == NULL ) {
+		//return 0;
+	}
+	char *dest;
+	dest = (char *) malloc( (5 + 1) * sizeof(char) );
+	dest = c; 
+	pad->dest = dest;
+
+
+     	c = strsep (&run, d);		/* Our ID */
+     	char *x,*xrun;
+     	xrun = strdup (c);
+	x = strsep (&xrun,".");
+	if (c == NULL ) {
+		//return 0;
+	}
+	char *id;
+	id = (char *) malloc( (5 + 1) * sizeof(char) );
+	id = x; 
+	pad->id = id;
+
+
+	// Development: Constant atm
+
+	pad->position = 100000;
+
+	pad->size = 1000000;
+
+
+	return pad;
+}
+
 /* Creates the actual string of the encrypted message that is given to the application.
 returns 1 if it could encrypt the message 
 */
@@ -196,7 +260,7 @@ unsigned int otp_decrypt(struct otp* mypad, char **message){
 	const char d[] = "|";
      	char *m,*mrun;
      	mrun = strdup (*message);
-	if (m == NULL ) {
+	if (*message == NULL ) {
 		return 0;
 	}
      	m = strsep (&mrun, d);
@@ -204,14 +268,14 @@ unsigned int otp_decrypt(struct otp* mypad, char **message){
 		return 0;
 	}
      	char *pos_str = strdup (m);	/* Our position in the pad*/
-	printf("decrypt:\tpos:\t%s\n",pos_str);
+	//printf("decrypt:\tpos:\t%s\n",pos_str);
      	m = strsep (&mrun, d);
 	if (m == NULL ) {
 		return 0;
 	}
      	char *id_str = strdup (m);	/* Our ID */
 
-	printf("decrypt:\tID:\t%s\n",id_str);
+	//printf("decrypt:\tID:\t%s\n",id_str);
      	m = strsep (&mrun, d);
 	if (m == NULL ) {
 		return 0;
