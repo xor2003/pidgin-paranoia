@@ -174,43 +174,42 @@ int otp_printint(char *m,int size) {
 
 // ----------------- Public One-Time Pad Functions ------------
 
-/* Creates the struct otp  
-HELP: How to signal a failure?!? Atm the strings are NULL in this case. */
-struct otp* otp_get_from_file(char* input_filename){
+/* Creates an otp struct, returns NULL if the filename is incorrect,
+   or if the file is missing */
+struct otp* otp_get_from_file(const char* input_filename){
 	static struct otp* pad;
-   	pad = (struct otp *)malloc(sizeof(struct otp));
-	char *filename;
-	//char empty[]='';
+   	pad = (struct otp *) malloc(sizeof(struct otp));
 
-	filename = (char *) malloc( (sizeof(input_filename) + 1) * sizeof(char) );
-	filename = input_filename; 
+	char *filename;
+	filename = (char *) malloc((strlen(input_filename) + 1) * sizeof(char) );
+	strcpy(filename, input_filename);
 	pad->filename = filename;
 
 
 	const char d[] = " ";		/* The delimiter */
-     	char *c,*run;
+     	char *c, *run;
      	run = strdup (filename);
-	if (filename == NULL ) {
-		// return 0;
+	if (filename == NULL ) {	/* empty filename */
+		return NULL;
 	}
 
 
      	c = strsep (&run, d);		/* Our source i.e alice@yabber.org */
 	if (c == NULL ) {
-		//return 0;
+		return NULL;
 	}
 	char *src;
-	src = (char *) malloc( (5 + 1) * sizeof(char) );
+	src = (char *) malloc((strlen(c) + 1) * sizeof(char) );
 	src = c; 
 	pad->src = src;
 
 
      	c = strsep (&run, d);		/* Our dest i.e bob@yabber.org */
 	if (c == NULL ) {
-		//return 0;
+		return NULL;
 	}
 	char *dest;
-	dest = (char *) malloc( (5 + 1) * sizeof(char) );
+	dest = (char *) malloc((strlen(c) + 1) * sizeof(char) );
 	dest = c; 
 	pad->dest = dest;
 
@@ -220,17 +219,18 @@ struct otp* otp_get_from_file(char* input_filename){
      	xrun = strdup (c);
 	x = strsep (&xrun,".");
 	if (c == NULL ) {
-		//return 0;
+		return NULL;
 	}
 	char *id;
-	id = (char *) malloc( (5 + 1) * sizeof(char) );
-	id = x; 
+	id = (char *) malloc((strlen(c) + 1) * sizeof(char) );
+	id = x;
 	pad->id = id;
 
+	// TODO: maybe check for ".otp" ?
 
 	// Development: Constant atm
 
-	pad->position = 100000;
+	pad->position = 99999;
 
 	pad->size = 1000000;
 

@@ -331,7 +331,8 @@ static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
 	// Strip all the HTML crap (Jabber)
 //Jabber: <html xmlns='http://jabber.org/protocol/xhtml-im'><body xmlns='http://www.w3.org/1999/xhtml'>hi</body></html>
 	// TODO: does that hurt?
-	// TODO: only strip if ist is encryptet!!! Otherwise we loose links ect...
+	// TODO: only strip, if ist is encryptet!!! Otherwise we loose links ect...
+	// TODO: only strip, if jabber
 	char *stripped_message = purple_markup_strip_html(*message);
 	char *tmp_message = (char *) malloc((strlen(stripped_message) + 1) * sizeof(char));
 	strcpy(tmp_message, stripped_message);
