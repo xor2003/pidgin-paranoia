@@ -39,17 +39,9 @@ int otp_b64enc(char **message, int *size) {
 	//printf("b64enc:\t\tMessage:\t%s\n",*message);
 	//printf("pointer:\t\t\t%u\n",size);
 
-	guchar *gumsg = (guchar *) malloc( *size * sizeof(guchar) );
-	memcpy(gumsg,*message,*size);
+	char* msg = (char*) g_base64_encode((char*) *message,*size);	/* Gnomelib Base64 encode */
+	*size = (strlen(msg) + 1) * sizeof(char);			/* The size has changed */
 
-	gchar *gmsg = g_base64_encode(gumsg,*size);
-
-	//g_print("b64enc:\t\tb64:\t\t%s\n",gmsg);
-	//printf("b64enc:\t\tMessage:\t%d\n",strlen(gmsg));
-
-	*size = strlen(gmsg) + 1;
-	char *msg = (char *) malloc( *size * sizeof(char) );
-	memcpy(msg,gmsg,*size);
 	free(*message);
 	*message = msg;
 	//printf("b64enc:\t\tMessage:\t%s\n",*message);
@@ -61,15 +53,16 @@ int otp_b64dec(char **message, int *size) {
 	//printf("b64dec:\t\tMessage:\t%s\n",*message);
 	//printf("pointer:\t\t\t%u\n",size);
 
-	gchar *gmsg = (gchar *) malloc( *size * sizeof(gchar) );
-	memcpy(gmsg,*message,*size);
 
-	guchar *gumsg = g_base64_decode(gmsg,size);
 
-	//g_print("b64dec:\t\tb64:\t\t%s\n",gumsg);
+	//printf("pointer:\t\t\t%u\n",*size);
+	char* msg = (char*) g_base64_decode((char*) *message,size);	/* Gnomelib Base64 decode */
+	//printf("pointer:\t\t\t%u\n",*size);
+	*size=*size;
+	//printf("pointer:\t\t\t%u\n",*size);
+	//otp_printint(msg,*size);
 
-	char *msg = (char *) malloc( *size * sizeof(char) );
-	memcpy(msg,gumsg,*size);
+
 	free(*message);
 	*message = msg;
 	//printf("b64dec:\t\tMessage:\t%s\n",*message);
@@ -78,34 +71,32 @@ int otp_b64dec(char **message, int *size) {
 
 /* Decrypt the message  */
 int otp_udecrypt(char **message) {
-	int a = strlen(*message); 				/* get length */
+	int a = strlen(*message) * sizeof(char); 				/* get length */
 	int *size=&a;
 	char *b="x"; char **pad; pad=&b;
+	//otp_printint(*message,*size+1);
 
 	//printf("udecrypt:\tSize:\t\t%d\n",*size);
 	//printf("udecrypt:\tMessage:\t%s\n",*message);
-
+	//otp_printint(*message,*size);
 	otp_b64dec( message, size );				/* decode base64 */
+	(*message)[*size] = '\0';
 	//printf("udecrypt:\tSize:\t\t%d\n",*size);
 	int padok = otp_getpad( size ,pad);			/* get pad */
-	otp_xor( message, pad, *size );				/* xor */
+	otp_xor( message, pad, *size);				/* xor */
+	//otp_printint(*message,*size + 1);
 	//printf("udecrypt:\tMessage:\t%s\n",*message);
-
-	//--------------------------------------------------------------------
-	// FIXME: from here on the '\0' sign of the message is missing or 
-	//        moved (it's always too long). Do you xor '\0'? and b64 '\0' ?
-	// WORKAROUND: this line is a work around to fix this bug.
-	(*message)[*size] = '\0';
-	// -------------------------------------------------------------------
+	//otp_printint(*message,*size+1);
 	return 1;
 }
 
 
 /* Encrypt the message  */
 int otp_uencrypt(char **message) {
-	int a = strlen(*message);				/* get length */
+	int a = strlen(*message) * sizeof(char);				/* get length */
 	int *size=&a;
-	char *b="x"; char **pad; pad=&b;			
+	char *b="x"; char **pad; pad=&b;	
+	//otp_printint(*message,*size+1);		
 
 	//printf("uencrypt:\tSize:\t\t%d\n",*size);
 	int padok = otp_getpad( size ,pad);			/* get pad */
@@ -114,6 +105,7 @@ int otp_uencrypt(char **message) {
 	otp_xor( message , pad, *size );			/* xor */
 	//printf("uencrypt:\tMessage:\t%s\n",*message);
 	otp_b64enc( message , size );				/* encode base64 */
+	//otp_printint(*message,*size);	
 	return 1;
 }
 /* Creates a pointer to a char-array with the pad */
@@ -148,13 +140,14 @@ int otp_xor(char **message,char **pad,int size) {
 	//printf("xorp:\t\tMessage:\t%s\n",*pad);
 	m = *message;
 	p = *pad;
-	
+	//otp_printint(m,size);
+	//otp_printint(p,size);
 	for (i = 0;i < (size);i++) {
 		//printf("%c\t%d\t%c\t%d\t%d\n",m[i],m[i],p[i],p[i],m[i]^p[i]); //debug
 		m[i]=m[i]^p[i];
 	}
-	
 	//otp_printint(*message,size);
+	*message=m;
 
 	return 1;
 }
@@ -164,7 +157,7 @@ int otp_printint(char *m,int size) {
 	//int len=strlen(m);
 	int i;
 	printf("\t\tIntegers:\t");
-	for (i = 0;i < size+1;i++) {
+	for (i = 0;i < size;i++) {
 		printf("%d ",m[i]);
 	}
 	printf("\n");
