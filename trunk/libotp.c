@@ -16,6 +16,9 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+
+//### gcc `pkg-config --cflags --libs glib-2.0` base64test.c && ./a.out 
+
 // GNUlibc includes
 #include <stdlib.h>
 #include <stdio.h>
@@ -32,15 +35,14 @@ extern char *stpcpy (char *, const char *);
 #include "libotp.h"
 
 // ----------------- Lib One-Time Pad Functions (Internal)------------------
-int otp_getpad(int *size,char **pad);
+int otp_getpad(int *len,char **pad);
 
 /* Encodes message into the base64 form */
-int otp_b64enc(char **message, int *size) {
+int otp_b64enc(char **message, int *len) {
 	//printf("b64enc:\t\tMessage:\t%s\n",*message);
-	//printf("pointer:\t\t\t%u\n",size);
 
-	char* msg = (char*) g_base64_encode((char*) *message,*size);	/* Gnomelib Base64 encode */
-	*size = (strlen(msg) + 1) * sizeof(char);			/* The size has changed */
+	char* msg = (char*) g_base64_encode((char*) *message,*len);	/* Gnomelib Base64 encode */
+	*len = (strlen(msg)+1) * sizeof(char);			/* The size has changed */
 
 	free(*message);
 	*message = msg;
@@ -49,18 +51,9 @@ int otp_b64enc(char **message, int *size) {
 }
 
 /* Decodes message from the base64 form */
-int otp_b64dec(char **message, int *size) {
-	//printf("b64dec:\t\tMessage:\t%s\n",*message);
-	//printf("pointer:\t\t\t%u\n",size);
+int otp_b64dec(char **message, int *len) {
 
-
-
-	//printf("pointer:\t\t\t%u\n",*size);
-	char* msg = (char*) g_base64_decode((char*) *message,size);	/* Gnomelib Base64 decode */
-	//printf("pointer:\t\t\t%u\n",*size);
-	*size=*size;
-	//printf("pointer:\t\t\t%u\n",*size);
-	//otp_printint(msg,*size);
+	char* msg = (char*) g_base64_decode((char*) *message,len);	/* Gnomelib Base64 decode */
 
 
 	free(*message);
@@ -71,55 +64,37 @@ int otp_b64dec(char **message, int *size) {
 
 /* Decrypt the message  */
 int otp_udecrypt(char **message) {
-	int a = strlen(*message) * sizeof(char); 				/* get length */
-	int *size=&a;
+	int a = (strlen(*message)+1)* sizeof(char); 				/* get length of the used memory*/
+	int *len=&a;
 	char *b="x"; char **pad; pad=&b;
-	//otp_printint(*message,*size+1);
-
-	//printf("udecrypt:\tSize:\t\t%d\n",*size);
+	otp_b64dec( message, len );				/* decode base64 */
+	int padok = otp_getpad( len ,pad);			/* get pad */
+	otp_xor( message, pad, *len);				/* xor */
 	//printf("udecrypt:\tMessage:\t%s\n",*message);
-	//otp_printint(*message,*size);
-	otp_b64dec( message, size );				/* decode base64 */
-	(*message)[*size] = '\0';
-	//printf("udecrypt:\tSize:\t\t%d\n",*size);
-	int padok = otp_getpad( size ,pad);			/* get pad */
-	otp_xor( message, pad, *size);				/* xor */
-	//otp_printint(*message,*size + 1);
-	//printf("udecrypt:\tMessage:\t%s\n",*message);
-	//otp_printint(*message,*size+1);
 	return 1;
 }
 
 
 /* Encrypt the message  */
 int otp_uencrypt(char **message) {
-	int a = strlen(*message) * sizeof(char);				/* get length */
-	int *size=&a;
-	char *b="x"; char **pad; pad=&b;	
-	//otp_printint(*message,*size+1);		
+	int a = (strlen(*message)+1) * sizeof(char);				/* get length of the used memory*/
+	int *len=&a;
+	char *b="x"; char **pad; pad=&b;		
 
-	//printf("uencrypt:\tSize:\t\t%d\n",*size);
-	int padok = otp_getpad( size ,pad);			/* get pad */
-	//printf("Pad\t:%s\n",*pad);
-
-	otp_xor( message , pad, *size );			/* xor */
-	//printf("uencrypt:\tMessage:\t%s\n",*message);
-	otp_b64enc( message , size );				/* encode base64 */
-	//otp_printint(*message,*size);	
+	int padok = otp_getpad( len ,pad);			/* get pad */
+	otp_xor( message , pad, *len);				/* xor */
+	otp_b64enc( message , len );				/* encode base64 */
+	
 	return 1;
 }
 /* Creates a pointer to a char-array with the pad */
-int otp_getpad(int *size,char **pad) {
+int otp_getpad(int *len,char **pad) {
 
-	//printf("pointerin1:\t\t\t%u\n",pad);
-	//printf("xor:\t\tSize:\t\t%d\n",*size);
-	//printf("pointer:\t\t\t%u\n",pad);
 
-	//       "123456789012345"
-	char p[]="x    wdjlkdjhdjewrhlkewjfhewlkjrhewlrkjewhrlkwqj4rjkfoidshfkjljvclkxvhfalkj dshfkjvcxnidsrur59380732847324098327409832740329847320948732 498324dsmfndsmfndsfkmdsfjdsfhldsjfhsadlkf  f kcvölcxkvjkc vdsvlädöclkäl"; 
+	char p[]="ziuzoiuoziuzoiuzoiuzoiuzoiuzoiewhrlkwqj4rjkfoidshfkjljvclkxvhfalkj dshfkjvcxnidsrur59380732847324098327409832740329847320948732 498324dsmfndsmfndsfkmdsfjdsfhldsjfhsadlkf  f kcvölcxkvjkc vdsvlädöclkäl"; 
  
-	char *vpad = (char *) malloc( (*size+1) * sizeof(char) );
-	memcpy(vpad,p,*size); //the pad could be anything... use memcyp
+	char *vpad = (char *) malloc( (*len) * sizeof(char) );
+	memcpy(vpad,p,*len-1); //the pad could be anything... use memcyp
 	*pad=vpad;
 
 	//printf("pad:\t\tPad:\t\t%s\n",*pad);
@@ -129,35 +104,33 @@ int otp_getpad(int *size,char **pad) {
 
 
 /* xor message and pad  */
-int otp_xor(char **message,char **pad,int size) {
+int otp_xor(char **message,char **pad,int len) {
 	int i;
 	char *m,*p;
 
-	//otp_printint(*message,size);
-	//otp_printint(*pad,size);
-
-	//printf("xor:\t\tMessage:\t%s\n",*message);
-	//printf("xorp:\t\tMessage:\t%s\n",*pad);
+	//printf("Warning: XOR disabled!!!!!!!!!!!!!!\n");
+	//return 1;			//Do no XOR
+	
 	m = *message;
 	p = *pad;
-	//otp_printint(m,size);
-	//otp_printint(p,size);
-	for (i = 0;i < (size);i++) {
+	//otp_printint(m,len);
+	//otp_printint(p,len);
+	for (i = 0;i < (len-1);i++) {
 		//printf("%c\t%d\t%c\t%d\t%d\n",m[i],m[i],p[i],p[i],m[i]^p[i]); //debug
 		m[i]=m[i]^p[i];
 	}
-	//otp_printint(*message,size);
+	//otp_printint(m,len);	
 	*message=m;
 
 	return 1;
 }
 
 /* Helper function for debugging */
-int otp_printint(char *m,int size) {
+int otp_printint(char *m,int len) {
 	//int len=strlen(m);
 	int i;
 	printf("\t\tIntegers:\t");
-	for (i = 0;i < size;i++) {
+	for (i = 0;i < len;i++) {
 		printf("%d ",m[i]);
 	}
 	printf("\n");
@@ -241,8 +214,10 @@ unsigned int otp_encrypt(struct otp* mypad, char **message){
 
 	int ret = otp_uencrypt(message);		/* Encrypt and base64 */
 
-	char *new_msg;				/* Create a new, bigger **message */
-	new_msg = (char *) malloc( (strlen(*message) + strlen(pos_str) + strlen(id_str) + 1 + 2) * sizeof(char) ); 
+	int size=(strlen(*message) + strlen(pos_str) + strlen(id_str) + 1 + 2) * sizeof(char);
+	//char *new_msg=(char* )g_strnfill((int) size,(gchar) "\0");   //Maybe a better way?
+	char *new_msg = (char *) malloc( size ); 	/* Create a new, bigger **message */
+
 	char *p = new_msg;	
 
 	p = stpcpy (p, pos_str);			/*Concatinate everything*/
@@ -252,6 +227,7 @@ unsigned int otp_encrypt(struct otp* mypad, char **message){
 	p = stpcpy (p, *message);
 	//printf("encrypt:\t\tMessage:\t%s\n",new_msg);
 
+	//(new_msg)[(strlen(*message) + strlen(pos_str) + strlen(id_str) + 2) * sizeof(char)] = '\0';
 	free(*message);
 	*message = new_msg;			/*Something like "3EF9|34EF4588|M+Rla2w=" */
 	return ret;
@@ -263,6 +239,7 @@ unsigned int otp_decrypt(struct otp* mypad, char **message){
 	const char d[] = "|";
      	char *m,*mrun;
      	mrun = strdup (*message);
+	//printf("xor:\t\tMessage:\t%s\n",*message);
 	if (*message == NULL ) {
 		return 0;
 	}
@@ -290,6 +267,7 @@ unsigned int otp_decrypt(struct otp* mypad, char **message){
 	strcpy(new_msg, m);
 	free(*message);
 	*message = new_msg;
+	//printf("xor:\t\tMessage:\t%s\n",*message);
 
 	return 	otp_udecrypt(message);		/* Decrypt and debase64 */;
 }

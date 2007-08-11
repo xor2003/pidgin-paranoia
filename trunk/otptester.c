@@ -29,14 +29,13 @@
 // great stuff
 #include "libotp.h"
 
-int printint(char *m);
-
 
 int main(void) {
 	//int a=0; int *size=&a;
 	//*size=10;
-	//       "123456789012345"
-	char m[]="hj»ÐñĀî"; // IMPORTANT: (pad has to be longer)
+	//       "123456789012"
+	char m[]="123456789012"; // IMPORTANT: (pad has to be longer)
+	//char m[]="sdanfnmadsbfmnbdsafnmbadsfmnbsadmfnbasdmfndasnbfm,sfnb,mnsadfm,nadbfmndsbaf,mnbasdfn";
 
 	char **message;
 	char *vmessage = (char *) malloc((strlen(m) + 1) * sizeof(char));
@@ -64,7 +63,7 @@ int main(void) {
 	printf("\n--------------------------------------\n\n");
 
 	printf("tester message:\t\t\tMessage:\t%s\n",*message);
-	//otp_printint(*message);
+	//otp_printint(*message,13);
 	//printf("tester:\t\tSize:\t\t%d\n",*size);
 	//otp_printint(*message,strlen(*message));
 
@@ -72,6 +71,7 @@ int main(void) {
 	//otp_uencrypt(message);
 	//otp_b64enc(message,size);
 	otp_encrypt(NULL,message);
+	//otp_printint(*message,13);
 
 	//printf("tester:\t\tSize:\t\t%d\n",*size);
 	printf("tester encrypted:\t\tMessage:\t%s\n",*message);
@@ -79,6 +79,7 @@ int main(void) {
 	//otp_udecrypt(message);
 	//otp_b64dec(message,size);
 	otp_decrypt(NULL,message);
+	//otp_printint(*message,13);
 
 	//printf("tester:\t\tSize:\t\t%d\n",*size);
 	printf("tester decrypted:\t\tMessage:\t%s\n",*message);
