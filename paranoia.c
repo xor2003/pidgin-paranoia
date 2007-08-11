@@ -70,14 +70,14 @@ struct key* keylist = NULL;
 
 
 // ----------------- Test Functions (should be removed) --------------------------
-struct key* HELP_make_key(const char* src, const char* dest, const char* id) {
+struct key* HELP_make_key(const char* filename) {
 
 	static struct key* key;
    	key = (struct key *)malloc(sizeof(struct key));
 
 	// a test otp object
 	static struct otp* test_pad;
-   	test_pad = (struct otp *)malloc(sizeof(struct otp));
+   	test_pad = otp_get_from_file(filename);
 
 	//a test option struct
 	static struct options* test_opt;
@@ -86,23 +86,6 @@ struct key* HELP_make_key(const char* src, const char* dest, const char* id) {
 	key->pad = test_pad;
 	key->opt = test_opt;
 	key->next = NULL;
-
-	char* test_src;
-	test_src = (char *) malloc((strlen(src) + 1) * sizeof(char));
-	strcpy(test_src, src);
-
-	char* test_dest;
-	test_dest = (char *) malloc((strlen(dest) + 1) * sizeof(char));
-	strcpy(test_dest, dest);
-
-	char* test_id;
-	test_id = (char *) malloc((strlen(id) + 1) * sizeof(char));
-	strcpy(test_id, id);
-
-	key->pad->src = test_src;
-	key->pad->dest = test_dest;
-	key->pad->id = test_id;
-	key->pad->size = 1024;
 
 	return key;
 }
@@ -114,25 +97,53 @@ static gboolean par_init_key_list() {
 	
 	// just a test TODO: read from files!
 	struct key* test_key1 = NULL;
-	test_key1 = HELP_make_key("simon.wenner@gmail.com", "nowic@swissjabber.ch", "AAAAAAAA");
+	test_key1 = HELP_make_key("simon.wenner@gmail.com simon.wenner@gmail.com AAAAAAAA.otp"); // nowic loop
 
 	keylist = test_key1;
 
 	struct key* test_key2 = NULL;
-	test_key2 = HELP_make_key("alexapfel@swissjabber.ch", "alexapfel@swissjabber.ch", "BBBBBBBB");
+	test_key2 = HELP_make_key("alexapfel@swissjabber.ch alexapfel@swissjabber.ch BBBBBBBB.otp"); //chri loop
 	test_key1->next = test_key2;
 
 	struct key* test_key3 = NULL;
-	test_key3 = HELP_make_key("simon.wenner@gmail.com", "alexapfel@swissjabber.ch", "CCCCCCCC");
+	test_key3 = HELP_make_key("simon.wenner@gmail.com alexapfel@swissjabber.ch CCCCCCCC.otp");
 	test_key2->next = test_key3;
 
 	struct key* test_key4 = NULL;
-	test_key4 = HELP_make_key("simon.wenner@gmail.com", "simon.wenner@gmail.com", "DDDDDDDD");
+	test_key4 = HELP_make_key("alexapfel@swissjabber.ch simon.wenner@gmail.com DDDDDDDD.otp");
 	test_key3->next = test_key4;
 
 	struct key* test_key5 = NULL;
-	test_key5 = HELP_make_key("simon.wenner@gmail.com", "alexapfel@gmail.com", "EEEEEEEE");
+	test_key5 = HELP_make_key("simon.wenner@gmail.com alexapfel@gmail.com EEEEEEEE.otp");
 	test_key4->next = test_key5;
+
+	struct key* test_key6 = NULL;
+	test_key6 = HELP_make_key("alexapfel@gmail.com simon.wenner@gmail.com FFFFFFFF.otp");
+	test_key5->next = test_key6;
+
+	struct key* test_key7 = NULL;
+	test_key7 = HELP_make_key("76239710 76239710 GGGGGGGG.otp"); //nowic loop
+	test_key6->next = test_key7;
+
+	struct key* test_key8 = NULL;
+	test_key8 = HELP_make_key("112920906 112920906 HHHHHHHH.otp"); //chri loop
+	test_key7->next = test_key8;
+
+	struct key* test_key9 = NULL;
+	test_key9 = HELP_make_key("76239710 112920906 IIIIIIII.otp"); //nowic->chri
+	test_key8->next = test_key9;
+
+	struct key* test_key10 = NULL;
+	test_key10 = HELP_make_key("112920906 76239710 JJJJJJJJ.otp"); //chri->nowic
+	test_key9->next = test_key10;
+
+	struct key* test_key11 = NULL;
+	test_key11 = HELP_make_key("alexapfel@gmail.com alexapfel@swissjabber.ch KKKKKKKK.otp"); //chri->chri
+	test_key10->next = test_key11;
+
+	struct key* test_key12 = NULL;
+	test_key12 = HELP_make_key("alexapfel@swissjabber.ch alexapfel@gmail.com LLLLLLLL.otp"); //chri->chri
+	test_key11->next = test_key12;
 
 	// debug
 	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Key list generated! YEEHAAA!\n");
@@ -143,19 +154,21 @@ static gboolean par_init_key_list() {
 // frees all memory of the keylist
 static gboolean par_free_key_list() {
 
+	// TODO
 	return TRUE;
 }
 
 // searches a key in the keylist, ID is optional, if no ID: searches first src/dest match
 static struct key* par_search_key(const char* src, const char* dest, const char* id) {
 
+	// TODO only for jabber?
 	// strip the jabber resource from src (/home etc.)
 	const char d[] = "/";
 	char *src_copy, *token;
      
 	src_copy = strdup(src);   // Make writable copy.
 	token = strsep(&src_copy, d);
-	printf("paranoia !!!!!!!!!!:\tResource remover: my_acc\t%s\n", token);
+	//printf("paranoia !!!!!!!!!!:\tResource remover: my_acc\t%s\n", token);
 	
 	if(token != NULL) {
 		src = token;
@@ -168,7 +181,7 @@ static struct key* par_search_key(const char* src, const char* dest, const char*
 
 	dest_copy = strdup(dest);   // Make writable copy.
 	token = strsep(&dest_copy, d);
-	printf("paranoia !!!!!!!!!!:\tResource remover: other_acc\t%s\n", token);
+	//printf("paranoia !!!!!!!!!!:\tResource remover: other_acc\t%s\n", token);
 	
 	if(token != NULL) {
 		dest = token;
@@ -308,56 +321,59 @@ static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
 	// some vars
 	const char* my_acc_name = purple_account_get_username(account);
 
-	// TODO: detect jabber? or any protcol id
-	// purple_account_get_protocol_id(account)
-
 	// debug
 	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "My account: %s\n", purple_account_get_username(account));
 	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "I received a message from %s\n", *sender);
 	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Rcv.Msg: %s\n", *message);
 
+	// TODO: check for Paranoia Header
+	// TODO: remove the paranoia header string
+	// TODO: get ID, src, dest from message (maybe compare with local src and dest)
+	// otp_get_id_from_message()
+
 	// search in Key list
 	struct key* used_key = NULL;
 	used_key = par_search_key(my_acc_name, *sender, NULL);
 
-	// DEBUG
+	// Key in key list?
 	if(used_key != NULL) {
+		// debug
 		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Found a matching Key with pad ID: %s\n", used_key->pad->id);
-	} else {
-		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Found NO matching Key.\n");
-	}
-	// DEBUG end
 
-	// Strip all the HTML crap (Jabber)
-//Jabber: <html xmlns='http://jabber.org/protocol/xhtml-im'><body xmlns='http://www.w3.org/1999/xhtml'>hi</body></html>
-	// TODO: does that hurt?
-	// TODO: only strip, if ist is encryptet!!! Otherwise we loose links ect...
-	// TODO: only strip, if jabber
-	char *stripped_message = purple_markup_strip_html(*message);
-	char *tmp_message = (char *) malloc((strlen(stripped_message) + 1) * sizeof(char));
-	strcpy(tmp_message, stripped_message);
+		// Strip all the HTML crap (Jabber)
+		//Jabber: <html xmlns='http://jabber.org/protocol/xhtml-im'><body xmlns='http://www.w3.org/1999/xhtml'>hi</body></html>
+		// TODO: does that hurt?
+		// TODO: only strip, if ist is encryptet!!! Otherwise we loose links ect...
+		// TODO: only strip, if jabber
+		// To detect jabber or any protcol id:
+		// purple_account_get_protocol_id(account)
 
-	g_free(*message);
+		char *stripped_message = purple_markup_strip_html(*message);
+		char *tmp_message = (char *) malloc((strlen(stripped_message) + 1) * sizeof(char));
+		strcpy(tmp_message, stripped_message);
 
-	*message = tmp_message;
+		g_free(*message);
+		*message = tmp_message;
 
-	// debug
-	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Stripped Msg: %s\n", *message);
+		// debug
+		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Stripped Msg: %s\n", *message);
 
-	// TODO: check key options
-
-	// TODO: remove the paranoia header string
+		// TODO: check key options
 
 #ifdef REALOTP
-	// ENABLE LIBOTP
-	otp_decrypt(NULL, message);
+		// ENABLE LIBOTP
+		otp_decrypt(NULL, message);
 #else
-	// Test function
-	aaaa_decrypt(message);
+		// Test function
+		aaaa_decrypt(message);
 #endif
 
-	// debug
-	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Dec.Msg: %s\n", *message);
+		// debug
+		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Dec.Msg: %s\n", *message);
+
+	} else {
+		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Found NO matching Key. Couldn't decrypt.\n");
+	}
 
 	return FALSE; // TRUE drops the msg!
 }
@@ -377,32 +393,34 @@ void par_sending_im_msg(PurpleAccount *account, const char *receiver,
 	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "I want to send a message to %s\n", receiver);
 	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Orig Msg: %s\n", *message);
 
-	// search in Key list, TODO: strip jabber ressources from own account (in search fn?)
+	// search in Key list
 	struct key* used_key = NULL;
 	used_key = par_search_key(my_acc_name, receiver, NULL);
 
-	// DEBUG
+	// Key in key list?
 	if(used_key != NULL) {
+		// debug
 		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Found a matching Key with pad ID: %s\n", used_key->pad->id);
-	} else {
-		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Found NO matching Key.\n");
-	}
-	// DEBUG end
 
-	// TODO: check key options
+		// TODO: check key options
+		// TODO: check for remaining entropy
 
 #ifdef REALOTP
-	// ENABLE LIBOTP
-	otp_encrypt(NULL, message);
+		// ENABLE LIBOTP
+		otp_encrypt(NULL, message);
 #else
-	// Test function
-	aaaa_encrypt(message);
+		// Test function
+		aaaa_encrypt(message);
 #endif
 
-	// TODO: add a paranoia header string
+		// TODO: add a paranoia header string
 
-	// debug
-	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Enc.Msg: %s\n", *message);
+		// debug
+		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Enc.Msg: %s\n", *message);
+
+	} else {
+		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Found NO matching Key. Won't encrypt.\n");
+	}
 
 	return;
 }
