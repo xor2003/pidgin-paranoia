@@ -26,12 +26,12 @@ void aaaa_decrypt(char **message);
 
 
 // public for development only (for boognu, unstable)
-int otp_xor(char **message,char **pad,int size);
+int otp_xor(char **message,char **pad,int len);
 int otp_uencrypt(char **message);
 int otp_udecrypt(char **message);
-int otp_b64enc(char **message, int *size);
-int otp_b64dec(char **message, int *size);
-int otp_printint(char *m, int size);
+int otp_b64enc(char **message, int *len);
+int otp_b64dec(char **message, int *len);
+int otp_printint(char *m, int len);
 
 
 // ----------------- OTP Crypto Functions API ------------------
