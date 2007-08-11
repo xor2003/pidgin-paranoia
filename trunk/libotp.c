@@ -18,8 +18,11 @@
 
 // GNUlibc includes
 #include <stdlib.h>
-#include <string.h>
 #include <stdio.h>
+#include <string.h>
+
+// starnge fix for a warning
+extern char *stpcpy (char *, const char *);
 
 //GNOMElib
 #include <glib.h>
@@ -75,9 +78,9 @@ int otp_b64dec(char **message, int *size) {
 
 /* Decrypt the message  */
 int otp_udecrypt(char **message) {
-	int a=0; int *size=&a;
+	int a = strlen(*message); 				/* get length */
+	int *size=&a;
 	char *b="x"; char **pad; pad=&b;
-	*size=strlen(*message);					/* get length */
 
 	//printf("udecrypt:\tSize:\t\t%d\n",*size);
 	//printf("udecrypt:\tMessage:\t%s\n",*message);
@@ -87,15 +90,22 @@ int otp_udecrypt(char **message) {
 	int padok = otp_getpad( size ,pad);			/* get pad */
 	otp_xor( message, pad, *size );				/* xor */
 	//printf("udecrypt:\tMessage:\t%s\n",*message);
+
+	//--------------------------------------------------------------------
+	// FIXME: from here on the '\0' sign of the message is missing or 
+	//        moved (it's always too long). Do you xor '\0'? and b64 '\0' ?
+	// WORKAROUND: this line is a work around to fix this bug.
+	(*message)[*size] = '\0';
+	// -------------------------------------------------------------------
 	return 1;
 }
 
 
 /* Encrypt the message  */
 int otp_uencrypt(char **message) {
-	int a=0; int *size=&a;
-	char *b="x"; char **pad; pad=&b;
-	*size=strlen(*message);					/* get length */
+	int a = strlen(*message);				/* get length */
+	int *size=&a;
+	char *b="x"; char **pad; pad=&b;			
 
 	//printf("uencrypt:\tSize:\t\t%d\n",*size);
 	int padok = otp_getpad( size ,pad);			/* get pad */

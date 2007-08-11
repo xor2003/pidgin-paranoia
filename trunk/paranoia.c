@@ -351,7 +351,7 @@ static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
 	// ENABLE LIBOTP
 	otp_decrypt(NULL, message);
 #else
-
+	// Test function
 	aaaa_decrypt(message);
 #endif
 
@@ -394,7 +394,7 @@ void par_sending_im_msg(PurpleAccount *account, const char *receiver,
 	// ENABLE LIBOTP
 	otp_encrypt(NULL, message);
 #else
-	
+	// Test function
 	aaaa_encrypt(message);
 #endif
 
