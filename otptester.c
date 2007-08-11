@@ -50,6 +50,16 @@ int main(void) {
 	//long int x=a64l (c);
 	//printf("tester:\t\tint:\t\t%ld\n",x);
 
+	char filename[]="alice@jabber.org bob@jabber.org 34EF4588.pad";
+	struct otp* pad = otp_get_from_file(filename);
+	printf("Pad:filename:\t\t\t%s\n",pad->filename);
+	printf("Pad:Pos:\t\t\t%ld\n",pad->position);
+	printf("Pad:Size:\t\t\t%ld\n",pad->size);
+
+	printf("Pad:src:\t\t\t%s\n",pad->src);
+	printf("Pad:dest:\t\t\t%s\n",pad->dest);
+	printf("Pad:id::\t\t\t%s\n",pad->id);
+
 
 	printf("\n--------------------------------------\n\n");
 
