@@ -39,7 +39,7 @@ int main(void) {
 
 
 	//char m[]="123456789012"; // IMPORTANT: (pad has to be longer)
-	char m[]="379879879|42247524|S1tGTlpfQldDWURIAA==";
+	char m[]="test";
 	//char m[]="sdanfnmadsbfmnbdsafnmbadsfmnbsadmfnbasdmfndasnbfm,sfnb,mnsadfm,nadbfmndsbaf,mnbasdfn";
 
 	/* Message creation */
@@ -61,21 +61,24 @@ int main(void) {
 	/* Pad Testing .... */
 	char filename[]="alice@jabber.org bob@jabber.org 34EF4588.pad";
 	struct otp* pad = otp_get_from_file(filename);
-	printf("Pad:filename:\t\t\t%s\n",pad->filename);
-	printf("Pad:Pos:\t\t\t%ld\n",pad->position);
-	printf("Pad:Size:\t\t\t%ld\n",pad->size);
+	//printf("Pad:filename:\t\t\t%s\n",pad->filename);
+	//printf("Pad:Pos:\t\t\t%ld\n",pad->position);
+	//printf("Pad:entropy:\t\t\t%ld\n",pad->entropy);
 
-	printf("Pad:src:\t\t\t%s\n",pad->src);
-	printf("Pad:dest:\t\t\t%s\n",pad->dest);
-	printf("Pad:id::\t\t\t%s\n",pad->id);
+	//printf("Pad:src:\t\t\t%s\n",pad->src);
+	//printf("Pad:dest:\t\t\t%s\n",pad->dest);
+	//printf("Pad:id:\t\t\t\t%s\n",pad->id);
+	//printf("Pad:filesize:\t\t\t%ld\n",pad->filesize);
 
 
 
 	printf("\n--------------------------------------\n\n");
 
-	printf("tester message:\t\t\tMessage:\t%s\n",*message);
+	//printf("tester message:\t\t\tMessage:\t%s\n",*message);
+
 	/* otp_get_id_from_message tester */
-	printf("tester:\t\t\t\tID:\t\t%s\n", otp_get_id_from_message(message));
+	//printf("tester:\t\t\t\tID:\t\t%s\n", otp_get_id_from_message(message));
+
 	//otp_printint(*message,13);
 	//printf("tester:\t\tSize:\t\t%d\n",*size);
 	//otp_printint(*message,strlen(*message));
@@ -83,7 +86,7 @@ int main(void) {
 
 	//otp_uencrypt(message);
 	//otp_b64enc(message,size);
-	//otp_encrypt(NULL,message);
+	otp_encrypt(pad,message);
 	//otp_printint(*message,13);
 
 	//printf("tester:\t\tSize:\t\t%d\n",*size);
@@ -91,14 +94,23 @@ int main(void) {
 
 	//otp_udecrypt(message);
 	//otp_b64dec(message,size);
-	//otp_decrypt(NULL,message);
+	otp_decrypt(pad,message);
 	//otp_printint(*message,13);
 
 	//printf("tester:\t\tSize:\t\t%d\n",*size);
-	//printf("tester decrypted:\t\tMessage:\t%s\n",*message);
+	printf("tester decrypted:\t\tMessage:\t%s\n",*message);
 	//printint(*message);
 
 	printf("\n--------------------------------------\n\n");
+
+	//printf("Pad:filename:\t\t\t%s\n",pad->filename);
+	//printf("Pad:Pos:\t\t\t%ld\n",pad->position);
+	//printf("Pad:entropy:\t\t\t%ld\n",pad->entropy);
+
+	//printf("Pad:src:\t\t\t%s\n",pad->src);
+	//printf("Pad:dest:\t\t\t%s\n",pad->dest);
+	//printf("Pad:id:\t\t\t\t%s\n",pad->id);
+	//printf("Pad:filesize:\t\t\t%ld\n",pad->filesize);
 	
 	return 0;
 }

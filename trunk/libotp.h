@@ -26,12 +26,14 @@ void aaaa_decrypt(char **message);
 
 
 // public for development only (for boognu, unstable)
-int otp_xor(char **message,char **pad,int len);
-int otp_uencrypt(char **message);
-int otp_udecrypt(char **message);
-int otp_b64enc(char **message, int *len);
-int otp_b64dec(char **message, int *len);
+//int otp_xor(char **message,char **pad,int len);
+//int otp_uencrypt(char **message);
+//int otp_udecrypt(char **message);
+//int otp_b64enc(char **message, int *len);
+//int otp_b64dec(char **message, int *len);
 int otp_printint(char *m, int len);
+/* searches the position of the first non zero value in the pad (maybe not a public function?, boognu:yes) */
+struct otp* otp_seek_start(struct otp* mypad);
 
 
 // ----------------- OTP Crypto Functions API ------------------
@@ -45,8 +47,10 @@ struct otp {
 	char* id; // the unique random number of the key pair
 	char* filename; // the filename defined in the libotp spec
 	unsigned int position; // start positon for the next encryption
-	unsigned int size; // the size (in bytes) of the otp (low entropy problem)
-//	TODO: maybe a mapped memory object?
+	unsigned int entropy; // the size (in bytes) of the entropy left for the sender
+	unsigned int filesize; //The size of the file in bytes
+
+//	TODO: maybe a mapped memory object? 
 };
 
 /* returns 1 if it could encrypt the message */
@@ -58,18 +62,9 @@ unsigned int otp_decrypt(struct otp* mypad, char **message);
 /* creates an otp object with the data from a key file */
 struct otp* otp_get_from_file(const char* filename);
 
-/* searches the position of the first non zero value in the pad (maybe not a public function?) */
-unsigned int otp_seek_start(struct otp* mypad);
-
 /* generates a new key pair (two files) with the name alice and bob 
-   of 'size' bytes.
-*/
+   of 'size' bytes. */
 unsigned int otp_generate_key_pair(char* alice, char* bob, char* filename_alice, char* filename_bob, unsigned int size);
-
-/* calculates if there is still enought non zero file content left.
-   returns a meaningfull numeric value (TODO: details?)
-*/
-int otp_check_entropy(struct otp* mypad);
 
 /* extracts and returns the ID from a given encrypted message. Leaves the message constant. Returns NULL if it fails.*/
 char* otp_get_id_from_message(char **message);
