@@ -25,6 +25,8 @@
 #include <errno.h>
 #include <ctype.h>
 
+extern char *stpncpy (char *restrict, const char *restrict, size_t);
+
 // libpurple
 #define PURPLE_PLUGINS
 #include "notify.h"
@@ -43,6 +45,39 @@
 #ifdef HAVE_CONFIG_H
 #include "paranoia_config.h"
 #endif
+
+// ----------------- General Paranoia Stuff ------------------
+#define PARANOIA_HEADER "*** Encrypted with the Pidgin-Paranoia plugin: "
+
+/* adds the paranoia header */
+void par_add_header(char** message) {
+
+	char* new_msg = (char *) malloc((strlen(*message) + strlen(PARANOIA_HEADER) + 1) * sizeof(char));
+	strcpy(new_msg, PARANOIA_HEADER);
+	strcat(new_msg, *message);
+
+	free(*message);
+	*message = new_msg;
+	printf("paranoia:\t\tHeader+Message:\t%s\n", *message);
+	return;
+}
+
+/* checks the header and removes it if found */
+static gboolean par_remove_header(char** message) {
+	if(strlen(*message) > strlen(PARANOIA_HEADER)) {
+		if(strncmp(*message, PARANOIA_HEADER, strlen(PARANOIA_HEADER)) == 0) {
+			char* new_msg = (char *) malloc((strlen(*message) - strlen(PARANOIA_HEADER) + 1) * sizeof(char));
+			char* ptr = *message + strlen(PARANOIA_HEADER);
+			strcpy(new_msg, ptr);
+
+			free(*message);
+			*message = new_msg;
+			printf("paranoia:\t\tMessage only:\t%s\n", *message);
+			return TRUE;
+		}	
+	}
+	return FALSE;
+}
 
 // ----------------- Paranoia Key Management ------------------
 
@@ -326,8 +361,37 @@ static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
 	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "I received a message from %s\n", *sender);
 	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Rcv.Msg: %s\n", *message);
 
-	// TODO: check for Paranoia Header
-	// TODO: remove the paranoia header string
+	// --- Strip all the HTML crap (Jabber) ---
+	//Jabber: <html xmlns='http://jabber.org/protocol/xhtml-im'><body xmlns='http://www.w3.org/1999/xhtml'>hi</body></html>
+	// TODO: does that hurt?
+	// TODO: only strip, if ist is encryptet!!! Otherwise we loose links ect...
+	// TODO: only strip, if jabber
+	// To detect jabber or any protcol id:
+	// purple_account_get_protocol_id(account)
+
+	const char *tmp_message = purple_markup_strip_html(*message);
+	char* the_message = (char *) malloc((strlen(tmp_message) + 1) * sizeof(char));
+	strcpy(the_message, tmp_message);
+
+	char** stripped_message;
+	stripped_message = &the_message;
+	
+	// debug
+	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Stripped Msg: %s\n", *stripped_message);
+
+	// --- checks for the Paranoia Header ---
+	// and removes it if found
+	if(!par_remove_header(stripped_message)) {
+
+		// free jabber strip!
+		g_free(*stripped_message);
+		return FALSE;
+	}
+
+	// apply jabber and header changes
+	g_free(*message);
+	*message = *stripped_message;
+
 	// TODO: get ID, src, dest from message (maybe compare with local src and dest)
 	// otp_get_id_from_message()
 
@@ -339,24 +403,6 @@ static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
 	if(used_key != NULL) {
 		// debug
 		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Found a matching Key with pad ID: %s\n", used_key->pad->id);
-
-		// Strip all the HTML crap (Jabber)
-		//Jabber: <html xmlns='http://jabber.org/protocol/xhtml-im'><body xmlns='http://www.w3.org/1999/xhtml'>hi</body></html>
-		// TODO: does that hurt?
-		// TODO: only strip, if ist is encryptet!!! Otherwise we loose links ect...
-		// TODO: only strip, if jabber
-		// To detect jabber or any protcol id:
-		// purple_account_get_protocol_id(account)
-
-		char *stripped_message = purple_markup_strip_html(*message);
-		char *tmp_message = (char *) malloc((strlen(stripped_message) + 1) * sizeof(char));
-		strcpy(tmp_message, stripped_message);
-
-		g_free(*message);
-		*message = tmp_message;
-
-		// debug
-		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Stripped Msg: %s\n", *message);
 
 		// TODO: check key options
 
@@ -413,7 +459,8 @@ void par_sending_im_msg(PurpleAccount *account, const char *receiver,
 		aaaa_encrypt(message);
 #endif
 
-		// TODO: add a paranoia header string
+		// add the paranoia header string
+		par_add_header(message);
 
 		// debug
 		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Enc.Msg: %s\n", *message);
