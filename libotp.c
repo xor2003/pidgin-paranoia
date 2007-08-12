@@ -21,6 +21,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
+
+#include <sys/types.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
 
 // starnge fix for a warning
 extern char *stpcpy (char *, const char *);
@@ -33,15 +39,22 @@ extern char *stpcpy (char *, const char *);
 #include "libotp.h"
 
 // Some defintions
-#define TRUE 1
-#define FALSE 0
+//#define TRUE 1
+//#define FALSE 0
 #define FILE_DELI " "		// Delimiter in the filename
 #define MSG_DELI "|"		// Delimiter in the encrypted message
+#define PAD_EMPTYCHAR '\0'	// Char that is used to mark the pad as used.
+#define PROTECTED_ENTROPY 100
+
+
+//#define HAVEFILE		// Do you have a file named pad->filename in your working dir? Used for struct *pad generation. (Works)
+//#define HAVEKEYFILE		// Do you have a file names pad->filename in your working dir? Used for en/decryption. (BROKEN)
 
 
 
 // ----------------- Lib One-Time Pad Functions (Internal)------------------
-int otp_getpad(int *len,char **pad);
+struct otp* otp_calc_entropy(struct otp* pad);
+
 
 /* Encodes message into the base64 form */
 int otp_b64enc(char **message, int *len) {
@@ -69,47 +82,73 @@ int otp_b64dec(char **message, int *len) {
 }
 
 /* Decrypt the message  */
-int otp_udecrypt(char **message) {
+int otp_udecrypt(char **message, struct otp* pad) {
 	int a = (strlen(*message)+1)* sizeof(char); 				/* get length of the used memory*/
 	int *len=&a;
-	char *b="x"; char **pad; pad=&b;
+	char *b="x"; char **key; key=&b;
 	otp_b64dec( message, len );				/* decode base64 */
-	int padok = otp_getpad( len ,pad);			/* get pad */
-	otp_xor( message, pad, *len);				/* xor */
-	//printf("udecrypt:\tMessage:\t%s\n",*message);
+
+#ifdef HAVEKEYFILE
+	otp_get_decryptkey_from_file(key,pad,*len);
+#else
+	char k[]="ziuzoiuoziuzoiuzoiuzoiuzoiuzoiewhrlkwqj4rjkfoidshfkjljvclkxvhfalkj dshfkjvcxnidsrur59380732847324098327409832740329847320948732 498324dsmfndsmfndsfkmdsfjdsfhldsjfhsadlkf  f kcvölcxkvjkc vdsvlädöclkäl";
+	char *vkey = (char *) malloc( (*len) * sizeof(char) );
+	memcpy(vkey,k,*len-1); //the pad could be anything... use memcyp
+	*key=vkey; 
+#endif
+
+
+	otp_xor( message, key, *len);				/* xor */
 	return TRUE;
 }
 
 
 /* Encrypt the message  */
-int otp_uencrypt(char **message) {
+int otp_uencrypt(char **message, struct otp* pad) {
 	int a = (strlen(*message)+1) * sizeof(char);				/* get length of the used memory*/
 	int *len=&a;
-	char *b="x"; char **pad; pad=&b;		
+	char *b=""; char **key; key=&b;		
 
-	int padok = otp_getpad( len ,pad);			/* get pad */
-	otp_xor( message , pad, *len);				/* xor */
+#ifdef HAVEKEYFILE
+	otp_get_encryptkey_from_file(key,pad,*len);
+
+#else
+
+	char k[]="ziuzoiuoziuzoiuzoiuzoiuzoiuzoiewhrlkwqj4rjkfoidshfkjljvclkxvhfalkj dshfkjvcxnidsrur59380732847324098327409832740329847320948732 498324dsmfndsmfndsfkmdsfjdsfhldsjfhsadlkf  f kcvölcxkvjkc vdsvlädöclkäl"; 
+	char *vkey = (char *) malloc( (*len) * sizeof(char) );
+	memcpy(vkey,k,*len-1); //the pad could be anything... use memcyp
+	*key=vkey;
+
+
+#endif
+
+	otp_xor( message , key, *len);				/* xor */
 	otp_b64enc( message , len );				/* encode base64 */
 	
 	return TRUE;
 }
-/* Creates a pointer to a char-array with the pad */
-int otp_getpad(int *len,char **pad) {
 
+/* Gets the key to encrypt from the keyfile */
+int otp_get_encryptkey_from_file(char **key , struct otp* pad, int len) {
+	char k[]="ziuzoiuoziuzoiuzoiuzoiuzoiuzoiewhrlkwqj4rjkfoidshfkjljvclkxvhfalkj dshfkjvcxnidsrur59380732847324098327409832740329847320948732 498324dsmfndsmfndsfkmdsfjdsfhldsjfhsadlkf  f kcvölcxkvjkc vdsvlädöclkäl"; 
+	char *vkey = (char *) malloc( (len) * sizeof(char) );
+	memcpy(vkey,k,len-1); //the pad could be anything... use memcyp
+	*key=vkey;
+	return TRUE;
 
-	char p[]="ziuzoiuoziuzoiuzoiuzoiuzoiuzoiewhrlkwqj4rjkfoidshfkjljvclkxvhfalkj dshfkjvcxnidsrur59380732847324098327409832740329847320948732 498324dsmfndsmfndsfkmdsfjdsfhldsjfhsadlkf  f kcvölcxkvjkc vdsvlädöclkäl"; 
- 
-	char *vpad = (char *) malloc( (*len) * sizeof(char) );
-	memcpy(vpad,p,*len-1); //the pad could be anything... use memcyp
-	*pad=vpad;
+}
 
-	//printf("pad:\t\tPad:\t\t%s\n",*pad);
-	//printf("pointerin2:\t\t\t%u\n",pad);
+/* Gets the key to decrypt from the keyfile */
+int otp_get_decryptkey_from_file(char **key , struct otp* pad, int len) {
+	char k[]="ziuzoiuoziuzoiuzoiuzoiuzoiuzoiewhrlkwqj4rjkfoidshfkjljvclkxvhfalkj dshfkjvcxnidsrur59380732847324098327409832740329847320948732 498324dsmfndsmfndsfkmdsfjdsfhldsjfhsadlkf  f kcvölcxkvjkc vdsvlädöclkäl"; 
+	char *vkey = (char *) malloc( (len) * sizeof(char) );
+	memcpy(vkey,k,len-1); //the pad could be anything... use memcyp
+	*key=vkey;
 	return TRUE;
 }
 
 
-/* xor message and pad  */
+/* XOR message and key. This function is the core of the libary. */
 int otp_xor(char **message,char **pad,int len) {
 	int i;
 	char *m,*p;
@@ -143,6 +182,77 @@ int otp_printint(char *m,int len) {
 	return TRUE;
 }
 
+/* Seeks the the starting position,filesize and entropy from the keyfile */
+struct otp* otp_seek_start(struct otp* pad){
+	//char* path = get_current_dir_name();
+	int fd; char *b=""; char **data; data=&b;
+
+	if (otp_open_keyfile(fd,data,pad)) {		/* Open the keyfile */
+	//otp_printint(*data+99990,100);
+
+		pad->position = otp_seek_pos(*data,pad->filesize);
+		pad=otp_calc_entropy(pad);
+
+		otp_close_keyfile(fd,data,pad);		/* Close the keyfile */
+	}
+
+	//printf("\t\tTest%u\n",h);
+	return pad;
+}
+
+/* Opens a keyfile with memory mapping */
+int otp_open_keyfile(int fd, char **data,struct otp* pad){
+
+	struct stat fstat;
+	if ((fd = open(pad->filename, O_RDONLY)) == -1) {
+		perror("open");
+		pad=NULL;
+		return FALSE;
+	}
+
+	if (stat(pad->filename, &fstat) == -1) {
+		perror("stat");
+		pad=NULL;
+		return FALSE;
+	}
+	pad->filesize=fstat.st_size;
+
+	if ((*data = mmap((caddr_t)0, pad->filesize, PROT_READ, MAP_SHARED, fd, 0)) == (caddr_t)(-1)) {
+		perror("mmap");
+		pad=NULL;
+		return FALSE;
+	}
+}
+
+/* Closes a keyfile with memory mapping */
+int otp_close_keyfile(int fd, char **data,struct otp* pad){
+	munmap(data, pad->filesize);
+	close(fd);
+}
+
+/* Seek the position where the pad can be used for encryption */
+int otp_seek_pos(char *data,int filesize){
+	int pos=0;
+	//otp_printint(data+pos,10);
+
+	while (  ( (data+pos)[0] == PAD_EMPTYCHAR) && (pos < filesize) ) {
+		pos++;
+	}
+	return pos;
+}
+
+/* Calculate the free entropy */
+struct otp* otp_calc_entropy(struct otp* pad){
+	int entropy = pad->filesize / 2 - pad->position - PROTECTED_ENTROPY;		/* Calculate the free entropy */
+
+	if (entropy < 0){
+		pad->entropy = 0;
+	} else {
+		pad->entropy = entropy;
+	}
+
+	return pad;
+}
 
 // ----------------- Public One-Time Pad Functions ------------
 
@@ -231,10 +341,16 @@ struct otp* otp_get_from_file(const char* input_filename){
 
 	// Development: Constant atm
 
-	pad->position = 99999;
+#ifdef HAVEFILE
 
-	pad->size = 1000000;
+	pad = otp_seek_start(pad);		//Try to open the keyfile and get position ans size
 
+#else
+	// Dummy-values for development
+	pad->position = 3000;
+	pad->filesize = 100000;
+	pad = otp_calc_entropy(pad);
+#endif
 
 	return pad;
 }
@@ -242,12 +358,18 @@ struct otp* otp_get_from_file(const char* input_filename){
 /* Creates the actual string of the encrypted message that is given to the application.
 returns 1 if it could encrypt the message 
 */
-unsigned int otp_encrypt(struct otp* mypad, char **message){
-	char *id_str = "42247524";			/* Our ID */
-	char *pos_str = "379879879";			/* Our position in the pad*/
+unsigned int otp_encrypt(struct otp* pad, char **message){
+
+	if(pad == NULL) {
+		return 0;
+	}
+				
+	char *pos_str;
+	asprintf (&pos_str, "%ld",pad->position);			/* Our position in the pad*/
+	char *id_str = pad->id;						/* Our ID */
 
 
-	int ret = otp_uencrypt(message);		/* Encrypt and base64 */
+	int ret = otp_uencrypt(message,pad);		/* Encrypt and base64 */
 
 	int size=(strlen(*message) + strlen(pos_str) + strlen(id_str) + 1 + 2) * sizeof(char);
 	//char *new_msg=(char* )g_strnfill((int) size,(gchar) "\0");   //Maybe a better way?
@@ -270,7 +392,13 @@ unsigned int otp_encrypt(struct otp* mypad, char **message){
 
 /* Strips the encrypted message and decrypts it.
 returns 1 if it could decrypt the message  */
-unsigned int otp_decrypt(struct otp* mypad, char **message){
+unsigned int otp_decrypt(struct otp* pad, char **message){
+
+	if(pad == NULL) {
+		return 0;
+	}
+
+
 	const char d[] = "|";
      	char *m,*mrun;
      	mrun = strdup (*message);
@@ -282,20 +410,19 @@ unsigned int otp_decrypt(struct otp* mypad, char **message){
 	if (m == NULL ) {
 		return 0;
 	}
-     	char *pos_str = strdup (m);	/* Our position in the pad */
+	pad->position = (unsigned int) g_ascii_strtoll ( strdup (m) ,NULL,10); 	/* Our position in the pad */
 	//printf("decrypt:\tpos:\t%s\n",pos_str);
      	m = strsep (&mrun, d);
 	if (m == NULL ) {
 		return 0;
 	}
-     	char *id_str = strdup (m);	/* Our ID */
+     	pad->id = strdup (m);		/* Our ID */
 
 	//printf("decrypt:\tID:\t%s\n",id_str);
      	m = strsep (&mrun, d);
 	if (m == NULL ) {
 		return 0;
 	}					/* Our Message */
-	//printf("decrypt:\tMessage:\t%s\n",m);
 
      	char *new_msg;				/* Create a new, smaller **message */
 	new_msg = (char *) malloc((strlen(m) + 1) * sizeof(char)); 
@@ -303,9 +430,17 @@ unsigned int otp_decrypt(struct otp* mypad, char **message){
 	free(*message);
 	*message = new_msg;
 	//printf("xor:\t\tMessage:\t%s\n",*message);
-
-	return 	otp_udecrypt(message);		/* Decrypt and debase64 */;
+	//printf("decrypt:\tMessage:\t%s\n",*message);
+	int ret = otp_udecrypt(message,pad);		/* Decrypt and debase64 */;
+	//printf("decrypt:\tMessage:\t%s\n",*message);
+	return ret;
 }
+
+
+
+
+
+
 
 
 // ----------------- TODO: REMOVE ME ------------------
