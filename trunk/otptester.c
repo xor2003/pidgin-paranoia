@@ -16,6 +16,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+//### gcc `pkg-config --cflags --libs glib-2.0` o.c && ./a.out 
+
 // GNOMElib
 
 // GNUlibc stuff
@@ -34,14 +36,20 @@ int main(void) {
 	//int a=0; int *size=&a;
 	//*size=10;
 	//       "123456789012"
-	char m[]="123456789012"; // IMPORTANT: (pad has to be longer)
+
+
+	//char m[]="123456789012"; // IMPORTANT: (pad has to be longer)
+	char m[]="379879879|42247524|S1tGTlpfQldDWURIAA==";
 	//char m[]="sdanfnmadsbfmnbdsafnmbadsfmnbsadmfnbasdmfndasnbfm,sfnb,mnsadfm,nadbfmndsbaf,mnbasdfn";
 
+	/* Message creation */
 	char **message;
 	char *vmessage = (char *) malloc((strlen(m) + 1) * sizeof(char));
 	strcpy(vmessage, m);
 	message=&vmessage;
 	
+
+
 	//long int i=384242343;
 	//printf("tester:\t\tint:\t\t%ld\n",i);
 	//char *c=l64a(i);
@@ -49,6 +57,8 @@ int main(void) {
 	//long int x=a64l (c);
 	//printf("tester:\t\tint:\t\t%ld\n",x);
 
+
+	/* Pad Testing .... */
 	char filename[]="alice@jabber.org bob@jabber.org 34EF4588.pad";
 	struct otp* pad = otp_get_from_file(filename);
 	printf("Pad:filename:\t\t\t%s\n",pad->filename);
@@ -60,9 +70,12 @@ int main(void) {
 	printf("Pad:id::\t\t\t%s\n",pad->id);
 
 
+
 	printf("\n--------------------------------------\n\n");
 
 	printf("tester message:\t\t\tMessage:\t%s\n",*message);
+	/* otp_get_id_from_message tester */
+	printf("tester:\t\t\t\tID:\t\t%s\n", otp_get_id_from_message(message));
 	//otp_printint(*message,13);
 	//printf("tester:\t\tSize:\t\t%d\n",*size);
 	//otp_printint(*message,strlen(*message));
@@ -70,7 +83,7 @@ int main(void) {
 
 	//otp_uencrypt(message);
 	//otp_b64enc(message,size);
-	otp_encrypt(NULL,message);
+	//otp_encrypt(NULL,message);
 	//otp_printint(*message,13);
 
 	//printf("tester:\t\tSize:\t\t%d\n",*size);
@@ -78,11 +91,11 @@ int main(void) {
 
 	//otp_udecrypt(message);
 	//otp_b64dec(message,size);
-	otp_decrypt(NULL,message);
+	//otp_decrypt(NULL,message);
 	//otp_printint(*message,13);
 
 	//printf("tester:\t\tSize:\t\t%d\n",*size);
-	printf("tester decrypted:\t\tMessage:\t%s\n",*message);
+	//printf("tester decrypted:\t\tMessage:\t%s\n",*message);
 	//printint(*message);
 
 	printf("\n--------------------------------------\n\n");
