@@ -17,8 +17,6 @@
 */
 
 
-//### gcc `pkg-config --cflags --libs glib-2.0` base64test.c && ./a.out 
-
 // GNUlibc includes
 #include <stdlib.h>
 #include <stdio.h>
@@ -34,6 +32,14 @@ extern char *stpcpy (char *, const char *);
 // great stuff
 #include "libotp.h"
 
+// Some defintions
+#define TRUE 1
+#define FALSE 0
+#define FILE_DELI " "		// Delimiter in the filename
+#define MSG_DELI "|"		// Delimiter in the encrypted message
+
+
+
 // ----------------- Lib One-Time Pad Functions (Internal)------------------
 int otp_getpad(int *len,char **pad);
 
@@ -47,7 +53,7 @@ int otp_b64enc(char **message, int *len) {
 	free(*message);
 	*message = msg;
 	//printf("b64enc:\t\tMessage:\t%s\n",*message);
-	return 1;
+	return TRUE;
 }
 
 /* Decodes message from the base64 form */
@@ -59,7 +65,7 @@ int otp_b64dec(char **message, int *len) {
 	free(*message);
 	*message = msg;
 	//printf("b64dec:\t\tMessage:\t%s\n",*message);
-	return 1;
+	return TRUE;
 }
 
 /* Decrypt the message  */
@@ -71,7 +77,7 @@ int otp_udecrypt(char **message) {
 	int padok = otp_getpad( len ,pad);			/* get pad */
 	otp_xor( message, pad, *len);				/* xor */
 	//printf("udecrypt:\tMessage:\t%s\n",*message);
-	return 1;
+	return TRUE;
 }
 
 
@@ -85,7 +91,7 @@ int otp_uencrypt(char **message) {
 	otp_xor( message , pad, *len);				/* xor */
 	otp_b64enc( message , len );				/* encode base64 */
 	
-	return 1;
+	return TRUE;
 }
 /* Creates a pointer to a char-array with the pad */
 int otp_getpad(int *len,char **pad) {
@@ -99,7 +105,7 @@ int otp_getpad(int *len,char **pad) {
 
 	//printf("pad:\t\tPad:\t\t%s\n",*pad);
 	//printf("pointerin2:\t\t\t%u\n",pad);
-	return 1;
+	return TRUE;
 }
 
 
@@ -122,7 +128,7 @@ int otp_xor(char **message,char **pad,int len) {
 	//otp_printint(m,len);	
 	*message=m;
 
-	return 1;
+	return TRUE;
 }
 
 /* Helper function for debugging */
@@ -134,11 +140,40 @@ int otp_printint(char *m,int len) {
 		printf("%d ",m[i]);
 	}
 	printf("\n");
-	return 1;
+	return TRUE;
 }
 
 
 // ----------------- Public One-Time Pad Functions ------------
+
+/* extracts and returns the ID from a given encrypted message. Leaves the message constant. Returns NULL if it fails.*/
+char* otp_get_id_from_message(char **message){
+	const char d[] = MSG_DELI;
+     	char *m,*mrun;
+     	mrun = strdup (*message);
+	if (*message == NULL ) {
+		return NULL;
+	}
+     	m = strsep (&mrun, d);
+	if (m == NULL ) {
+		return NULL;
+	}
+	//printf("id:\tpos:\t%s\n",m);	/* Our position in the pad */
+     	m = strsep (&mrun, d);
+	if (m == NULL ) {
+		return NULL;
+	}
+     	char *id_str = strdup (m);	/* Our ID */
+
+	//printf("id:\tID:\t%s\n",m);
+     	m = strsep (&mrun, d);
+	if (m == NULL ) {
+		return NULL;
+	}					/* Our Message */
+	//printf("id:\tmessage:\t%s\n",m);
+
+	return id_str;				/* The ID only if the message was extracted as well.*/	
+}
 
 /* Creates an otp struct, returns NULL if the filename is incorrect,
    or if the file is missing */
@@ -152,7 +187,7 @@ struct otp* otp_get_from_file(const char* input_filename){
 	pad->filename = filename;
 
 
-	const char d[] = " ";		/* The delimiter */
+	const char d[] = FILE_DELI;		/* The delimiter */
      	char *c, *run;
      	run = strdup (filename);
 	if (filename == NULL ) {	/* empty filename */
@@ -247,7 +282,7 @@ unsigned int otp_decrypt(struct otp* mypad, char **message){
 	if (m == NULL ) {
 		return 0;
 	}
-     	char *pos_str = strdup (m);	/* Our position in the pad*/
+     	char *pos_str = strdup (m);	/* Our position in the pad */
 	//printf("decrypt:\tpos:\t%s\n",pos_str);
      	m = strsep (&mrun, d);
 	if (m == NULL ) {

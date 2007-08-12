@@ -71,6 +71,9 @@ unsigned int otp_generate_key_pair(char* alice, char* bob, char* filename_alice,
 */
 int otp_check_entropy(struct otp* mypad);
 
+/* extracts and returns the ID from a given encrypted message. Leaves the message constant. Returns NULL if it fails.*/
+char* otp_get_id_from_message(char **message);
+
 
 
 
