@@ -46,6 +46,7 @@ extern char *stpcpy (char *, const char *);
 #define PAD_EMPTYCHAR '\0'	// Char that is used to mark the pad as used.
 #define PROTECTED_ENTROPY 100
 
+#define STATICKEY "dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4"
 
 //#define HAVEFILE		// Do you have a file named pad->filename in your working dir? Used for struct *pad generation. (Works)
 //#define HAVEKEYFILE		// Do you have a file names pad->filename in your working dir? Used for en/decryption. (BROKEN)
@@ -91,7 +92,7 @@ int otp_udecrypt(char **message, struct otp* pad) {
 #ifdef HAVEKEYFILE
 	otp_get_decryptkey_from_file(key,pad,*len);
 #else
-	char k[]="ziuzoiuoziuzoiuzoiuzoiuzoiuzoiewhrlkwqj4rjkfoidshfkjljvclkxvhfalkj dshfkjvcxnidsrur59380732847324098327409832740329847320948732 498324dsmfndsmfndsfkmdsfjdsfhldsjfhsadlkf  f kcvölcxkvjkc vdsvlädöclkäl";
+	char k[]=STATICKEY;
 	char *vkey = (char *) malloc( (*len) * sizeof(char) );
 	memcpy(vkey,k,*len-1); //the pad could be anything... use memcyp
 	*key=vkey; 
@@ -114,7 +115,7 @@ int otp_uencrypt(char **message, struct otp* pad) {
 
 #else
 
-	char k[]="ziuzoiuoziuzoiuzoiuzoiuzoiuzoiewhrlkwqj4rjkfoidshfkjljvclkxvhfalkj dshfkjvcxnidsrur59380732847324098327409832740329847320948732 498324dsmfndsmfndsfkmdsfjdsfhldsjfhsadlkf  f kcvölcxkvjkc vdsvlädöclkäl"; 
+	char k[]=STATICKEY; 
 	char *vkey = (char *) malloc( (*len) * sizeof(char) );
 	memcpy(vkey,k,*len-1); //the pad could be anything... use memcyp
 	*key=vkey;
@@ -130,20 +131,20 @@ int otp_uencrypt(char **message, struct otp* pad) {
 
 /* Gets the key to encrypt from the keyfile */
 int otp_get_encryptkey_from_file(char **key , struct otp* pad, int len) {
-	char k[]="ziuzoiuoziuzoiuzoiuzoiuzoiuzoiewhrlkwqj4rjkfoidshfkjljvclkxvhfalkj dshfkjvcxnidsrur59380732847324098327409832740329847320948732 498324dsmfndsmfndsfkmdsfjdsfhldsjfhsadlkf  f kcvölcxkvjkc vdsvlädöclkäl"; 
-	char *vkey = (char *) malloc( (len) * sizeof(char) );
-	memcpy(vkey,k,len-1); //the pad could be anything... use memcyp
-	*key=vkey;
+	//char k[]=STATICKEY; 
+	//char *vkey = (char *) malloc( (len) * sizeof(char) );
+	//memcpy(vkey,k,len-1); //the pad could be anything... use memcyp
+	//*key=vkey;
 	return TRUE;
 
 }
 
 /* Gets the key to decrypt from the keyfile */
 int otp_get_decryptkey_from_file(char **key , struct otp* pad, int len) {
-	char k[]="ziuzoiuoziuzoiuzoiuzoiuzoiuzoiewhrlkwqj4rjkfoidshfkjljvclkxvhfalkj dshfkjvcxnidsrur59380732847324098327409832740329847320948732 498324dsmfndsmfndsfkmdsfjdsfhldsjfhsadlkf  f kcvölcxkvjkc vdsvlädöclkäl"; 
-	char *vkey = (char *) malloc( (len) * sizeof(char) );
-	memcpy(vkey,k,len-1); //the pad could be anything... use memcyp
-	*key=vkey;
+	//char k[]=STATICKEY; 
+	//char *vkey = (char *) malloc( (len) * sizeof(char) );
+	//memcpy(vkey,k,len-1); //the pad could be anything... use memcyp
+	//*key=vkey;
 	return TRUE;
 }
 
@@ -228,6 +229,7 @@ int otp_open_keyfile(int fd, char **data,struct otp* pad){
 int otp_close_keyfile(int fd, char **data,struct otp* pad){
 	munmap(data, pad->filesize);
 	close(fd);
+	return TRUE;
 }
 
 /* Seek the position where the pad can be used for encryption */
@@ -404,24 +406,24 @@ unsigned int otp_decrypt(struct otp* pad, char **message){
      	mrun = strdup (*message);
 	//printf("xor:\t\tMessage:\t%s\n",*message);
 	if (*message == NULL ) {
-		return 0;
+		return FALSE;
 	}
      	m = strsep (&mrun, d);
 	if (m == NULL ) {
-		return 0;
+		return FALSE;
 	}
 	pad->position = (unsigned int) g_ascii_strtoll ( strdup (m) ,NULL,10); 	/* Our position in the pad */
 	//printf("decrypt:\tpos:\t%s\n",pos_str);
      	m = strsep (&mrun, d);
 	if (m == NULL ) {
-		return 0;
+		return FALSE;
 	}
      	pad->id = strdup (m);		/* Our ID */
 
 	//printf("decrypt:\tID:\t%s\n",id_str);
      	m = strsep (&mrun, d);
 	if (m == NULL ) {
-		return 0;
+		return FALSE;
 	}					/* Our Message */
 
      	char *new_msg;				/* Create a new, smaller **message */
