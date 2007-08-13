@@ -48,6 +48,7 @@ extern char *stpncpy (char *restrict, const char *restrict, size_t);
 
 // ----------------- General Paranoia Stuff ------------------
 #define PARANOIA_HEADER "*** Encrypted with the Pidgin-Paranoia plugin: "
+#define PARANOIA_PATH "/.paranoia"
 
 /* adds the paranoia header */
 void par_add_header(char** message) {
@@ -58,7 +59,7 @@ void par_add_header(char** message) {
 
 	free(*message);
 	*message = new_msg;
-	printf("paranoia:\t\tHeader+Message:\t%s\n", *message);
+	//printf("paranoia:\t\tHeader+Message:\t%s\n", *message);
 	return;
 }
 
@@ -72,7 +73,7 @@ static gboolean par_remove_header(char** message) {
 
 			free(*message);
 			*message = new_msg;
-			printf("paranoia:\t\tMessage only:\t%s\n", *message);
+			//printf("paranoia:\t\tMessage only:\t%s\n", *message);
 			return TRUE;
 		}	
 	}
@@ -104,17 +105,21 @@ struct key* keylist = NULL;
 // ----------------- Test Functions (should be removed) --------------------------
 struct key* HELP_make_key(const char* filename) {
 
-	static struct key* key;
-   	key = (struct key *)malloc(sizeof(struct key));
-
 	// a test otp object
 	static struct otp* test_pad;
    	test_pad = otp_get_from_file(filename);
 
 	//a test option struct
 	static struct options* test_opt;
-   	test_opt = (struct options *)malloc(sizeof(struct options));
+   	test_opt = (struct options *) malloc(sizeof(struct options));
+	test_opt->asked = TRUE; // shoud be FALSE
+	test_opt->has_plugin = TRUE; // shoud be FALSE
+	test_opt->otp_enabled = FALSE;
+	test_opt->auto_enable = TRUE;
+	test_opt->no_entropy = FALSE;
 
+	static struct key* key;
+   	key = (struct key *) malloc(sizeof(struct key));
 	key->pad = test_pad;
 	key->opt = test_opt;
 	key->next = NULL;
@@ -198,7 +203,7 @@ static gboolean par_free_key_list() {
 static struct key* par_search_key(const char* src, const char* dest, const char* id) {
 
 	// TODO only for jabber?
-	// strip the jabber resource from src (/home etc.)
+	// strip the jabber resource from src (/home /mobile etc.)
 	const char d[] = "/";
 	char *src_copy, *token;
      
@@ -211,7 +216,7 @@ static struct key* par_search_key(const char* src, const char* dest, const char*
 		free(src_copy);
 	}
 
-	// strip the jabber resource from dest (/home etc.)
+	// strip the jabber resource from dest (/home /mobile etc.)
 	char *dest_copy;
      	token = NULL;
 
@@ -231,9 +236,18 @@ static struct key* par_search_key(const char* src, const char* dest, const char*
 
 	while(!(tmp_ptr == NULL)) {
 	// possible edless loop! make sure the last otp->next == NULL
-		if ((strcmp(tmp_ptr->pad->src, src) == 0) && (strcmp(tmp_ptr->pad->dest, dest) == 0)) {
-			// TODO: add ID check
-			return tmp_ptr;
+		if ((strcmp(tmp_ptr->pad->src, src) == 0) && (strcmp(tmp_ptr->pad->dest, dest) == 0) 
+			&& !tmp_ptr->opt->no_entropy) {
+			//  check ID too?
+			if (id == NULL) {
+				// takes the first matching key, any id
+				return tmp_ptr;
+			} else {
+				//takes the exact key
+				if (strcmp(tmp_ptr->pad->id, id) == 0) {
+					return tmp_ptr;
+				}
+			}
 		}
 		tmp_ptr = tmp_ptr->next;
 	}
@@ -244,7 +258,28 @@ static struct key* par_search_key(const char* src, const char* dest, const char*
 // lists all keys in the im window for a certain src/dest combination 
 static gboolean par_list_keys(const char* src, const char* dest) {
 
+	// TODO
 	return FALSE;
+}
+
+static gboolean par_ask_for_plugin(struct key* used_key) {
+
+	return TRUE;
+}
+
+static gboolean par_check_for_plugin_request(char** message_no_header) {
+
+	return TRUE;
+}
+
+static gboolean try_to_enable_enc(struct key* used_key) {
+
+	return TRUE;
+}
+
+static gboolean disable_enc(struct key* used_key) {
+
+	return TRUE;
 }
 
 // ----------------- Paranoia CLI ------------------
@@ -349,12 +384,12 @@ static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
                              char **message, PurpleConversation *conv,
                              PurpleMessageFlags *flags) {
 
-	// TODO: if an other plugin destroyed the message
-	//if ((message == NULL) || (*message == NULL)) {
-	//	return TRUE;
-	//}
+	// if an other plugin destroyed the message
+	if ((message == NULL) || (*message == NULL)) {
+		return TRUE;
+	}
 
-	// some vars
+	// my account name, alice@jabber.org
 	const char* my_acc_name = purple_account_get_username(account);
 
 	// debug
@@ -363,11 +398,9 @@ static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
 	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Rcv.Msg: %s\n", *message);
 
 	// --- Strip all the HTML crap (Jabber) ---
-	//Jabber: <html xmlns='http://jabber.org/protocol/xhtml-im'><body xmlns='http://www.w3.org/1999/xhtml'>hi</body></html>
 	// TODO: does that hurt?
-	// TODO: only strip, if ist is encryptet!!! Otherwise we loose links ect...
-	// TODO: only strip, if jabber
-	// To detect jabber or any protcol id:
+	// TODO: only strip, if jabber or msn or ???
+	// HELP: To detect the protcol id:
 	// purple_account_get_protocol_id(account)
 
 	const char *tmp_message = purple_markup_strip_html(*message);
@@ -380,12 +413,15 @@ static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
 	// debug
 	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Stripped Msg: %s\n", *stripped_message);
 
+	// TODO: disable encryption if active key is found and unencrypted message received
+
 	// --- checks for the Paranoia Header ---
 	// and removes it if found
 	if(!par_remove_header(stripped_message)) {
 
-		// free jabber strip!
+		// free the jabber strip!
 		g_free(*stripped_message);
+		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "This is not a paranoia message.\n");
 		return FALSE;
 	}
 
@@ -393,19 +429,29 @@ static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
 	g_free(*message);
 	*message = *stripped_message;
 
-	// TODO: get ID, src, dest from message (maybe compare with local src and dest)
-	// otp_get_id_from_message()
+	// get ID from message
+	char* recv_id = otp_get_id_from_message(message);
 
 	// search in Key list
-	struct key* used_key = NULL;
-	used_key = par_search_key(my_acc_name, *sender, NULL);
+	struct key* used_key = par_search_key(my_acc_name, *sender, recv_id);
 
 	// Key in key list?
 	if(used_key != NULL) {
 		// debug
 		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Found a matching Key with pad ID: %s\n", used_key->pad->id);
+		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "otp_enabled == %i\n", used_key->opt->otp_enabled);
 
-		// TODO: check key options
+		// encryption not enabled?
+		if (!used_key->opt->otp_enabled) {
+			//can I activate an encrypted conversation too?
+			if (used_key->opt->has_plugin && used_key->opt->auto_enable) {
+				used_key->opt->otp_enabled = TRUE;
+				purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "This conversation was already initialized! otp_enabled is now TRUE\n");
+			} else {
+				purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "He sends us an encrypted message, but has no plugin? strange!\n");
+				// TODO: enable it anyway?
+			}
+		}
 
 #ifdef REALOTP
 		// ENABLE LIBOTP
@@ -441,15 +487,21 @@ void par_sending_im_msg(PurpleAccount *account, const char *receiver,
 	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Orig Msg: %s\n", *message);
 
 	// search in Key list
-	struct key* used_key = NULL;
-	used_key = par_search_key(my_acc_name, receiver, NULL);
+	struct key* used_key = par_search_key(my_acc_name, receiver, NULL);
 
 	// Key in key list?
 	if(used_key != NULL) {
 		// debug
 		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Found a matching Key with pad ID: %s\n", used_key->pad->id);
+		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "otp_enabled == %i\n", used_key->opt->otp_enabled);
 
-		// TODO: check key options
+		// encryption enabled?
+		if (!used_key->opt->otp_enabled) {
+			//TODO: initialize an encrypted conversation. already asked?
+			purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "This conversation was not initialized! otp_enabled == FALSE. But we encrypt it anyway...(FIXME) \n");		
+			//return; DISABLED FOR TESTING ONLY
+		}
+
 		// TODO: check for remaining entropy
 
 #ifdef REALOTP
@@ -502,9 +554,12 @@ static gboolean plugin_load(PurplePlugin *plugin) {
 		PURPLE_MAJOR_VERSION, PURPLE_MINOR_VERSION, PURPLE_MICRO_VERSION, purple_core_get_version());
 
 	// set the global key folder
-	const gchar* global_otp_path = g_get_home_dir();
+	const gchar* home = g_get_home_dir();
+	char* global_otp_path = (char *) malloc((strlen(home) + strlen(PARANOIA_PATH) + 1) * sizeof(char));
+	strcpy(global_otp_path, (char*) home);
+	strcat(global_otp_path, PARANOIA_PATH);
 
-	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Key Path: %s\n", (char*) global_otp_path);
+	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Key Path: %s\n", global_otp_path);
 
 	// stuff I don't understand yet TODO: read doc!
 	void *conv_handle;
