@@ -19,6 +19,7 @@
 //### gcc `pkg-config --cflags --libs glib-2.0` o.c && ./a.out 
 
 // GNOMElib
+#include <glib.h>
 
 // GNUlibc stuff
 #include <string.h>
@@ -31,6 +32,7 @@
 // great stuff
 #include "libotp.h"
 
+#define PARANOIA_PATH "/.paranoia/"		// TODO: REMOVE
 
 int main(void) {
 	//int a=0; int *size=&a;
@@ -38,8 +40,9 @@ int main(void) {
 	//       "123456789012"
 
 
+
 	//char m[]="123456789012"; // IMPORTANT: (pad has to be longer)
-	char m[]="test";
+	char m[]="AAAA";
 	//char m[]="sdanfnmadsbfmnbdsafnmbadsfmnbsadmfnbasdmfndasnbfm,sfnb,mnsadfm,nadbfmndsbaf,mnbasdfn";
 
 	/* Message creation */
@@ -47,11 +50,18 @@ int main(void) {
 	char *vmessage = (char *) malloc((strlen(m) + 1) * sizeof(char));
 	strcpy(vmessage, m);
 	message=&vmessage;
+
+	// set the global key folder  TODO: REMOVE!
+	const gchar* home = g_get_home_dir();
+	char* path = (char *) malloc((strlen(home) + strlen(PARANOIA_PATH) + 1) * sizeof(char));
+	strcpy(path, (char*) home);
+	strcat(path, PARANOIA_PATH);
+
 	
 
 
 	//long int i=384242343;
-	//printf("tester:\t\tint:\t\t%ld\n",i);
+	//printf("tester:\t\%s\n",global_otp_path);
 	//char *c=l64a(i);
 	//printf("tester:\t\tint:\t\t%s\n",c);
 	//long int x=a64l (c);
@@ -59,17 +69,22 @@ int main(void) {
 
 
 	/* Pad Testing .... */
-	char filename[]="alice@jabber.org bob@jabber.org 34EF4588.pad";
-	struct otp* pad = otp_get_from_file(filename);
-	//printf("Pad:filename:\t\t\t%s\n",pad->filename);
-	//printf("Pad:Pos:\t\t\t%ld\n",pad->position);
-	//printf("Pad:entropy:\t\t\t%ld\n",pad->entropy);
+	//char filename[]="hello world txt.txt";
+	char filename[]="alice@jabber.org bob@jabber.org 22222222.entropy";
+	struct otp* pad = otp_get_from_file(path,filename);
+	if (pad == NULL) {
+		printf("Tester:File can not be opened!\n");
+	}else{
 
-	//printf("Pad:src:\t\t\t%s\n",pad->src);
-	//printf("Pad:dest:\t\t\t%s\n",pad->dest);
-	//printf("Pad:id:\t\t\t\t%s\n",pad->id);
-	//printf("Pad:filesize:\t\t\t%ld\n",pad->filesize);
+		printf("Pad:filename:\t\t\t%s\n",pad->filename);
+		printf("Pad:Pos:\t\t\t%ld\n",pad->position);
+		printf("Pad:entropy:\t\t\t%ld\n",pad->entropy);
 
+		printf("Pad:src:\t\t\t%s\n",pad->src);
+		printf("Pad:dest:\t\t\t%s\n",pad->dest);
+		printf("Pad:id:\t\t\t\t%s\n",pad->id);
+		printf("Pad:filesize:\t\t\t%ld\n",pad->filesize);
+	}
 
 
 	printf("\n--------------------------------------\n\n");
