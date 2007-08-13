@@ -42,9 +42,9 @@ struct otp* otp_seek_start(struct otp* mypad);
 char* global_otp_path;
 
 struct otp {
-	char* src; // for pidgin: 'account' like a jabberadr, icq#...
-	char* dest; // for pidgin: 'account' like a jabberadr, icq#...
-	char* id; // the unique random number of the key pair
+	char* src; // for pidgin: 'account' like alice@jabber.org
+	char* dest; // for pidgin: 'account' like bob@jabber.org
+	char* id; // 8 digits unique random number of the key pair (hex)
 	char* filename; // the filename defined in the libotp spec
 	unsigned int position; // start positon for the next encryption
 	unsigned int entropy; // the size (in bytes) of the entropy left for the sender

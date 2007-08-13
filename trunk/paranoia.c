@@ -81,9 +81,6 @@ static gboolean par_remove_header(char** message) {
 
 // ----------------- Paranoia Key Management ------------------
 
-// TODO: set global key folder
-// g_get_home_dir()
-
 // needs to be reseted for every chat session
 struct options {
 	gboolean asked; // already asked for plugin support?
@@ -132,53 +129,57 @@ static gboolean par_init_key_list() {
 	
 	// just a test TODO: read from files!
 	struct key* test_key1 = NULL;
-	test_key1 = HELP_make_key("simon.wenner@gmail.com simon.wenner@gmail.com AAAAAAAA.otp"); // nowic loop
+	test_key1 = HELP_make_key("simon.wenner@gmail.com simon.wenner@gmail.com 01010101.otp"); // nowic loop
 
 	keylist = test_key1;
 
 	struct key* test_key2 = NULL;
-	test_key2 = HELP_make_key("alexapfel@swissjabber.ch alexapfel@swissjabber.ch BBBBBBBB.otp"); //chri loop
+	test_key2 = HELP_make_key("alexapfel@swissjabber.ch alexapfel@swissjabber.ch 02020202.otp"); //chri loop
 	test_key1->next = test_key2;
 
 	struct key* test_key3 = NULL;
-	test_key3 = HELP_make_key("simon.wenner@gmail.com alexapfel@swissjabber.ch CCCCCCCC.otp");
+	test_key3 = HELP_make_key("simon.wenner@gmail.com alexapfel@swissjabber.ch 03030303.otp");
 	test_key2->next = test_key3;
 
 	struct key* test_key4 = NULL;
-	test_key4 = HELP_make_key("alexapfel@swissjabber.ch simon.wenner@gmail.com DDDDDDDD.otp");
+	test_key4 = HELP_make_key("alexapfel@swissjabber.ch simon.wenner@gmail.com 04040404.otp");
 	test_key3->next = test_key4;
 
 	struct key* test_key5 = NULL;
-	test_key5 = HELP_make_key("simon.wenner@gmail.com alexapfel@gmail.com EEEEEEEE.otp");
+	test_key5 = HELP_make_key("simon.wenner@gmail.com alexapfel@gmail.com 05050505.otp");
 	test_key4->next = test_key5;
 
 	struct key* test_key6 = NULL;
-	test_key6 = HELP_make_key("alexapfel@gmail.com simon.wenner@gmail.com FFFFFFFF.otp");
+	test_key6 = HELP_make_key("alexapfel@gmail.com simon.wenner@gmail.com 06060606.otp");
 	test_key5->next = test_key6;
 
 	struct key* test_key7 = NULL;
-	test_key7 = HELP_make_key("76239710 76239710 GGGGGGGG.otp"); //nowic loop
+	test_key7 = HELP_make_key("76239710 76239710 07070707.otp"); //nowic loop
 	test_key6->next = test_key7;
 
 	struct key* test_key8 = NULL;
-	test_key8 = HELP_make_key("112920906 112920906 HHHHHHHH.otp"); //chri loop
+	test_key8 = HELP_make_key("112920906 112920906 08080808.otp"); //chri loop
 	test_key7->next = test_key8;
 
 	struct key* test_key9 = NULL;
-	test_key9 = HELP_make_key("76239710 112920906 IIIIIIII.otp"); //nowic->chri
+	test_key9 = HELP_make_key("76239710 112920906 09090909.otp"); //nowic->chri
 	test_key8->next = test_key9;
 
 	struct key* test_key10 = NULL;
-	test_key10 = HELP_make_key("112920906 76239710 JJJJJJJJ.otp"); //chri->nowic
+	test_key10 = HELP_make_key("112920906 76239710 10101010.otp"); //chri->nowic
 	test_key9->next = test_key10;
 
 	struct key* test_key11 = NULL;
-	test_key11 = HELP_make_key("alexapfel@gmail.com alexapfel@swissjabber.ch KKKKKKKK.otp"); //chri->chri
+	test_key11 = HELP_make_key("alexapfel@gmail.com alexapfel@swissjabber.ch 11111111.otp"); //chri->chri
 	test_key10->next = test_key11;
 
 	struct key* test_key12 = NULL;
-	test_key12 = HELP_make_key("alexapfel@swissjabber.ch alexapfel@gmail.com LLLLLLLL.otp"); //chri->chri
+	test_key12 = HELP_make_key("alexapfel@swissjabber.ch alexapfel@gmail.com 12121212.otp"); //chri->chri
 	test_key11->next = test_key12;
+
+	struct key* test_key13 = NULL;
+	test_key13 = HELP_make_key("fredibraatsmaal@hotmail.com fredibraatsmaal@hotmail.com 13131313.otp"); //chri->chri
+	test_key12->next = test_key13;
 
 	// debug
 	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Key list generated! YEEHAAA!\n");
@@ -408,7 +409,7 @@ static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
 
 #ifdef REALOTP
 		// ENABLE LIBOTP
-		otp_decrypt(NULL, message);
+		otp_decrypt(used_key->pad, message);
 #else
 		// Test function
 		aaaa_decrypt(message);
@@ -453,7 +454,7 @@ void par_sending_im_msg(PurpleAccount *account, const char *receiver,
 
 #ifdef REALOTP
 		// ENABLE LIBOTP
-		otp_encrypt(NULL, message);
+		otp_encrypt(used_key->pad, message);
 #else
 		// Test function
 		aaaa_encrypt(message);
@@ -499,6 +500,11 @@ static gboolean plugin_load(PurplePlugin *plugin) {
 	purple_debug(PURPLE_DEBUG_INFO, OTP_ID,
 		"Compiled with Purple '%d.%d.%d', running with Purple '%s'.\n",
 		PURPLE_MAJOR_VERSION, PURPLE_MINOR_VERSION, PURPLE_MICRO_VERSION, purple_core_get_version());
+
+	// set the global key folder
+	const gchar* global_otp_path = g_get_home_dir();
+
+	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Key Path: %s\n", (char*) global_otp_path);
 
 	// stuff I don't understand yet TODO: read doc!
 	void *conv_handle;
