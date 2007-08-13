@@ -38,14 +38,12 @@ struct otp* otp_seek_start(struct otp* mypad);
 
 // ----------------- OTP Crypto Functions API ------------------
 
-// path to the otp key files
-char* global_otp_path;
 
 struct otp {
 	char* src; // for pidgin: 'account' like alice@jabber.org
 	char* dest; // for pidgin: 'account' like bob@jabber.org
 	char* id; // 8 digits unique random number of the key pair (hex)
-	char* filename; // the filename defined in the libotp spec
+	char* filename; // The full path and the filename defined in the libotp spec 
 	unsigned int position; // start positon for the next encryption
 	unsigned int entropy; // the size (in bytes) of the entropy left for the sender
 	unsigned int filesize; //The size of the file in bytes
@@ -60,7 +58,7 @@ unsigned int otp_encrypt(struct otp* mypad, char **message);
 unsigned int otp_decrypt(struct otp* mypad, char **message);
 
 /* creates an otp object with the data from a key file */
-struct otp* otp_get_from_file(const char* filename);
+struct otp* otp_get_from_file(const char* path, const char* filename);
 
 /* generates a new key pair (two files) with the name alice and bob 
    of 'size' bytes. */

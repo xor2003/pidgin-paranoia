@@ -27,6 +27,7 @@
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <time.h>
 
 // starnge fix for a warning
 extern char *stpcpy (char *, const char *);
@@ -44,12 +45,14 @@ extern char *stpcpy (char *, const char *);
 #define FILE_DELI " "		// Delimiter in the filename
 #define MSG_DELI "|"		// Delimiter in the encrypted message
 #define PAD_EMPTYCHAR '\0'	// Char that is used to mark the pad as used.
-#define PROTECTED_ENTROPY 100
+#define PROTECTED_ENTROPY 100	// The amount of entropy that is only used for "out of entropy" messages
+#define	KEYFILEEND "entropy"	// The keyfiles have to end with this string to be valid. This string has to be separated by ".".
+
+#define HAVEFILE		// Do you have a file named pad->filename in your working dir? Used for struct *pad generation. (Works)
+//#define HAVEKEYFILE		// Do you have a file names pad->filename in your working dir? Used for en/decryption. (BROKEN)
+
 
 #define STATICKEY "dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4"
-
-//#define HAVEFILE		// Do you have a file named pad->filename in your working dir? Used for struct *pad generation. (Works)
-//#define HAVEKEYFILE		// Do you have a file names pad->filename in your working dir? Used for en/decryption. (BROKEN)
 
 
 
@@ -108,22 +111,26 @@ int otp_udecrypt(char **message, struct otp* pad) {
 int otp_uencrypt(char **message, struct otp* pad) {
 	int a = (strlen(*message)+1) * sizeof(char);				/* get length of the used memory*/
 	int *len=&a;
-	char *b=""; char **key; key=&b;		
+	char *b=""; char **key; key=&b;
+						// FIXME: VOODOO!!
 
 #ifdef HAVEKEYFILE
-	otp_get_encryptkey_from_file(key,pad,*len);
-
+	if ( otp_get_encryptkey_from_file(key,pad,*len) == FALSE ) {
+		otp_printint(*key,*len);
+		//return FALSE;
+	}
 #else
 
 	char k[]=STATICKEY; 
 	char *vkey = (char *) malloc( (*len) * sizeof(char) );
 	memcpy(vkey,k,*len-1); //the pad could be anything... use memcyp
 	*key=vkey;
-
-
 #endif
 
+	//otp_printint(*message,*len);
+	//otp_printint(*key,*len);
 	otp_xor( message , key, *len);				/* xor */
+	//otp_printint(*message,*len);
 	otp_b64enc( message , len );				/* encode base64 */
 	
 	return TRUE;
@@ -131,10 +138,30 @@ int otp_uencrypt(char **message, struct otp* pad) {
 
 /* Gets the key to encrypt from the keyfile */
 int otp_get_encryptkey_from_file(char **key , struct otp* pad, int len) {
-	//char k[]=STATICKEY; 
-	//char *vkey = (char *) malloc( (len) * sizeof(char) );
-	//memcpy(vkey,k,len-1); //the pad could be anything... use memcyp
-	//*key=vkey;
+	int fd; char *b=""; char **data; data=&b;
+
+	if (otp_open_keyfile(fd,data,pad)) {		/* Open the keyfile */
+
+		char *vkey = (char *) malloc( (len) * sizeof(char) );
+		memcpy( vkey,*(data+pad->position * sizeof(char)) ,len-1); //the pad could be anything... use memcyp
+		*key=vkey;
+		//otp_printint(*key,len);
+		otp_printint(*key,len+20);
+
+		char* e = (char*) g_strnfill( (gsize) len-1, (gchar) PAD_EMPTYCHAR );		/* Invalidate the used key by writing \0 */
+
+		data[pad->position]=e;
+
+		otp_printint(data[pad->position],len+20);
+
+		msync(data, pad->filesize, MS_ASYNC);
+		usleep(100000);
+
+
+		otp_close_keyfile(fd,data,pad);		/* Close the keyfile */
+	}else{
+		return FALSE;
+	}
 	return TRUE;
 
 }
@@ -150,24 +177,24 @@ int otp_get_decryptkey_from_file(char **key , struct otp* pad, int len) {
 
 
 /* XOR message and key. This function is the core of the libary. */
-int otp_xor(char **message,char **pad,int len) {
+int otp_xor(char **message,char **key,int len) {
 	int i;
-	char *m,*p;
+	char *m,*k;
 
 	//printf("Warning: XOR disabled!!!!!!!!!!!!!!\n");
 	//return 1;			//Do no XOR
 	
 	m = *message;
-	p = *pad;
+	k = *key;
 	//otp_printint(m,len);
 	//otp_printint(p,len);
 	for (i = 0;i < (len-1);i++) {
 		//printf("%c\t%d\t%c\t%d\t%d\n",m[i],m[i],p[i],p[i],m[i]^p[i]); //debug
-		m[i]=m[i]^p[i];
+		m[i]=m[i]^k[i];
 	}
 	//otp_printint(m,len);	
 	*message=m;
-
+	free(*key);
 	return TRUE;
 }
 
@@ -195,6 +222,8 @@ struct otp* otp_seek_start(struct otp* pad){
 		pad=otp_calc_entropy(pad);
 
 		otp_close_keyfile(fd,data,pad);		/* Close the keyfile */
+	}else{
+		return NULL;
 	}
 
 	//printf("\t\tTest%u\n",h);
@@ -204,6 +233,8 @@ struct otp* otp_seek_start(struct otp* pad){
 /* Opens a keyfile with memory mapping */
 int otp_open_keyfile(int fd, char **data,struct otp* pad){
 
+
+	//printf("test:\t\%s\n",pad->filename);
 	struct stat fstat;
 	if ((fd = open(pad->filename, O_RDONLY)) == -1) {
 		perror("open");
@@ -218,7 +249,7 @@ int otp_open_keyfile(int fd, char **data,struct otp* pad){
 	}
 	pad->filesize=fstat.st_size;
 
-	if ((*data = mmap((caddr_t)0, pad->filesize, PROT_READ, MAP_SHARED, fd, 0)) == (caddr_t)(-1)) {
+	if ((*data = mmap((caddr_t)0, pad->filesize, PROT_READ && PROT_WRITE, MAP_SHARED, fd, 0)) == (caddr_t)(-1)) {
 		perror("mmap");
 		pad=NULL;
 		return FALSE;
@@ -237,7 +268,7 @@ int otp_seek_pos(char *data,int filesize){
 	int pos=0;
 	//otp_printint(data+pos,10);
 
-	while (  ( (data+pos)[0] == PAD_EMPTYCHAR) && (pos < filesize) ) {
+	while ( ( (data+pos)[0] == PAD_EMPTYCHAR) && (pos < filesize) ) {
 		pos++;
 	}
 	return pos;
@@ -289,19 +320,20 @@ char* otp_get_id_from_message(char **message){
 
 /* Creates an otp struct, returns NULL if the filename is incorrect,
    or if the file is missing */
-struct otp* otp_get_from_file(const char* input_filename){
+struct otp* otp_get_from_file(const char* path, const char* input_filename){
 	static struct otp* pad;
    	pad = (struct otp *) malloc(sizeof(struct otp));
 
 	char *filename;
-	filename = (char *) malloc((strlen(input_filename) + 1) * sizeof(char) );
-	strcpy(filename, input_filename);
+	filename = (char *) malloc((strlen(input_filename) + strlen(path) + 1) * sizeof(char) );
+	strcpy(filename, path);
+	strcat(filename, input_filename);
 	pad->filename = filename;
 
 
 	const char d[] = FILE_DELI;		/* The delimiter */
      	char *c, *run;
-     	run = strdup (filename);
+	run = strdup(input_filename);
 	if (filename == NULL ) {	/* empty filename */
 		return NULL;
 	}
@@ -316,6 +348,8 @@ struct otp* otp_get_from_file(const char* input_filename){
 	src = c; 
 	pad->src = src;
 
+	//printf("id:\tID:\t%s\n",pad->src);
+
 
      	c = strsep (&run, d);		/* Our dest i.e bob@yabber.org */
 	if (c == NULL ) {
@@ -328,7 +362,11 @@ struct otp* otp_get_from_file(const char* input_filename){
 
 
      	c = strsep (&run, d);		/* Our ID */
-     	char *x,*xrun;
+     	char *x,*xrun=c;
+
+	if (c == NULL ) {
+		return NULL;
+	}
      	xrun = strdup (c);
 	x = strsep (&xrun,".");
 	if (c == NULL ) {
@@ -338,6 +376,12 @@ struct otp* otp_get_from_file(const char* input_filename){
 	id = (char *) malloc((strlen(c) + 1) * sizeof(char) );
 	id = x;
 	pad->id = id;
+	if ( strcmp(xrun, KEYFILEEND) == TRUE ) {
+		return NULL;
+	}
+
+	free(run);
+	free(xrun);
 
 	// TODO: maybe check for ".otp" ?
 

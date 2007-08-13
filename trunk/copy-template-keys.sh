@@ -13,11 +13,11 @@ for s in $SRC; do
 	for d in $DST; do
             if [ $s = $d ]; then
 		#echo Source == Dest: I use the self template
-		cp loop.entropy "$DIR $s $d 11111111.pad"
+		cp loop.entropy "$DIR $s $d 11111111.entropy"
 	    else
 		#echo Source <> Dest: I use the normal templates
-		cp template.entropy "$DIR$s $d 22222222.pad"
-		cp template-rev.entropy "$DIR$d $s 22222222.pad"
+		cp template.entropy "$DIR$s $d 22222222.entropy"
+		cp template-rev.entropy "$DIR$d $s 22222222.entropy"
             fi
 	#echo $s $d
 	done
