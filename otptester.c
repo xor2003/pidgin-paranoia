@@ -74,7 +74,7 @@ int main(void) {
 	// /*
 	//char filename[]=" hello world.txt";
 	//char filename[]="aa aa aa";
-	char filename[]="alexapfel@gmail.com alexapfel@gmail.com 11111111.entropy";
+	char filename[]="simon.wenner@gmail.com alexapfel@swissjabber.ch 03030303.entrop";
 	struct otp* pad = otp_get_from_file(path,filename);
 	if (pad == NULL) {
 		printf("Tester:File can not be opened!\n");
@@ -88,18 +88,48 @@ int main(void) {
 		printf("Pad:dest:\t\t\t%s\n",pad->dest);
 		printf("Pad:id:\t\t\t\t%s\n",pad->id);
 		printf("Pad:filesize:\t\t\t%ld\n",pad->filesize);
+
+		//printf("\n--------------------------------------\n\n");
+		//printf("tester encrypted:\t\tMessage:\t%s\n",*message);
+		otp_encrypt(pad,message);
+		//printf("tester encrypted:\t\tMessage:\t%s\n",*message);
+		otp_decrypt(pad,message);
+		printf("tester encrypted:\t\tMessage:\t%s\n",*message);
+		//printf("\n--------------------------------------\n\n");
+		otp_destroy(pad);
 	}
-	printf("\n--------------------------------------\n\n");
-	printf("tester encrypted:\t\tMessage:\t%s\n",*message);
-	otp_encrypt(pad,message);
-	printf("tester encrypted:\t\tMessage:\t%s\n",*message);
-	otp_decrypt(pad,message);
-	printf("tester encrypted:\t\tMessage:\t%s\n",*message);
-	printf("\n--------------------------------------\n\n");
+	
+	
 	// */
 
 
-	otp_destroy(pad);
+
+
+	char filename2[]="simon.wenner@gmail.com alexapfel@swissjabber.ch 03030303.entropy";
+	struct otp* pad2 = otp_get_from_file(path,filename2);
+	if (pad2 == NULL) {
+		printf("Tester:File can not be opened!\n");
+	}else{
+
+		printf("Pad:filename:\t\t\t%s\n",pad2->filename);
+		printf("Pad:Pos:\t\t\t%ld\n",pad2->position);
+		printf("Pad:entropy:\t\t\t%ld\n",pad2->entropy);
+
+		printf("Pad:src:\t\t\t%s\n",pad2->src);
+		printf("Pad:dest:\t\t\t%s\n",pad2->dest);
+		printf("Pad:id:\t\t\t\t%s\n",pad2->id);
+		printf("Pad:filesize:\t\t\t%ld\n",pad2->filesize);
+		//printf("\n--------------------------------------\n\n");
+		//printf("tester encrypted:\t\tMessage:\t%s\n",*message);
+		otp_encrypt(pad2,message);
+		//printf("tester encrypted:\t\tMessage:\t%s\n",*message);
+		otp_decrypt(pad2,message);
+		printf("tester encrypted:\t\tMessage:\t%s\n",*message);
+		//printf("\n--------------------------------------\n\n");
+		otp_destroy(pad2);
+	}
+	// */
+
 
 
 	//printf("tester message:\t\t\tMessage:\t%s\n",*message);

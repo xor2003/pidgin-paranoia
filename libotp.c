@@ -56,7 +56,7 @@ extern char *stpcpy (char *, const char *);
 
 
 // ----------------- Lib One-Time Pad Functions (Internal)------------------
-struct otp* otp_calc_entropy(struct otp* pad);
+void otp_calc_entropy(struct otp* pad);
 
 
 
@@ -235,7 +235,7 @@ struct otp* otp_seek_start(struct otp* pad){
 	//otp_printint(*data+99990,100);
 
 		pad->position = otp_seek_pos(*data,pad->filesize);
-		pad=otp_calc_entropy(pad);
+		otp_calc_entropy(pad);
 
 		otp_close_keyfile(fd,data,pad);		/* Close the keyfile */
 	}else{
@@ -299,7 +299,7 @@ int otp_seek_pos(char *data,int filesize){
 
 
 /* Calculate the free entropy */
-struct otp* otp_calc_entropy(struct otp* pad){
+void otp_calc_entropy(struct otp* pad){
 	int entropy = pad->filesize / 2 - pad->position - PROTECTED_ENTROPY;		/* Calculate the free entropy */
 
 	if (entropy < 0){
@@ -307,8 +307,6 @@ struct otp* otp_calc_entropy(struct otp* pad){
 	} else {
 		pad->entropy = entropy;
 	}
-
-	return pad;
 }
 
 
@@ -360,6 +358,15 @@ struct otp* otp_get_from_file(const char* path, const char* input_filename){
 	static struct otp* pad;
    	pad = (struct otp *) malloc(sizeof(struct otp));
 
+	if (input_filename == NULL ) {	/* empty filename */
+		return NULL;
+	}
+
+	if (path == NULL ) {	/* empty path */
+		return NULL;
+	}
+
+
 	char *filename;
 	filename = (char *) malloc((strlen(input_filename) + strlen(path) + 1) * sizeof(char) );
 	strcpy(filename, path);
@@ -370,9 +377,6 @@ struct otp* otp_get_from_file(const char* path, const char* input_filename){
 	const char d[] = FILE_DELI;		/* The delimiter */
      	char *c, *run;
 	run = strdup(input_filename);
-	if (filename == NULL ) {	/* empty filename */
-		return NULL;
-	}
 
 
      	c = strsep (&run, d);		/* Our source i.e alice@yabber.org */
@@ -421,7 +425,7 @@ struct otp* otp_get_from_file(const char* path, const char* input_filename){
 		return NULL;
 	}
 
-	if ( strcmp(xrun, KEYFILEEND) == TRUE ) {
+	if ( strcmp(KEYFILEEND, xrun) == TRUE ) {
 		return NULL;
 	}
 
@@ -437,9 +441,9 @@ struct otp* otp_get_from_file(const char* path, const char* input_filename){
 #else
 	// Dummy-values for development
 	if (pad != NULL) {
-		pad->position = 3000;
+		pad->position = 10000;
 		pad->filesize = 100000;
-		pad = otp_calc_entropy(pad);
+		otp_calc_entropy(pad);
 	}
 #endif
 
