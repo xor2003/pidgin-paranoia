@@ -34,6 +34,8 @@
 
 #define PARANOIA_PATH "/.paranoia/"		// TODO: REMOVE
 
+#define STATICMSG "1234"
+
 int main(void) {
 	//int a=0; int *size=&a;
 	//*size=10;
@@ -42,7 +44,7 @@ int main(void) {
 
 
 	//char m[]="123456789012"; // IMPORTANT: (pad has to be longer)
-	char m[]="Test ޠޛޙޔފލބޔ";
+	char m[]= STATICMSG;
 	//char m[]="sdanfnmadsbfmnbdsafnmbadsfmnbsadmfnbasdmfndasnbfm,sfnb,mnsadfm,nadbfmndsbaf,mnbasdfn";
 
 	/* Message creation */
@@ -58,8 +60,8 @@ int main(void) {
 	strcat(path, PARANOIA_PATH);
 
 	
-	char * id=otp_get_id_from_message(message);
-	printf("tester encrypted:\t\tMessage:\t%s\n",id);
+	//char * id=otp_get_id_from_message(message);
+	//printf("tester encrypted:\t\tMessage:\t%s\n",id);
 
 	//long int i=384242343;
 	//printf("tester:\t\%s\n",global_otp_path);
@@ -74,12 +76,12 @@ int main(void) {
 	// /*
 	//char filename[]=" hello world.txt";
 	//char filename[]="aa aa aa";
-	char filename[]="simon.wenner@gmail.com alexapfel@swissjabber.ch 03030303.entrop";
+	char filename[]="alice@jabber.org bob@jabber.org 22222222.entropy";
 	struct otp* pad = otp_get_from_file(path,filename);
 	if (pad == NULL) {
 		printf("Tester:File can not be opened!\n");
 	}else{
-
+/*
 		printf("Pad:filename:\t\t\t%s\n",pad->filename);
 		printf("Pad:Pos:\t\t\t%ld\n",pad->position);
 		printf("Pad:entropy:\t\t\t%ld\n",pad->entropy);
@@ -89,28 +91,25 @@ int main(void) {
 		printf("Pad:id:\t\t\t\t%s\n",pad->id);
 		printf("Pad:filesize:\t\t\t%ld\n",pad->filesize);
 
+*/
 		//printf("\n--------------------------------------\n\n");
 		//printf("tester encrypted:\t\tMessage:\t%s\n",*message);
 		otp_encrypt(pad,message);
 		//printf("tester encrypted:\t\tMessage:\t%s\n",*message);
-		otp_decrypt(pad,message);
+		//otp_decrypt(pad,message);
 		printf("tester encrypted:\t\tMessage:\t%s\n",*message);
-		//printf("\n--------------------------------------\n\n");
+		printf("Pad:Pos:\t\t\t%ld\n",pad->position);
+		printf("Pad:entropy:\t\t\t%ld\n",pad->entropy);
 		otp_destroy(pad);
 	}
-	
-	
-	// */
 
 
-
-
-	char filename2[]="simon.wenner@gmail.com alexapfel@swissjabber.ch 03030303.entropy";
+	char filename2[]="bob@jabber.org alice@jabber.org 22222222.entropy";
 	struct otp* pad2 = otp_get_from_file(path,filename2);
 	if (pad2 == NULL) {
 		printf("Tester:File can not be opened!\n");
 	}else{
-
+/*
 		printf("Pad:filename:\t\t\t%s\n",pad2->filename);
 		printf("Pad:Pos:\t\t\t%ld\n",pad2->position);
 		printf("Pad:entropy:\t\t\t%ld\n",pad2->entropy);
@@ -119,16 +118,21 @@ int main(void) {
 		printf("Pad:dest:\t\t\t%s\n",pad2->dest);
 		printf("Pad:id:\t\t\t\t%s\n",pad2->id);
 		printf("Pad:filesize:\t\t\t%ld\n",pad2->filesize);
+*/
+
 		//printf("\n--------------------------------------\n\n");
 		//printf("tester encrypted:\t\tMessage:\t%s\n",*message);
-		otp_encrypt(pad2,message);
+		//otp_encrypt(pad2,message);
 		//printf("tester encrypted:\t\tMessage:\t%s\n",*message);
-		otp_decrypt(pad2,message);
-		printf("tester encrypted:\t\tMessage:\t%s\n",*message);
-		//printf("\n--------------------------------------\n\n");
+		otp_decrypt(pad,message);
+		printf("tester decrypted:\t\tMessage:\t%s\n",*message);
+		printf("Pad:Pos:\t\t\t%ld\n",pad->position);
+		printf("Pad:entropy:\t\t\t%ld\n",pad->entropy);
 		otp_destroy(pad2);
 	}
-	// */
+	
+	
+
 
 
 
