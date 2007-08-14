@@ -129,6 +129,7 @@ static struct key* par_create_key(const char* filename) {
    	test_pad = otp_get_from_file(global_otp_path, filename);
 
 	if(test_pad == NULL) {
+		//printf("paranoia:\t\tFAILED:\t%s\n", filename);
 		return NULL;
 	}
 
@@ -146,7 +147,6 @@ static struct key* par_create_key(const char* filename) {
 	key->pad = test_pad;
 	key->opt = test_opt;
 	key->next = NULL;
-
 	return key;
 }
 
@@ -209,22 +209,34 @@ static gboolean par_init_key_list() {
 
 	// just a test, no files needed
 	struct key* test_key1 = NULL;
+	struct key* working = NULL;
 	test_key1 = par_create_key("simon.wenner@gmail.com simon.wenner@gmail.com 01010101.otp"); // nowic loop
-
-	keylist = test_key1;
+	if(test_key1 != NULL) {
+		keylist = test_key1;
+		working = test_key1;
+	}
 
 	struct key* test_key2 = NULL;
 	test_key2 = par_create_key("alexapfel@swissjabber.ch alexapfel@swissjabber.ch 02020202.otp"); //chri loop
-	test_key1->next = test_key2;
+	if(test_key2 != NULL) {
+		working->next = test_key2;
+		working = test_key2;
+	}
 
 	struct key* test_key3 = NULL;
 	test_key3 = par_create_key("simon.wenner@gmail.com alexapfel@swissjabber.ch 03030303.otp");
-	test_key2->next = test_key3;
+	if(test_key3 != NULL) {
+		working->next = test_key3;
+		working = test_key3;
+	}
 
 	struct key* test_key4 = NULL;
 	test_key4 = par_create_key("alexapfel@swissjabber.ch simon.wenner@gmail.com 04040404.otp");
-	test_key3->next = test_key4;
-
+	if(test_key4 != NULL) {
+		working->next = test_key4;
+		working = test_key4;
+	}
+/*
 	struct key* test_key5 = NULL;
 	test_key5 = par_create_key("simon.wenner@gmail.com alexapfel@gmail.com 05050505.otp");
 	test_key4->next = test_key5;
@@ -259,7 +271,7 @@ static gboolean par_init_key_list() {
 
 	struct key* test_key13 = NULL;
 	test_key13 = par_create_key("fredibraatsmaal@hotmail.com fredibraatsmaal@hotmail.com 13131313.otp"); //chri->chri
-	test_key12->next = test_key13;
+	test_key12->next = test_key13; */
 
 #endif
 	// debug
@@ -670,6 +682,13 @@ static gboolean plugin_load(PurplePlugin *plugin) {
 		PURPLE_CALLBACK(par_sending_im_msg), NULL);
 	/* purple_signal_connect(conv_handle, "writing-im-msg", plugin,
 		PURPLE_CALLBACK(par_change_displayed_msg), NULL); */
+
+	/* purple_signal_connect(conv_handle, "conversation-created", plugin,
+               PURPLE_CALLBACK(PE_new_conv_cb), NULL);
+	purple_signal_connect(conv_handle, "conversation-updated", plugin,
+               PURPLE_CALLBACK(PE_updated_conv_cb), NULL);
+	purple_signal_connect(conv_handle, "deleting-conversation", plugin, 
+                       PURPLE_CALLBACK(PE_del_conv_cb), NULL); */
 
 
 	// register command(s)
