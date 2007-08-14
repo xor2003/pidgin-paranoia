@@ -46,9 +46,16 @@ extern char *stpncpy (char *restrict, const char *restrict, size_t);
 #include "paranoia_config.h"
 #endif
 
+// test
+#define HAVEFILE
+
 // ----------------- General Paranoia Stuff ------------------
 #define PARANOIA_HEADER "*** Encrypted with the Pidgin-Paranoia plugin: "
-#define PARANOIA_PATH "/.paranoia"
+#define PARANOIA_PATH "/.paranoia/"
+#define PARANOIA_STATUS " &lt;secure&gt; "
+#define SHOW_STATUS TRUE
+
+char* global_otp_path;
 
 /* adds the paranoia header */
 void par_add_header(char** message) {
@@ -80,6 +87,19 @@ static gboolean par_remove_header(char** message) {
 	return FALSE;
 }
 
+/* adds a string at the beginning of the message (if encrypted) */
+static gboolean par_add_status_str(char** message) {
+
+	char* new_msg = (char *) malloc((strlen(*message) + strlen(PARANOIA_STATUS) + 1) * sizeof(char));
+	strcpy(new_msg, PARANOIA_STATUS);
+	strcat(new_msg, *message);
+
+	free(*message);
+	*message = new_msg;
+	return TRUE;
+}
+
+
 // ----------------- Paranoia Key Management ------------------
 
 // needs to be reseted for every chat session
@@ -93,7 +113,7 @@ struct options {
 
 // paranoia key struct (a linked list)
 struct key {
-	struct otp* pad; // an otp struct
+	struct otp* pad; // -> libotp.h
 	struct options* opt; // key options
 	struct key* next;
 };
@@ -101,15 +121,18 @@ struct key {
 // paranoia keylist pointer
 struct key* keylist = NULL;
 
+// creates a key struct
+static struct key* par_create_key(const char* filename) {
 
-// ----------------- Test Functions (should be removed) --------------------------
-struct key* HELP_make_key(const char* filename) {
-
-	// a test otp object
+	// get otp object
 	static struct otp* test_pad;
-   	test_pad = otp_get_from_file(filename);
+   	test_pad = otp_get_from_file(global_otp_path, filename);
 
-	//a test option struct
+	if(test_pad == NULL) {
+		return NULL;
+	}
+
+	//default option struct
 	static struct options* test_opt;
    	test_opt = (struct options *) malloc(sizeof(struct options));
 	test_opt->asked = TRUE; // shoud be FALSE
@@ -127,67 +150,120 @@ struct key* HELP_make_key(const char* filename) {
 	return key;
 }
 
+// counts all keys in the list
+static int par_count_keys() {
+	int sum = 0;
+	struct key* tmp_ptr = keylist;
 
+	while(!(tmp_ptr == NULL)) {
+		// possible edless loop! make sure the last otp->next == NULL
+		sum++;
+		tmp_ptr = tmp_ptr->next;
+	}
+
+	return sum;
+}
 
 // loads all available keys from the global otp folder into the keylist
 static gboolean par_init_key_list() {
 	
-	// just a test TODO: read from files!
+#ifdef HAVEFILE
+
+	struct key* prev_key_ptr = NULL;
+	struct key* tmp_key = NULL;
+	GError* error = NULL;
+	GDir* directoryhandle = g_dir_open(global_otp_path, 0, &error);
+	const gchar* tmp_filename = g_dir_read_name(directoryhandle);
+	char* tmp_path = NULL;
+	
+	// Loop over global key dir
+	while(tmp_filename != NULL) {
+		if (error) {
+			g_printerr ("paranoia   g_dir_open(%s) failed - %s\n", (gchar*) global_otp_path, error->message);
+			g_error_free(error);
+		}
+
+		tmp_path = (char *) malloc((strlen(global_otp_path) + strlen(tmp_filename) + 1) * sizeof(char));
+		strcpy(tmp_path, global_otp_path);
+		strcat(tmp_path, tmp_filename);
+		
+		if(g_file_test(tmp_path, G_FILE_TEST_IS_REGULAR)) {
+			tmp_key = par_create_key(tmp_filename);
+			if(tmp_key == NULL) {
+				purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Could not add Filename: %s\n", tmp_filename);
+			} else {
+				purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Key added, Filename: %s\n", tmp_filename);
+				tmp_key->next = prev_key_ptr;
+				prev_key_ptr = tmp_key;
+			}
+
+		}
+		g_free(tmp_path);
+		tmp_filename = g_dir_read_name(directoryhandle);
+	}
+
+	g_dir_close(directoryhandle);
+	keylist = tmp_key;
+
+#else
+
+	// just a test, no files needed
 	struct key* test_key1 = NULL;
-	test_key1 = HELP_make_key("simon.wenner@gmail.com simon.wenner@gmail.com 01010101.otp"); // nowic loop
+	test_key1 = par_create_key("simon.wenner@gmail.com simon.wenner@gmail.com 01010101.otp"); // nowic loop
 
 	keylist = test_key1;
 
 	struct key* test_key2 = NULL;
-	test_key2 = HELP_make_key("alexapfel@swissjabber.ch alexapfel@swissjabber.ch 02020202.otp"); //chri loop
+	test_key2 = par_create_key("alexapfel@swissjabber.ch alexapfel@swissjabber.ch 02020202.otp"); //chri loop
 	test_key1->next = test_key2;
 
 	struct key* test_key3 = NULL;
-	test_key3 = HELP_make_key("simon.wenner@gmail.com alexapfel@swissjabber.ch 03030303.otp");
+	test_key3 = par_create_key("simon.wenner@gmail.com alexapfel@swissjabber.ch 03030303.otp");
 	test_key2->next = test_key3;
 
 	struct key* test_key4 = NULL;
-	test_key4 = HELP_make_key("alexapfel@swissjabber.ch simon.wenner@gmail.com 04040404.otp");
+	test_key4 = par_create_key("alexapfel@swissjabber.ch simon.wenner@gmail.com 04040404.otp");
 	test_key3->next = test_key4;
 
 	struct key* test_key5 = NULL;
-	test_key5 = HELP_make_key("simon.wenner@gmail.com alexapfel@gmail.com 05050505.otp");
+	test_key5 = par_create_key("simon.wenner@gmail.com alexapfel@gmail.com 05050505.otp");
 	test_key4->next = test_key5;
 
 	struct key* test_key6 = NULL;
-	test_key6 = HELP_make_key("alexapfel@gmail.com simon.wenner@gmail.com 06060606.otp");
+	test_key6 = par_create_key("alexapfel@gmail.com simon.wenner@gmail.com 06060606.otp");
 	test_key5->next = test_key6;
 
 	struct key* test_key7 = NULL;
-	test_key7 = HELP_make_key("76239710 76239710 07070707.otp"); //nowic loop
+	test_key7 = par_create_key("76239710 76239710 07070707.otp"); //nowic loop
 	test_key6->next = test_key7;
 
 	struct key* test_key8 = NULL;
-	test_key8 = HELP_make_key("112920906 112920906 08080808.otp"); //chri loop
+	test_key8 = par_create_key("112920906 112920906 08080808.otp"); //chri loop
 	test_key7->next = test_key8;
 
 	struct key* test_key9 = NULL;
-	test_key9 = HELP_make_key("76239710 112920906 09090909.otp"); //nowic->chri
+	test_key9 = par_create_key("76239710 112920906 09090909.otp"); //nowic->chri
 	test_key8->next = test_key9;
 
 	struct key* test_key10 = NULL;
-	test_key10 = HELP_make_key("112920906 76239710 10101010.otp"); //chri->nowic
+	test_key10 = par_create_key("112920906 76239710 10101010.otp"); //chri->nowic
 	test_key9->next = test_key10;
 
 	struct key* test_key11 = NULL;
-	test_key11 = HELP_make_key("alexapfel@gmail.com alexapfel@swissjabber.ch 11111111.otp"); //chri->chri
+	test_key11 = par_create_key("alexapfel@gmail.com alexapfel@swissjabber.ch 11111111.otp"); //chri->chri
 	test_key10->next = test_key11;
 
 	struct key* test_key12 = NULL;
-	test_key12 = HELP_make_key("alexapfel@swissjabber.ch alexapfel@gmail.com 12121212.otp"); //chri->chri
+	test_key12 = par_create_key("alexapfel@swissjabber.ch alexapfel@gmail.com 12121212.otp"); //chri->chri
 	test_key11->next = test_key12;
 
 	struct key* test_key13 = NULL;
-	test_key13 = HELP_make_key("fredibraatsmaal@hotmail.com fredibraatsmaal@hotmail.com 13131313.otp"); //chri->chri
+	test_key13 = par_create_key("fredibraatsmaal@hotmail.com fredibraatsmaal@hotmail.com 13131313.otp"); //chri->chri
 	test_key12->next = test_key13;
 
+#endif
 	// debug
-	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Key list generated! YEEHAAA!\n");
+	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Key list of %i keys generated!\n", par_count_keys());
 
 	return TRUE;
 }
@@ -475,7 +551,7 @@ static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
 
 
 /* ---- signal handler for "sending-im-msg" ---- */
-void par_sending_im_msg(PurpleAccount *account, const char *receiver,
+static void par_sending_im_msg(PurpleAccount *account, const char *receiver,
                              char **message) {
 
 	// some vars
@@ -531,13 +607,30 @@ void par_sending_im_msg(PurpleAccount *account, const char *receiver,
 
 
 /* ---- signal handler for "writing-im-msg", needed to change the displayed msg ---- */
-static gboolean par_change_displayed_msg(PurpleAccount *account, const char *who,
-                           char **message, PurpleConversation *conv,
-                           PurpleMessageFlags flags) {
+//static gboolean addnewline_msg_cb(PurpleAccount *account, char *sender, char **message,
+//					 PurpleConversation *conv, int *flags, void *data)
 
-	// TODO: add "<secure>" to the message
 
-	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "WritMsg: %s\n", *message);
+static gboolean par_change_displayed_msg(PurpleAccount *account, const char *sender, char **message, 
+		PurpleConversation *conv, PurpleMessageFlags flags) {
+
+// FIXME: not used yet! -> sender bug
+
+	if(SHOW_STATUS) {
+		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "WHO? (FIXME): %s\n", sender);
+		// search in Key list
+		/*struct key* used_key = par_search_key(purple_account_get_username(account), sender, NULL);
+
+		// Key in key list and otp_enabled?
+		if(used_key != NULL) {
+			if (used_key->opt->otp_enabled) {
+				// Add the status string
+				par_add_status_str(message);
+			}
+		}*/
+	}
+
+	//purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "WritMsg: %s\n", *message);
 	// debug
 	//purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "wrote msg, here we could do usefull stuff.\n");
 
@@ -555,8 +648,8 @@ static gboolean plugin_load(PurplePlugin *plugin) {
 
 	// set the global key folder
 	const gchar* home = g_get_home_dir();
-	char* global_otp_path = (char *) malloc((strlen(home) + strlen(PARANOIA_PATH) + 1) * sizeof(char));
-	strcpy(global_otp_path, (char*) home);
+	global_otp_path = (char *) malloc((strlen(home) + strlen(PARANOIA_PATH) + 1) * sizeof(char));
+	strcpy(global_otp_path, (char *) home);
 	strcat(global_otp_path, PARANOIA_PATH);
 
 	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Key Path: %s\n", global_otp_path);
@@ -578,6 +671,7 @@ static gboolean plugin_load(PurplePlugin *plugin) {
 	/* purple_signal_connect(conv_handle, "writing-im-msg", plugin,
 		PURPLE_CALLBACK(par_change_displayed_msg), NULL); */
 
+
 	// register command(s)
 	// "/otp" + a string of args
 	otp_cmd_id = purple_cmd_register ("otp", "s", PURPLE_CMD_P_DEFAULT,
@@ -585,7 +679,7 @@ static gboolean plugin_load(PurplePlugin *plugin) {
 		"otp &lt;command&gt: type /otp to get help", NULL);
 
 	// debug
-	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "done loading\n");
+	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Done loading.\n");
 	
 	return TRUE;
 }
@@ -602,7 +696,7 @@ gboolean plugin_unload(PurplePlugin *plugin) {
 	// TODO: free key list
 
 	// debug
-	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "done unloading\n");
+	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Done unloading.\n");
 
 	return TRUE;
 }

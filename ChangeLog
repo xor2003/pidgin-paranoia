@@ -9,6 +9,7 @@ Simon Wenner:
  * Session and key management documentation
  * Paranoia: CLI functionality
  * Paranoia: Key list search function
+ * Paranoia: Key list is generated from files
 
 Christan Wäckerlin:
  * One-time pad documentation
