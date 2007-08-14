@@ -337,7 +337,6 @@ struct otp* otp_get_from_file(const char* path, const char* input_filename){
 	if (filename == NULL ) {	/* empty filename */
 		return NULL;
 	}
-	printf("id:\tID:\t%s\n",run);
 
 
      	c = strsep (&run, d);		/* Our source i.e alice@yabber.org */
@@ -350,7 +349,6 @@ struct otp* otp_get_from_file(const char* path, const char* input_filename){
 	pad->src = src;
 
 
-
      	c = strsep (&run, d);		/* Our dest i.e bob@yabber.org */
 	if (c == NULL ) {
 		return NULL;
@@ -360,7 +358,6 @@ struct otp* otp_get_from_file(const char* path, const char* input_filename){
 	dest = c; 
 	pad->dest = dest;
 
-
      	c = strsep (&run, d);		/* Our ID */
      	char *x,*xrun=c;
 
@@ -368,17 +365,30 @@ struct otp* otp_get_from_file(const char* path, const char* input_filename){
 		return NULL;
 	}
      	xrun = strdup (c);
-	x = strsep (&xrun,".");
+
 	if (c == NULL ) {
 		return NULL;
 	}
+
+	x = strsep (&xrun,".");
+
+	if (x == NULL ) {
+		return NULL;
+	}
+
 	char *id;
 	id = (char *) malloc((strlen(c) + 1) * sizeof(char) );
 	id = x;
 	pad->id = id;
+
+	if (xrun == NULL ) {
+		return NULL;
+	}
+
 	if ( strcmp(xrun, KEYFILEEND) == TRUE ) {
 		return NULL;
 	}
+
 
 	//free(run);
 	//free(xrun);
