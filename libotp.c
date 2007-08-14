@@ -337,6 +337,7 @@ struct otp* otp_get_from_file(const char* path, const char* input_filename){
 	if (filename == NULL ) {	/* empty filename */
 		return NULL;
 	}
+	printf("id:\tID:\t%s\n",run);
 
 
      	c = strsep (&run, d);		/* Our source i.e alice@yabber.org */
@@ -348,7 +349,6 @@ struct otp* otp_get_from_file(const char* path, const char* input_filename){
 	src = c; 
 	pad->src = src;
 
-	//printf("id:\tID:\t%s\n",pad->src);
 
 
      	c = strsep (&run, d);		/* Our dest i.e bob@yabber.org */
@@ -380,12 +380,9 @@ struct otp* otp_get_from_file(const char* path, const char* input_filename){
 		return NULL;
 	}
 
-	free(run);
-	free(xrun);
+	//free(run);
+	//free(xrun);
 
-	// TODO: maybe check for ".otp" ?
-
-	// Development: Constant atm
 
 #ifdef HAVEFILE
 
