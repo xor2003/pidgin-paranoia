@@ -70,7 +70,8 @@ int main(void) {
 
 	/* Pad Testing .... */
 	//char filename[]=" hello world.txt";
-	char filename[]="fredibraatsmaal@hotmail.com fredibraatsmaal@hotmail.com 11111111.entropy";
+	char filename[]="aa aa aa";
+	//char filename[]="alexapfkel@swissjabber.ch alexapfel@swissjabber.ch 11111111.entropy";
 	struct otp* pad = otp_get_from_file(path,filename);
 	if (pad == NULL) {
 		printf("Tester:File can not be opened!\n");
