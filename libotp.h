@@ -60,6 +60,9 @@ unsigned int otp_decrypt(struct otp* mypad, char **message);
 /* creates an otp object with the data from a key file */
 struct otp* otp_get_from_file(const char* path, const char* filename);
 
+/* destroys an otp object */
+void otp_destroy(struct otp* mypad);
+
 /* generates a new key pair (two files) with the name alice and bob 
    of 'size' bytes. */
 unsigned int otp_generate_key_pair(char* alice, char* bob, char* filename_alice, char* filename_bob, unsigned int size);
