@@ -42,7 +42,7 @@ int main(void) {
 
 
 	//char m[]="123456789012"; // IMPORTANT: (pad has to be longer)
-	char m[]="AAAA";
+	char m[]="Test ޠޛޙޔފލބޔ";
 	//char m[]="sdanfnmadsbfmnbdsafnmbadsfmnbsadmfnbasdmfndasnbfm,sfnb,mnsadfm,nadbfmndsbaf,mnbasdfn";
 
 	/* Message creation */
@@ -58,7 +58,8 @@ int main(void) {
 	strcat(path, PARANOIA_PATH);
 
 	
-
+	char * id=otp_get_id_from_message(message);
+	printf("tester encrypted:\t\tMessage:\t%s\n",id);
 
 	//long int i=384242343;
 	//printf("tester:\t\%s\n",global_otp_path);
@@ -69,9 +70,11 @@ int main(void) {
 
 
 	/* Pad Testing .... */
+
+	// /*
 	//char filename[]=" hello world.txt";
-	char filename[]="aa aa aa";
-	//char filename[]="alexapfkel@swissjabber.ch alexapfel@swissjabber.ch 11111111.entropy";
+	//char filename[]="aa aa aa";
+	char filename[]="alexapfel@gmail.com alexapfel@gmail.com 11111111.entropy";
 	struct otp* pad = otp_get_from_file(path,filename);
 	if (pad == NULL) {
 		printf("Tester:File can not be opened!\n");
@@ -86,9 +89,18 @@ int main(void) {
 		printf("Pad:id:\t\t\t\t%s\n",pad->id);
 		printf("Pad:filesize:\t\t\t%ld\n",pad->filesize);
 	}
-
-
 	printf("\n--------------------------------------\n\n");
+	printf("tester encrypted:\t\tMessage:\t%s\n",*message);
+	otp_encrypt(pad,message);
+	printf("tester encrypted:\t\tMessage:\t%s\n",*message);
+	otp_decrypt(pad,message);
+	printf("tester encrypted:\t\tMessage:\t%s\n",*message);
+	printf("\n--------------------------------------\n\n");
+	// */
+
+
+	otp_destroy(pad);
+
 
 	//printf("tester message:\t\t\tMessage:\t%s\n",*message);
 
@@ -102,22 +114,18 @@ int main(void) {
 
 	//otp_uencrypt(message);
 	//otp_b64enc(message,size);
-	otp_encrypt(pad,message);
 	//otp_printint(*message,13);
 
 	//printf("tester:\t\tSize:\t\t%d\n",*size);
-	printf("tester encrypted:\t\tMessage:\t%s\n",*message);
 
 	//otp_udecrypt(message);
 	//otp_b64dec(message,size);
-	otp_decrypt(pad,message);
 	//otp_printint(*message,13);
 
 	//printf("tester:\t\tSize:\t\t%d\n",*size);
-	printf("tester decrypted:\t\tMessage:\t%s\n",*message);
+	//printf("tester decrypted:\t\tMessage:\t%s\n",*message);
 	//printint(*message);
 
-	printf("\n--------------------------------------\n\n");
 
 	//printf("Pad:filename:\t\t\t%s\n",pad->filename);
 	//printf("Pad:Pos:\t\t\t%ld\n",pad->position);

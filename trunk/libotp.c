@@ -40,13 +40,12 @@ extern char *stpcpy (char *, const char *);
 #include "libotp.h"
 
 // Some defintions
-//#define TRUE 1
-//#define FALSE 0
 #define FILE_DELI " "		// Delimiter in the filename
 #define MSG_DELI "|"		// Delimiter in the encrypted message
 #define PAD_EMPTYCHAR '\0'	// Char that is used to mark the pad as used.
 #define PROTECTED_ENTROPY 100	// The amount of entropy that is only used for "out of entropy" messages
 #define	KEYFILEEND "entropy"	// The keyfiles have to end with this string to be valid. This string has to be separated by ".".
+#define ID_LENGTH 8		// Size of the ID-string
 
 #define HAVEFILE		// Do you have a file named pad->filename in your working dir? Used for struct *pad generation. (Works)
 //#define HAVEKEYFILE		// Do you have a file names pad->filename in your working dir? Used for en/decryption. (BROKEN)
@@ -58,6 +57,7 @@ extern char *stpcpy (char *, const char *);
 
 // ----------------- Lib One-Time Pad Functions (Internal)------------------
 struct otp* otp_calc_entropy(struct otp* pad);
+
 
 
 /* Encodes message into the base64 form */
@@ -73,6 +73,8 @@ int otp_b64enc(char **message, int *len) {
 	return TRUE;
 }
 
+
+
 /* Decodes message from the base64 form */
 int otp_b64dec(char **message, int *len) {
 
@@ -84,6 +86,8 @@ int otp_b64dec(char **message, int *len) {
 	//printf("b64dec:\t\tMessage:\t%s\n",*message);
 	return TRUE;
 }
+
+
 
 /* Decrypt the message  */
 int otp_udecrypt(char **message, struct otp* pad) {
@@ -105,6 +109,8 @@ int otp_udecrypt(char **message, struct otp* pad) {
 	otp_xor( message, key, *len);				/* xor */
 	return TRUE;
 }
+
+
 
 
 /* Encrypt the message  */
@@ -136,6 +142,8 @@ int otp_uencrypt(char **message, struct otp* pad) {
 	return TRUE;
 }
 
+
+
 /* Gets the key to encrypt from the keyfile */
 int otp_get_encryptkey_from_file(char **key , struct otp* pad, int len) {
 	int fd; char *b=""; char **data; data=&b;
@@ -166,6 +174,8 @@ int otp_get_encryptkey_from_file(char **key , struct otp* pad, int len) {
 
 }
 
+
+
 /* Gets the key to decrypt from the keyfile */
 int otp_get_decryptkey_from_file(char **key , struct otp* pad, int len) {
 	//char k[]=STATICKEY; 
@@ -174,6 +184,8 @@ int otp_get_decryptkey_from_file(char **key , struct otp* pad, int len) {
 	//*key=vkey;
 	return TRUE;
 }
+
+
 
 
 /* XOR message and key. This function is the core of the libary. */
@@ -198,6 +210,8 @@ int otp_xor(char **message,char **key,int len) {
 	return TRUE;
 }
 
+
+
 /* Helper function for debugging */
 int otp_printint(char *m,int len) {
 	//int len=strlen(m);
@@ -209,6 +223,8 @@ int otp_printint(char *m,int len) {
 	printf("\n");
 	return TRUE;
 }
+
+
 
 /* Seeks the the starting position,filesize and entropy from the keyfile */
 struct otp* otp_seek_start(struct otp* pad){
@@ -229,6 +245,8 @@ struct otp* otp_seek_start(struct otp* pad){
 	//printf("\t\tTest%u\n",h);
 	return pad;
 }
+
+
 
 /* Opens a keyfile with memory mapping */
 int otp_open_keyfile(int fd, char **data,struct otp* pad){
@@ -256,12 +274,16 @@ int otp_open_keyfile(int fd, char **data,struct otp* pad){
 	}
 }
 
+
+
 /* Closes a keyfile with memory mapping */
 int otp_close_keyfile(int fd, char **data,struct otp* pad){
 	munmap(data, pad->filesize);
 	close(fd);
 	return TRUE;
 }
+
+
 
 /* Seek the position where the pad can be used for encryption */
 int otp_seek_pos(char *data,int filesize){
@@ -273,6 +295,8 @@ int otp_seek_pos(char *data,int filesize){
 	}
 	return pos;
 }
+
+
 
 /* Calculate the free entropy */
 struct otp* otp_calc_entropy(struct otp* pad){
@@ -286,6 +310,19 @@ struct otp* otp_calc_entropy(struct otp* pad){
 
 	return pad;
 }
+
+
+/* Check if the ID is valid */
+char* otp_check_id(char* id_str){
+	if ( strlen(id_str) == ID_LENGTH * sizeof(char)) {
+		return id_str;				/* The ID only if the message was extracted as well.*/	
+	}else{
+		return NULL;
+	}
+}
+
+
+
 
 // ----------------- Public One-Time Pad Functions ------------
 
@@ -313,9 +350,8 @@ char* otp_get_id_from_message(char **message){
 	if (m == NULL ) {
 		return NULL;
 	}					/* Our Message */
-	//printf("id:\tmessage:\t%s\n",m);
+	return otp_check_id(id_str);
 
-	return id_str;				/* The ID only if the message was extracted as well.*/	
 }
 
 /* Creates an otp struct, returns NULL if the filename is incorrect,
@@ -389,23 +425,39 @@ struct otp* otp_get_from_file(const char* path, const char* input_filename){
 		return NULL;
 	}
 
+	if ( otp_check_id(pad->id) == NULL ) {
+		return NULL;
+	}
 
-	//free(run);
-	//free(xrun);
 
 
 #ifdef HAVEFILE
 
 	pad = otp_seek_start(pad);		//Try to open the keyfile and get position ans size
-
 #else
 	// Dummy-values for development
-	pad->position = 3000;
-	pad->filesize = 100000;
-	pad = otp_calc_entropy(pad);
+	if (pad != NULL) {
+		pad->position = 3000;
+		pad->filesize = 100000;
+		pad = otp_calc_entropy(pad);
+	}
 #endif
 
 	return pad;
+}
+/* destroys an otp object */
+void otp_destroy(struct otp* pad) {
+	if (pad != NULL) {
+		if (pad->src != NULL)
+			free(pad->src);
+		if (pad->dest != NULL)
+			free(pad->dest);
+		if (pad->id != NULL)
+			free(pad->id);
+		if (pad->filename != NULL)
+			free(pad->filename);
+		free(pad);
+	}
 }
 
 /* Creates the actual string of the encrypted message that is given to the application.
@@ -453,8 +505,9 @@ unsigned int otp_decrypt(struct otp* pad, char **message){
 
 
 	const char d[] = "|";
-     	char *m,*mrun;
-     	mrun = strdup (*message);
+     	char *m;
+	char *mrun=*message;
+
 	//printf("xor:\t\tMessage:\t%s\n",*message);
 	if (*message == NULL ) {
 		return FALSE;
