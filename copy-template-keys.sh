@@ -30,7 +30,7 @@ DIR="$HOME/.paranoia/"
 mkdir $DIR
 
 
-SRC="simon.wenner@gmail.com alexapfel@gmail.com alexapfel@swissjabber.ch nowic@swissjabber.ch"
+SRC="simon.wenner@gmail.com alexapfel@gmail.com alexapfel@swissjabber.ch"
 DST=$SRC
 
 copyfiles

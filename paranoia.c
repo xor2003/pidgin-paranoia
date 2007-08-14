@@ -99,7 +99,6 @@ static gboolean par_add_status_str(char** message) {
 	return TRUE;
 }
 
-
 // ----------------- Paranoia Key Management ------------------
 
 // needs to be reseted for every chat session
@@ -343,12 +342,7 @@ static struct key* par_search_key(const char* src, const char* dest, const char*
 	return NULL;
 }
 
-// lists all keys in the im window for a certain src/dest combination 
-static gboolean par_list_keys(const char* src, const char* dest) {
-
-	// TODO
-	return FALSE;
-}
+// ----------------- Session Management ------------------
 
 static gboolean par_ask_for_plugin(struct key* used_key) {
 
@@ -356,16 +350,6 @@ static gboolean par_ask_for_plugin(struct key* used_key) {
 }
 
 static gboolean par_check_for_plugin_request(char** message_no_header) {
-
-	return TRUE;
-}
-
-static gboolean try_to_enable_enc(struct key* used_key) {
-
-	return TRUE;
-}
-
-static gboolean disable_enc(struct key* used_key) {
 
 	return TRUE;
 }
@@ -464,8 +448,69 @@ static PurpleCmdRet par_check_command(PurpleConversation *conv, const gchar *cmd
 	return PURPLE_CMD_RET_OK;
 }
 
+// tries to enable the encryption 
+static gboolean par_cli_try_enable_enc(struct key* used_key) {
+
+	return TRUE;
+}
+
+// disables encryption
+static gboolean par_cli_disable_enc(struct key* used_key) {
+
+	return TRUE;
+}
+
+// lists all keys in the im window for a certain src/dest combination 
+static gboolean par_cli_list_keys(const char* src, const char* dest) {
+
+	// TODO
+	return FALSE;
+}
+
+// shows all informatioon about a key
+static gboolean par_cli_key_details(struct key* used_key) {
+
+	return TRUE;
+}
 
 // ----------------- Siganl Handlers ------------------
+
+/* --- signal handler for "conversation-created" --- */
+// Emitted when a new conversation is created. 
+void par_conversation_created(PurpleConversation *conv) {
+	//conv 	The new conversation.
+
+	// TODO: send a real request message
+	purple_conversation_write(conv, 0, "the opposite side would like to start an otp session.",
+			PURPLE_MESSAGE_SYSTEM, time((time_t)NULL));	
+
+	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Conversation created.\n");
+}
+
+/* --- signal handler for "conversation-updated" --- */
+// Emitted when a conversation is updated. 
+void par_conversation_updated(PurpleConversation *conv, PurpleConvUpdateType type) {
+	//conv 	The conversation that was updated.
+	//type 	The type of update that was made.
+
+	// Possibly Not needed
+
+	//purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Conversation updated.\n");
+}
+
+/* --- signal handler for "deleting-conversation" --- */
+// Emitted just before a conversation is to be destroyed.
+void par_deleting_conversation(PurpleConversation *conv) {
+	//conv 	The conversation that's about to be destroyed.
+
+	// TODO reset the pad
+
+	// TODO send a real cancel message
+	purple_conversation_write(conv, 0, "the opposite side closed this otp session.",
+			PURPLE_MESSAGE_SYSTEM, time((time_t)NULL));
+
+	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Conversation deleted.\n");
+}
 
 /* ---- signal handler for "receiving-im-msg" ---- */
 static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
@@ -682,13 +727,12 @@ static gboolean plugin_load(PurplePlugin *plugin) {
 		PURPLE_CALLBACK(par_sending_im_msg), NULL);
 	/* purple_signal_connect(conv_handle, "writing-im-msg", plugin,
 		PURPLE_CALLBACK(par_change_displayed_msg), NULL); */
-
-	/* purple_signal_connect(conv_handle, "conversation-created", plugin,
-               PURPLE_CALLBACK(PE_new_conv_cb), NULL);
-	purple_signal_connect(conv_handle, "conversation-updated", plugin,
-               PURPLE_CALLBACK(PE_updated_conv_cb), NULL);
+	purple_signal_connect(conv_handle, "conversation-created", plugin,
+		PURPLE_CALLBACK(par_conversation_created), NULL);
+	/* purple_signal_connect(conv_handle, "conversation-updated", plugin,
+		PURPLE_CALLBACK(par_conversation_updated), NULL); */
 	purple_signal_connect(conv_handle, "deleting-conversation", plugin, 
-                       PURPLE_CALLBACK(PE_del_conv_cb), NULL); */
+		PURPLE_CALLBACK(par_deleting_conversation), NULL);
 
 
 	// register command(s)
