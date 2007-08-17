@@ -112,8 +112,10 @@ struct options {
 
 // paranoia key struct (a linked list)
 struct key {
-	struct otp* pad; // -> libotp.h
+	struct otp* pad; // see libotp.h
 	struct options* opt; // key options
+	PurpleConversation* conv; //current conversation (if any)
+	//void* last_msg; // a ptr to the last message (a workaround)
 	struct key* next;
 };
 
@@ -145,6 +147,8 @@ static struct key* par_create_key(const char* filename) {
    	key = (struct key *) malloc(sizeof(struct key));
 	key->pad = test_pad;
 	key->opt = test_opt;
+	key->conv = NULL;
+	//key->last_msg = NULL;
 	key->next = NULL;
 	return key;
 }
@@ -290,7 +294,7 @@ static gboolean par_free_key_list() {
 static struct key* par_search_key(const char* src, const char* dest, const char* id) {
 
 	// TODO only for jabber?
-	// strip the jabber resource from src (/home /mobile etc.)
+	// strip the jabber resource from src (/home /mobile ect.)
 	const char d[] = "/";
 	char *src_copy, *token;
      
@@ -303,7 +307,7 @@ static struct key* par_search_key(const char* src, const char* dest, const char*
 		free(src_copy);
 	}
 
-	// strip the jabber resource from dest (/home /mobile etc.)
+	// strip the jabber resource from dest (/home /mobile ect.)
 	char *dest_copy;
      	token = NULL;
 
@@ -342,14 +346,59 @@ static struct key* par_search_key(const char* src, const char* dest, const char*
 	return NULL;
 }
 
+// searches a key in the keylist by PurpleConversation
+static struct key* par_search_key_by_conv(PurpleConversation *conv) {
+
+	struct key* tmp_ptr = keylist;
+
+	while(!(tmp_ptr == NULL)) {
+	// possible edless loop! make sure the last otp->next == NULL
+		if (tmp_ptr->conv == conv) {
+		
+			return tmp_ptr;
+		}
+		tmp_ptr = tmp_ptr->next;
+	}
+
+	return NULL;
+
+}
+
+// searches a key in the keylist by the last message of the conversation (NOT WORKING)
+/*
+static struct key* par_search_key_by_msg(char** message) {
+
+	struct key* tmp_ptr = keylist;
+
+	while(!(tmp_ptr == NULL)) {
+	// possible edless loop! make sure the last otp->next == NULL
+		if (tmp_ptr->last_msg == message) {
+		
+			return tmp_ptr;
+		}
+		tmp_ptr = tmp_ptr->next;
+	}
+
+	return NULL;
+}
+*/
+
 // ----------------- Session Management ------------------
 
-static gboolean par_ask_for_plugin(struct key* used_key) {
+// sends an otp encryption request message
+static gboolean par_session_request(struct key* used_key) {
 
 	return TRUE;
 }
 
-static gboolean par_check_for_plugin_request(char** message_no_header) {
+// sends an otp termination message
+static gboolean par_session_close(struct key* used_key) {
+
+	return TRUE;
+}
+
+// detects request and close messages and sets the key settings. Returns TRUE if one of them is found
+static gboolean par_session_check_str(char** message_no_header, struct key* used_key) {
 
 	return TRUE;
 }
@@ -358,7 +407,7 @@ static gboolean par_check_for_plugin_request(char** message_no_header) {
 
 PurpleCmdId otp_cmd_id;
 
-#define OTP_HELP_STR "Welcome to the One-Time Pad CLI.\notp help: shows this message \notp genkey &lt;size&gt;: generates a key pair of &lt;size&gt; MB\notp start: tries to start the encryption\notp stop: stops the encryption\notp keys: lists all available keys"
+#define OTP_HELP_STR "Welcome to the One-Time Pad CLI.\notp help: shows this message \notp genkey &lt;size&gt;: generates a key pair of &lt;size&gt; MB\notp start: tries to start the encryption\notp stop: stops the encryption\notp info: shows details about the used key\notp keys: lists all available keys"
 
 #define OTP_ERROR_STR "Wrong argument(s). Type '/otp help' for help."
 
@@ -370,6 +419,51 @@ static void set_default_cli_error(gchar **error) {
 	*error = tmp_error;
 	return;
 }
+
+// tries to enable the encryption 
+static gboolean par_cli_try_enable_enc(PurpleConversation *conv) {
+
+	return TRUE;
+}
+
+// disables encryption
+static gboolean par_cli_disable_enc(PurpleConversation *conv) {
+
+	return TRUE;
+}
+
+// lists all keys in the im window for a certain src/dest combination 
+static gboolean par_cli_list_keys(PurpleConversation *conv) {
+
+	// TODO
+	return FALSE;
+}
+
+// shows all informatioon about a key of a conversation
+// TODO: Boolean or void?
+static gboolean par_cli_key_details(PurpleConversation *conv) {
+
+	// search by conv
+	struct key* used_key = par_search_key_by_conv(conv);
+	char* disp_string = (char *) malloc((200) * sizeof(char)); // TODO: SIZE??????????
+	if(used_key != NULL) {
+		sprintf( disp_string, 
+		"Key Infos:\nID: %s\nSize: %i\nPosition: %i\nEntropy: %i\nAsked: %i\nHas plugin: %i\nOTP enabled: %i\nAuto enable: %i",
+		used_key->pad->id, used_key->pad->filesize, used_key->pad->position, used_key->pad->entropy, 
+		used_key->opt->asked, used_key->opt->has_plugin, used_key->opt->otp_enabled, used_key->opt->auto_enable );
+
+	//missing: gboolean no_entropy;
+
+	} else {
+		strcpy(disp_string, "There is no key available (yet) for this conversation.");
+	}
+
+	purple_conversation_write(conv, NULL, disp_string, PURPLE_MESSAGE_NO_LOG, time(NULL));
+	g_free(disp_string);
+
+	return TRUE;
+}
+
 
 /* otp commads check function */
 static PurpleCmdRet par_check_command(PurpleConversation *conv, const gchar *cmd, gchar **args, gchar **error, void *data) {
@@ -437,6 +531,10 @@ static PurpleCmdRet par_check_command(PurpleConversation *conv, const gchar *cmd
 			// otp keys
 			purple_conversation_write(conv, NULL, "This should list all available keys.", PURPLE_MESSAGE_NO_LOG, time(NULL));
 		}
+		else if(strcmp("info", *args) == 0){
+			// otp key info
+			par_cli_key_details(conv);
+		}
 		// TODO: add more commands
 		else {
 			// unknown arg
@@ -448,47 +546,42 @@ static PurpleCmdRet par_check_command(PurpleConversation *conv, const gchar *cmd
 	return PURPLE_CMD_RET_OK;
 }
 
-// tries to enable the encryption 
-static gboolean par_cli_try_enable_enc(struct key* used_key) {
-
-	return TRUE;
-}
-
-// disables encryption
-static gboolean par_cli_disable_enc(struct key* used_key) {
-
-	return TRUE;
-}
-
-// lists all keys in the im window for a certain src/dest combination 
-static gboolean par_cli_list_keys(const char* src, const char* dest) {
-
-	// TODO
-	return FALSE;
-}
-
-// shows all informatioon about a key
-static gboolean par_cli_key_details(struct key* used_key) {
-
-	return TRUE;
-}
-
 // ----------------- Siganl Handlers ------------------
 
 /* --- signal handler for "conversation-created" --- */
-// Emitted when a new conversation is created. 
 void par_conversation_created(PurpleConversation *conv) {
-	//conv 	The new conversation.
 
 	// TODO: send a real request message
-	purple_conversation_write(conv, 0, "the opposite side would like to start an otp session.",
-			PURPLE_MESSAGE_SYSTEM, time((time_t)NULL));	
+
+	//purple_conversation_write(conv, 0, "the opposite side would like to start an otp session.",
+	//		PURPLE_MESSAGE_RECV, time((time_t)NULL));
+
+	//purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), "trying to start an otp session...", 		//		PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
 
 	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Conversation created.\n");
 }
 
+/* --- signal handler for "deleting-conversation" --- */
+// Emitted just before a conversation is to be destroyed.
+void par_deleting_conversation(PurpleConversation *conv) {
+
+	// TODO reset the pad
+	struct key* used_key = par_search_key_by_conv(conv);
+	if(used_key != NULL) {
+		used_key->conv = NULL;
+		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Reset conversation in key list.\n");
+	}
+
+	// TODO send a real cancel message
+	//purple_conversation_write(conv, 0, "the opposite side closed this otp session.",
+	//		PURPLE_MESSAGE_RECV, time((time_t)NULL));
+
+	//purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), "the opposite side closed this otp session.", 		//		PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG); // TODO: add PURPLE_MESSAGE_NO_LOG 
+
+	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Conversation deleted.\n");
+}
+
 /* --- signal handler for "conversation-updated" --- */
-// Emitted when a conversation is updated. 
 void par_conversation_updated(PurpleConversation *conv, PurpleConvUpdateType type) {
 	//conv 	The conversation that was updated.
 	//type 	The type of update that was made.
@@ -496,20 +589,6 @@ void par_conversation_updated(PurpleConversation *conv, PurpleConvUpdateType typ
 	// Possibly Not needed
 
 	//purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Conversation updated.\n");
-}
-
-/* --- signal handler for "deleting-conversation" --- */
-// Emitted just before a conversation is to be destroyed.
-void par_deleting_conversation(PurpleConversation *conv) {
-	//conv 	The conversation that's about to be destroyed.
-
-	// TODO reset the pad
-
-	// TODO send a real cancel message
-	purple_conversation_write(conv, 0, "the opposite side closed this otp session.",
-			PURPLE_MESSAGE_SYSTEM, time((time_t)NULL));
-
-	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Conversation deleted.\n");
 }
 
 /* ---- signal handler for "receiving-im-msg" ---- */
@@ -530,7 +609,7 @@ static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
 	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "I received a message from %s\n", *sender);
 	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Rcv.Msg: %s\n", *message);
 
-	// --- Strip all the HTML crap (Jabber) ---
+	// --- Strip all the HTML crap (Jabber, MSN) ---
 	// TODO: does that hurt?
 	// TODO: only strip, if jabber or msn or ???
 	// HELP: To detect the protcol id:
@@ -546,21 +625,24 @@ static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
 	// debug
 	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Stripped Msg: %s\n", *stripped_message);
 
-	// TODO: disable encryption if active key is found and unencrypted message received
-
 	// --- checks for the Paranoia Header ---
 	// and removes it if found
 	if(!par_remove_header(stripped_message)) {
 
-		// free the jabber strip!
+		// free the jabber/msn strip!
 		g_free(*stripped_message);
 		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "This is not a paranoia message.\n");
+
+		// TODO: disable encryption if active key is found and unencrypted message received
+
 		return FALSE;
 	}
 
 	// apply jabber and header changes
 	g_free(*message);
 	*message = *stripped_message;
+
+	// TODO: detect initialisation and destruction message.
 
 	// get ID from message
 	char* recv_id = otp_get_id_from_message(message);
@@ -573,6 +655,9 @@ static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
 		// debug
 		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Found a matching Key with pad ID: %s\n", used_key->pad->id);
 		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "otp_enabled == %i\n", used_key->opt->otp_enabled);
+
+		// save conversation ptr
+		used_key->conv = conv;
 
 		// encryption not enabled?
 		if (!used_key->opt->otp_enabled) {
@@ -628,10 +713,15 @@ static void par_sending_im_msg(PurpleAccount *account, const char *receiver,
 		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Found a matching Key with pad ID: %s\n", used_key->pad->id);
 		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "otp_enabled == %i\n", used_key->opt->otp_enabled);
 
+		// (TODO: search conversation and save conversation ptr (if possible?))
+
+		// save the msg ptr
+		//used_key->last_msg = message;
+
 		// encryption enabled?
 		if (!used_key->opt->otp_enabled) {
 			//TODO: initialize an encrypted conversation. already asked?
-			purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "This conversation was not initialized! otp_enabled == FALSE. But we encrypt it anyway...(FIXME) \n");		
+			purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "This conversation was not initialized! otp_enabled == FALSE. But we encrypt it anyway...(FIXME) \n");
 			//return; DISABLED FOR TESTING ONLY
 		}
 
@@ -667,14 +757,27 @@ static void par_sending_im_msg(PurpleAccount *account, const char *receiver,
 //static gboolean addnewline_msg_cb(PurpleAccount *account, char *sender, char **message,
 //					 PurpleConversation *conv, int *flags, void *data)
 
-
 static gboolean par_change_displayed_msg(PurpleAccount *account, const char *sender, char **message, 
 		PurpleConversation *conv, PurpleMessageFlags flags) {
 
+	// --- this solves the problem, to know the conv if you never receive a message.
+	// search a matching key by message to save the conversation ptr
+	/*
+	struct key* used_key = par_search_key_by_msg(message);
+	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "orig: %i\n", (int) message);
+	if(used_key != NULL) {
+		used_key->conv = conv;
+		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "saved conv ptr in key list!!!!!!!\n");
+		used_key->last_msg = NULL;
+	} else {
+		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "could NOT save conv ptr in key list!!!!!!!\n"); 
+	} */
+	// --- end
+
 // FIXME: not used yet! -> sender bug
 
-	if(SHOW_STATUS) {
-		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "WHO? (FIXME): %s\n", sender);
+	//if(SHOW_STATUS) {
+	//	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "WHO? (FIXME): %s\n", sender);
 		// search in Key list
 		/*struct key* used_key = par_search_key(purple_account_get_username(account), sender, NULL);
 
@@ -685,7 +788,7 @@ static gboolean par_change_displayed_msg(PurpleAccount *account, const char *sen
 				par_add_status_str(message);
 			}
 		}*/
-	}
+	//}
 
 	//purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "WritMsg: %s\n", *message);
 	// debug
@@ -711,7 +814,7 @@ static gboolean plugin_load(PurplePlugin *plugin) {
 
 	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Key Path: %s\n", global_otp_path);
 
-	// stuff I don't understand yet TODO: read doc!
+	// Get the conversaiton handle
 	void *conv_handle;
 	conv_handle = purple_conversations_get_handle();
 
@@ -725,8 +828,8 @@ static gboolean plugin_load(PurplePlugin *plugin) {
 		PURPLE_CALLBACK(par_receiving_im_msg), NULL);
 	purple_signal_connect(conv_handle, "sending-im-msg", plugin,
 		PURPLE_CALLBACK(par_sending_im_msg), NULL);
-	/* purple_signal_connect(conv_handle, "writing-im-msg", plugin,
-		PURPLE_CALLBACK(par_change_displayed_msg), NULL); */
+	purple_signal_connect(conv_handle, "writing-im-msg", plugin,
+		PURPLE_CALLBACK(par_change_displayed_msg), NULL);
 	purple_signal_connect(conv_handle, "conversation-created", plugin,
 		PURPLE_CALLBACK(par_conversation_created), NULL);
 	/* purple_signal_connect(conv_handle, "conversation-updated", plugin,
