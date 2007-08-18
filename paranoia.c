@@ -371,8 +371,10 @@ static struct key* par_search_key_by_conv(PurpleConversation *conv) {
 // sends an otp encryption request message
 static void par_session_request(PurpleConversation *conv) {
 
-	purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), PARANOIA_REQUEST, 
-		PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_RAW); //PURPLE_MESSAGE_SYSTEM | 
+	if(par_search_key_by_conv(conv) == NULL) {
+		purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), PARANOIA_REQUEST, 
+			PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_RAW); //PURPLE_MESSAGE_SYSTEM | 
+	}
 
 	return;
 }
@@ -418,6 +420,7 @@ static gboolean par_session_check_req(const char* alice, const char* bob, Purple
 		// TODO src for ID too! Save it in msg before!
 		struct key* temp_key = par_search_key(alice, bob, NULL);
 		if (temp_key != NULL) {
+			temp_key->opt->asked = TRUE;
 			temp_key->opt->has_plugin = TRUE;
 			temp_key->conv = conv;
 			par_session_ack(temp_key, conv);
@@ -615,6 +618,9 @@ void par_deleting_conversation(PurpleConversation *conv) {
 	struct key* used_key = par_search_key_by_conv(conv);
 	if(used_key != NULL) {
 		used_key->conv = NULL;
+		used_key->opt->asked = FALSE;
+		used_key->opt->has_plugin = FALSE;
+		used_key->opt->otp_enabled = FALSE;
 		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Reset conversation in key list.\n");
 	}
 
