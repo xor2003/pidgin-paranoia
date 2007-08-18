@@ -33,7 +33,7 @@ void aaaa_decrypt(char **message);
 //int otp_b64dec(char **message, int *len);
 int otp_printint(char *m, int len);
 /* searches the position of the first non zero value in the pad (maybe not a public function?, boognu:yes) */
-struct otp* otp_seek_start(struct otp* mypad);
+//struct otp* otp_seek_start(struct otp* mypad);
 
 
 // ----------------- OTP Crypto Functions API ------------------
@@ -63,12 +63,15 @@ struct otp* otp_get_from_file(const char* path, const char* filename);
 /* destroys an otp object */
 void otp_destroy(struct otp* mypad);
 
-/* generates a new key pair (two files) with the name alice and bob 
-   of 'size' bytes. */
-unsigned int otp_generate_key_pair(char* alice, char* bob, char* filename_alice, char* filename_bob, unsigned int size);
-
 /* extracts and returns the ID from a given encrypted message. Leaves the message constant. Returns NULL if it fails.*/
 char* otp_get_id_from_message(char **message);
+
+/* generates a new key pair (two files) with the name alice and bob 
+   of 'size' bytes. TODO*/
+unsigned int otp_generate_key_pair(char* alice, char* bob, char* path, unsigned int size);
+
+/* encrypts a message that signals that the sender is out of entropy */
+unsigned int otp_encrypt_noentropy_warning(struct otp* mypad);
 
 
 
