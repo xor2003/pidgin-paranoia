@@ -47,7 +47,7 @@ extern char *stpncpy (char *restrict, const char *restrict, size_t);
 #endif
 
 // test
-#define HAVEFILE
+//#define HAVEFILE
 
 // ----------------- General Paranoia Stuff ------------------
 #define PARANOIA_HEADER "*** Encrypted with the Pidgin-Paranoia plugin: "
@@ -64,11 +64,13 @@ char* global_otp_path;
 /* adds the paranoia header */
 void par_add_header(char** message) {
 
-	char* new_msg = (char *) malloc((strlen(*message) + strlen(PARANOIA_HEADER) + 1) * sizeof(char));
-	strcpy(new_msg, PARANOIA_HEADER);
-	strcat(new_msg, *message);
+	// GLIB_FIX
+	//char* new_msg = (char *) malloc((strlen(*message) + strlen(PARANOIA_HEADER) + 1) * sizeof(char));
+	//strcpy(new_msg, PARANOIA_HEADER);
+	//strcat(new_msg, *message);
+	char* new_msg = g_strconcat(PARANOIA_HEADER, *message, NULL);
 
-	free(*message);
+	g_free(*message);
 	*message = new_msg;
 	//printf("paranoia:\t\tHeader+Message:\t%s\n", *message);
 	return;
@@ -78,11 +80,11 @@ void par_add_header(char** message) {
 static gboolean par_remove_header(char** message) {
 	if(strlen(*message) > strlen(PARANOIA_HEADER)) {
 		if(strncmp(*message, PARANOIA_HEADER, strlen(PARANOIA_HEADER)) == 0) {
-			char* new_msg = (char *) malloc((strlen(*message) - strlen(PARANOIA_HEADER) + 1) * sizeof(char));
+			char* new_msg = (char *) g_malloc((strlen(*message) - strlen(PARANOIA_HEADER) + 1) * sizeof(char));
 			char* ptr = *message + strlen(PARANOIA_HEADER);
 			strcpy(new_msg, ptr);
 
-			free(*message);
+			g_free(*message);
 			*message = new_msg;
 			//printf("paranoia:\t\tMessage only:\t%s\n", *message);
 			return TRUE;
@@ -94,11 +96,13 @@ static gboolean par_remove_header(char** message) {
 /* adds a string at the beginning of the message (if encrypted) */
 static gboolean par_add_status_str(char** message) {
 
-	char* new_msg = (char *) malloc((strlen(*message) + strlen(PARANOIA_STATUS) + 1) * sizeof(char));
-	strcpy(new_msg, PARANOIA_STATUS);
-	strcat(new_msg, *message);
+	// GLIB FIX
+	//char* new_msg = (char *) malloc((strlen(*message) + strlen(PARANOIA_STATUS) + 1) * sizeof(char));
+	//strcpy(new_msg, PARANOIA_STATUS);
+	//strcat(new_msg, *message);
+	char* new_msg = g_strconcat(PARANOIA_STATUS, *message, NULL);
 
-	free(*message);
+	g_free(*message);
 	*message = new_msg;
 	return TRUE;
 }
@@ -138,7 +142,7 @@ static struct key* par_create_key(const char* filename) {
 
 	//default option struct
 	static struct options* test_opt;
-   	test_opt = (struct options *) malloc(sizeof(struct options));
+   	test_opt = (struct options *) g_malloc(sizeof(struct options));
 	test_opt->asked = FALSE; // shoud be FALSE
 	test_opt->has_plugin = FALSE; // shoud be FALSE
 	test_opt->otp_enabled = FALSE;
@@ -146,7 +150,7 @@ static struct key* par_create_key(const char* filename) {
 	test_opt->no_entropy = FALSE;
 
 	static struct key* key;
-   	key = (struct key *) malloc(sizeof(struct key));
+   	key = (struct key *) g_malloc(sizeof(struct key));
 	key->pad = test_pad;
 	key->opt = test_opt;
 	key->conv = NULL;
@@ -178,7 +182,7 @@ static gboolean par_init_key_list() {
 	GError* error = NULL;
 	GDir* directoryhandle = g_dir_open(global_otp_path, 0, &error);
 	const gchar* tmp_filename = g_dir_read_name(directoryhandle);
-	char* tmp_path = NULL;
+	//char* tmp_path = NULL;
 	
 	// Loop over global key dir
 	while(tmp_filename != NULL) {
@@ -188,9 +192,11 @@ static gboolean par_init_key_list() {
 			g_error_free(error);
 		}
 
-		tmp_path = (char *) malloc((strlen(global_otp_path) + strlen(tmp_filename) + 1) * sizeof(char));
-		strcpy(tmp_path, global_otp_path);
-		strcat(tmp_path, tmp_filename);
+		// GLIB FIX
+		//tmp_path = (char *) malloc((strlen(global_otp_path) + strlen(tmp_filename) + 1) * sizeof(char));
+		//strcpy(tmp_path, global_otp_path);
+		//strcat(tmp_path, tmp_filename);
+		char* tmp_path = g_strconcat(global_otp_path, tmp_filename, NULL);
 		
 		if(g_file_test(tmp_path, G_FILE_TEST_IS_REGULAR)) {
 			tmp_key = par_create_key(tmp_filename);
@@ -295,32 +301,45 @@ static gboolean par_free_key_list() {
 // searches a key in the keylist, ID is optional, if no ID: searches first src/dest match
 static struct key* par_search_key(const char* src, const char* dest, const char* id) {
 
-	// TODO only for jabber?
+	// TODO: only for jabber?
 	// strip the jabber resource from src (/home /mobile ect.)
 	const char d[] = "/";
-	char *src_copy, *token;
-     
+
+	gchar** str_array = g_strsplit(src, d, 2);
+	char* src_copy = g_strdup(str_array[0]);
+	printf("paranoia !!!!!!!!!!:\tResource remover: my_acc\t%s\n", src_copy);
+	g_strfreev(str_array);
+
+	/* GLIB FIX char *src_copy, *token;
+
 	src_copy = strdup(src);   // Make writable copy.
 	token = strsep(&src_copy, d);
-	//printf("paranoia !!!!!!!!!!:\tResource remover: my_acc\t%s\n", token);
+	printf("paranoia !!!!!!!!!!:\tResource remover: my_acc\t%s\n", token);
 	
 	if(token != NULL) {
-		src = token;
+		src = g_strdup(token);
 		free(src_copy);
-	}
+	} */
 
 	// strip the jabber resource from dest (/home /mobile ect.)
-	char *dest_copy;
+	str_array = g_strsplit(dest, d, 2);
+	char* dest_copy = g_strdup(str_array[0]);
+	printf("paranoia !!!!!!!!!!:\tResource remover: other_acc\t%s\n", dest_copy);
+	g_strfreev(str_array);
+
+
+	/* GLIB FIX char *dest_copy;
      	token = NULL;
 
 	dest_copy = strdup(dest);   // Make writable copy.
 	token = strsep(&dest_copy, d);
-	//printf("paranoia !!!!!!!!!!:\tResource remover: other_acc\t%s\n", token);
+	printf("paranoia !!!!!!!!!!:\tResource remover: other_acc\t%s\n", token);
 	
 	if(token != NULL) {
-		dest = token;
+		dest = g_strdup(token);
+		//free(token);
 		free(dest_copy);
-	}
+	} */
 
 	// ---- end stripping -----
 
@@ -329,7 +348,7 @@ static struct key* par_search_key(const char* src, const char* dest, const char*
 
 	while(!(tmp_ptr == NULL)) {
 	// possible edless loop! make sure the last otp->next == NULL
-		if ((strcmp(tmp_ptr->pad->src, src) == 0) && (strcmp(tmp_ptr->pad->dest, dest) == 0) 
+		if ((strcmp(tmp_ptr->pad->src, src_copy) == 0) && (strcmp(tmp_ptr->pad->dest, dest_copy) == 0) 
 			&& !tmp_ptr->opt->no_entropy) {
 			//  check ID too?
 			if (id == NULL) {
@@ -345,6 +364,8 @@ static struct key* par_search_key(const char* src, const char* dest, const char*
 		tmp_ptr = tmp_ptr->next;
 	}
 
+	g_free(src_copy);
+	g_free(dest_copy);
 	return NULL;
 }
 
@@ -383,7 +404,7 @@ static void par_session_request(PurpleConversation *conv) {
 void par_session_ack(struct key* used_key, PurpleConversation *conv) {
 
 	// encrypt PARANOIA_ACK
-	char *tmp_str = (char *) malloc((strlen(PARANOIA_ACK) + 1) * sizeof(char));
+	char *tmp_str = (char *) g_malloc((strlen(PARANOIA_ACK) + 1) * sizeof(char));
 	strcpy(tmp_str, PARANOIA_ACK);
 	char** tmp_msg;
 	tmp_msg = &tmp_str;
@@ -400,7 +421,7 @@ void par_session_ack(struct key* used_key, PurpleConversation *conv) {
 void par_session_close(struct key* used_key, PurpleConversation *conv) {
 
 	// encrypt PARANOIA_EXIT
-	char *tmp_str = (char *) malloc((strlen(PARANOIA_EXIT) + 1) * sizeof(char));
+	char *tmp_str = (char *) g_malloc((strlen(PARANOIA_EXIT) + 1) * sizeof(char));
 	strcpy(tmp_str, PARANOIA_EXIT);
 	char** tmp_msg;
 	tmp_msg = &tmp_str;
@@ -467,9 +488,9 @@ PurpleCmdId otp_cmd_id;
 
 /* sets the default paranoia cli error */
 static void set_default_cli_error(gchar **error) {
-	char *tmp_error = (char *) malloc((strlen(OTP_ERROR_STR) + 1) * sizeof(char));
+	char *tmp_error = (char *) g_malloc((strlen(OTP_ERROR_STR) + 1) * sizeof(char));
 	strcpy(tmp_error, OTP_ERROR_STR);
-	free(*error);
+	g_free(*error);
 	*error = tmp_error;
 	return;
 }
@@ -498,7 +519,7 @@ static void par_cli_key_details(PurpleConversation *conv) {
 
 	// search by conv
 	struct key* used_key = par_search_key_by_conv(conv);
-	char* disp_string = (char *) malloc((200) * sizeof(char)); // TODO: SIZE??????????
+	char* disp_string = (char *) g_malloc((200) * sizeof(char)); // TODO: SIZE??????????
 	if(used_key != NULL) {
 		sprintf( disp_string, 
 		"Key Infos:\nID: %s\nSize: %i\nPosition: %i\nEntropy: %i\nAsked: %i\nHas plugin: %i\nOTP enabled: %i\nAuto enable: %i",
@@ -655,7 +676,7 @@ static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
 	// purple_account_get_protocol_id(account)
 
 	const char *tmp_message = purple_markup_strip_html(*message);
-	char* the_message = (char *) malloc((strlen(tmp_message) + 1) * sizeof(char));
+	char* the_message = (char *) g_malloc((strlen(tmp_message) + 1) * sizeof(char));
 	strcpy(the_message, tmp_message);
 
 	char** stripped_message;
@@ -793,7 +814,7 @@ static void par_sending_im_msg(PurpleAccount *account, const char *receiver,
 		// don't send requests to users with no key.
 		if(strncmp(*message, PARANOIA_REQUEST, 70) == 0) {
 			purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Found NO matching Key. Won't sent REQUEST.\n");
-			free(*message);
+			g_free(*message);
 			*message = NULL;
 			return;
 		}
@@ -850,9 +871,11 @@ static gboolean plugin_load(PurplePlugin *plugin) {
 
 	// set the global key folder
 	const gchar* home = g_get_home_dir();
-	global_otp_path = (char *) malloc((strlen(home) + strlen(PARANOIA_PATH) + 1) * sizeof(char));
-	strcpy(global_otp_path, (char *) home);
-	strcat(global_otp_path, PARANOIA_PATH);
+	// GLIB FIX
+	//global_otp_path = (char *) malloc((strlen(home) + strlen(PARANOIA_PATH) + 1) * sizeof(char));
+	//strcpy(global_otp_path, (char *) home);
+	//strcat(global_otp_path, PARANOIA_PATH);
+	global_otp_path = g_strconcat(home, PARANOIA_PATH, NULL);
 
 	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Key Path: %s\n", global_otp_path);
 
