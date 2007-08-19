@@ -16,12 +16,12 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-//### gcc `pkg-config --cflags --libs glib-2.0` o.c && ./a.out 
+/* ### gcc `pkg-config --cflags --libs glib-2.0` o.c && ./a.out  */
 
-// GNOMElib
+/* GNOMElib */
 #include <glib.h>
 
-// GNUlibc stuff
+/* GNUlibc stuff */
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -29,23 +29,23 @@
 
 
 
-// great stuff
+/* great stuff */
 #include "libotp.h"
 
-#define PARANOIA_PATH "/.paranoia/"		// TODO: REMOVE
+#define PARANOIA_PATH "/.paranoia/"		/* TODO: REMOVE */
 
-#define STATICMSG "1234"
+#define STATICMSG "1234           1234"
 
 int main(void) {
-	//int a=0; int *size=&a;
-	//*size=10;
-	//       "123456789012"
+/* 	int a=0; int *size=&a; */
+/* 	*size=10; */
+/* 	       "123456789012" */
 
 
 
-	//char m[]="123456789012"; // IMPORTANT: (pad has to be longer)
+/* 	char m[]="123456789012"; // IMPORTANT: (pad has to be longer) */
 	char m[]= STATICMSG;
-	//char m[]="sdanfnmadsbfmnbdsafnmbadsfmnbsadmfnbasdmfndasnbfm,sfnb,mnsadfm,nadbfmndsbaf,mnbasdfn";
+/* 	char m[]="sdanfnmadsbfmnbdsafnmbadsfmnbsadmfnbasdmfndasnbfm,sfnb,mnsadfm,nadbfmndsbaf,mnbasdfn"; */
 
 	/* Message creation */
 	char **message;
@@ -53,58 +53,55 @@ int main(void) {
 	strcpy(vmessage, m);
 	message=&vmessage;
 
-	// set the global key folder  TODO: REMOVE!
-	const gchar* home = g_get_home_dir();
+	const gchar* home = g_get_home_dir();		/* set the global key folder  TODO: REMOVE! */
 	char* path = (char *) malloc((strlen(home) + strlen(PARANOIA_PATH) + 1) * sizeof(char));
 	strcpy(path, (char*) home);
 	strcat(path, PARANOIA_PATH);
 
 	
-	//char * id=otp_get_id_from_message(message);
-	//printf("tester encrypted:\t\tMessage:\t%s\n",id);
 
-	//long int i=384242343;
-	//printf("tester:\t\%s\n",global_otp_path);
-	//char *c=l64a(i);
-	//printf("tester:\t\tint:\t\t%s\n",c);
-	//long int x=a64l (c);
-	//printf("tester:\t\tint:\t\t%ld\n",x);
+/* 	long int i=384242343; */
+/* 	printf("tester:\t\%s\n",global_otp_path); */
+/* 	char *c=l64a(i); */
+/* 	printf("tester:\t\tint:\t\t%s\n",c); */
+/* 	long int x=a64l (c); */
+/* 	printf("tester:\t\tint:\t\t%ld\n",x); */
 
 
 	/* Pad Testing .... */
 
-	// /*
-	//char filename[]=" hello world.txt";
-	//char filename[]="aa aa aa";
-	char filename[]="alice@jabber.org bob@jabber.org 22222222.entropy";
+/* 	char filename[]=" hello world.txt"; */
+/* 	char filename[]="aa aa aa"; */
+	char filename[]="alexapfel@gmail.com alexapfel@gmail.com 11111111.entropy";
 	struct otp* pad = otp_get_from_file(path,filename);
 	if (pad == NULL) {
 		printf("Tester:File can not be opened!\n");
 	}else{
-/*
+
 		printf("Pad:filename:\t\t\t%s\n",pad->filename);
-		printf("Pad:Pos:\t\t\t%ld\n",pad->position);
-		printf("Pad:entropy:\t\t\t%ld\n",pad->entropy);
+		printf("Pad:Pos:\t\t\t%u\n",pad->position);
+		printf("Pad:entropy:\t\t\t%u\n",pad->entropy);
 
 		printf("Pad:src:\t\t\t%s\n",pad->src);
 		printf("Pad:dest:\t\t\t%s\n",pad->dest);
 		printf("Pad:id:\t\t\t\t%s\n",pad->id);
-		printf("Pad:filesize:\t\t\t%ld\n",pad->filesize);
+		printf("Pad:filesize:\t\t\t%u\n",pad->filesize);
 
-*/
-		//printf("\n--------------------------------------\n\n");
-		//printf("tester encrypted:\t\tMessage:\t%s\n",*message);
+
+/* 		printf("\n--------------------------------------\n\n"); */
+/* 		printf("tester encrypted:\t\tMessage:\t%s\n",*message); */
 		otp_encrypt(pad,message);
-		//printf("tester encrypted:\t\tMessage:\t%s\n",*message);
-		//otp_decrypt(pad,message);
 		printf("tester encrypted:\t\tMessage:\t%s\n",*message);
-		printf("Pad:Pos:\t\t\t%ld\n",pad->position);
-		printf("Pad:entropy:\t\t\t%ld\n",pad->entropy);
+		printf("Pad:Pos:\t\t\t%u\n",pad->position);
+		printf("Pad:entropy:\t\t\t%u\n",pad->entropy);
 		otp_destroy(pad);
 	}
 
+	char *id=otp_get_id_from_message(message);
+	printf("tester encrypted:\t\tMessage:\t%s\n",id);
 
-	char filename2[]="bob@jabber.org alice@jabber.org 22222222.entropy";
+
+	char filename2[]="alexapfel@gmail.com alexapfel@gmail.com 11111111.entropy";
 	struct otp* pad2 = otp_get_from_file(path,filename2);
 	if (pad2 == NULL) {
 		printf("Tester:File can not be opened!\n");
@@ -120,55 +117,18 @@ int main(void) {
 		printf("Pad:filesize:\t\t\t%ld\n",pad2->filesize);
 */
 
-		//printf("\n--------------------------------------\n\n");
-		//printf("tester encrypted:\t\tMessage:\t%s\n",*message);
-		//otp_encrypt(pad2,message);
-		//printf("tester encrypted:\t\tMessage:\t%s\n",*message);
+/* 		printf("\n--------------------------------------\n\n"); */
+/* 		printf("tester encrypted:\t\tMessage:\t%s\n",*message); */
+/* 		otp_encrypt(pad2,message); */
+/* 		printf("tester encrypted:\t\tMessage:\t%s\n",*message); */
 		otp_decrypt(pad,message);
 		printf("tester decrypted:\t\tMessage:\t%s\n",*message);
-		printf("Pad:Pos:\t\t\t%ld\n",pad->position);
-		printf("Pad:entropy:\t\t\t%ld\n",pad->entropy);
+		printf("Pad:Pos:\t\t\t%u\n",pad->position);
+		printf("Pad:entropy:\t\t\t%u\n",pad->entropy);
 		otp_destroy(pad2);
 	}
 	
 	
-
-
-
-
-	//printf("tester message:\t\t\tMessage:\t%s\n",*message);
-
-	/* otp_get_id_from_message tester */
-	//printf("tester:\t\t\t\tID:\t\t%s\n", otp_get_id_from_message(message));
-
-	//otp_printint(*message,13);
-	//printf("tester:\t\tSize:\t\t%d\n",*size);
-	//otp_printint(*message,strlen(*message));
-
-
-	//otp_uencrypt(message);
-	//otp_b64enc(message,size);
-	//otp_printint(*message,13);
-
-	//printf("tester:\t\tSize:\t\t%d\n",*size);
-
-	//otp_udecrypt(message);
-	//otp_b64dec(message,size);
-	//otp_printint(*message,13);
-
-	//printf("tester:\t\tSize:\t\t%d\n",*size);
-	//printf("tester decrypted:\t\tMessage:\t%s\n",*message);
-	//printint(*message);
-
-
-	//printf("Pad:filename:\t\t\t%s\n",pad->filename);
-	//printf("Pad:Pos:\t\t\t%ld\n",pad->position);
-	//printf("Pad:entropy:\t\t\t%ld\n",pad->entropy);
-
-	//printf("Pad:src:\t\t\t%s\n",pad->src);
-	//printf("Pad:dest:\t\t\t%s\n",pad->dest);
-	//printf("Pad:id:\t\t\t\t%s\n",pad->id);
-	//printf("Pad:filesize:\t\t\t%ld\n",pad->filesize);
 	
 	return 0;
 }

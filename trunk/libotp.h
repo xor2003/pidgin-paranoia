@@ -16,39 +16,39 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-// ----------------- TODO: REMOVE ME ------------------
+/* ----------------- TODO: REMOVE ME ------------------ */
 
-// For Nowic (semistable)
-// for testing only
+/* For Nowic (semistable) */
+/* for testing only */
 void aaaa_encrypt(char **message);
-// for testing only
+/* for testing only */
 void aaaa_decrypt(char **message);
 
 
-// public for development only (for boognu, unstable)
-//int otp_xor(char **message,char **pad,int len);
-//int otp_uencrypt(char **message);
-//int otp_udecrypt(char **message);
-//int otp_b64enc(char **message, int *len);
-//int otp_b64dec(char **message, int *len);
-int otp_printint(char *m, int len);
+/* public for development only (for boognu, unstable) */
+/* int otp_xor(char **message,char **pad,int len); */
+/* int otp_uencrypt(char **message); */
+/* int otp_udecrypt(char **message); */
+/* int otp_b64enc(char **message, int *len); */
+/* int otp_b64dec(char **message, int *len); */
+/* int otp_printint(char *m, int len); */
 /* searches the position of the first non zero value in the pad (maybe not a public function?, boognu:yes) */
-//struct otp* otp_seek_start(struct otp* mypad);
+/* struct otp* otp_seek_start(struct otp* mypad); */
 
 
-// ----------------- OTP Crypto Functions API ------------------
+/*  ----------------- OTP Crypto Functions API ------------------ */
 
 
 struct otp {
-	char* src; // for pidgin: 'account' like alice@jabber.org
-	char* dest; // for pidgin: 'account' like bob@jabber.org
-	char* id; // 8 digits unique random number of the key pair (hex)
-	char* filename; // The full path and the filename defined in the libotp spec 
-	unsigned int position; // start positon for the next encryption
-	unsigned int entropy; // the size (in bytes) of the entropy left for the sender
-	unsigned int filesize; //The size of the file in bytes
+ 	char* src; 		/* for pidgin: 'account' like alice@jabber.org */
+	char* dest; 		/* for pidgin: 'account' like bob@jabber.org */
+	char* id; 		/* 8 digits unique random number of the key pair (hex) */
+	char* filename; 	/* The full path and the filename defined in the libotp spec */
+	unsigned int position; 	/* start positon for the next encryption */
+	unsigned int entropy; 	/* the size (in bytes) of the entropy left for the sender */
+	unsigned int filesize; 	/* The size of the file in bytes */
 
-//	TODO: maybe a mapped memory object? 
+/* 	TODO: maybe a mapped memory object?  */
 };
 
 /* returns 1 if it could encrypt the message */

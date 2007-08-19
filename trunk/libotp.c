@@ -16,8 +16,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-
-// GNUlibc includes
+/* GNUlibc includes */
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -29,52 +28,58 @@
 #include <sys/stat.h>
 #include <time.h>
 
-// starnge fix for a warning
+/* starnge fix for a warning */
 extern char *stpcpy (char *, const char *);
 
-//GNOMElib
+/* GNOMElib */
 #include <glib.h>
 
 
-// great stuff
+/* great stuff */
 #include "libotp.h"
 
-// Some defintions
-#define FILE_DELI " "		// Delimiter in the filename
-#define MSG_DELI "|"		// Delimiter in the encrypted message
-#define PAD_EMPTYCHAR '\0'	// Char that is used to mark the pad as used.
-#define PROTECTED_ENTROPY 100	// The amount of entropy that is only used for "out of entropy" messages
-#define	KEYFILEEND "entropy"	// The keyfiles have to end with this string to be valid. This string has to be separated by ".".
-#define ID_LENGTH 8		// Size of the ID-string
-#define NOENTROPY_SIGNAL "*** I'm out of entropy!"	// The message that is send in case the sender is out of entropy
+/* Some defintions */
+#define FILE_DELI " "		/* Delimiter in the filename */
+#define MSG_DELI "|"		/* Delimiter in the encrypted message */
+#define PAD_EMPTYCHAR '\0'	/* Char that is used to mark the pad as used. */
+#define PROTECTED_ENTROPY 100	/* The amount of entropy that is only used for "out of entropy" messages */ 
+#define	FILE_SUFFIX ".entropy"	/* The keyfiles have to end with this string to be valid. This string has to be separated by ".". */
+#define ID_LENGTH 8		/* Size of the ID-string */
+#define NOENTROPY_SIGNAL "*** I'm out of entropy!"	/* The message that is send in case the sender is out of entropy */
 
 
-// All defines needed for full opt functionality!
+/* All defines needed for full opt functionality! */
 
-//#define HAVEFILE		// Do you have a file named pad->filename in your working dir? Used for struct *pad generation. (Works)
-//#define HAVEKEYFILE		// Do you have a file names pad->filename in your working dir? Used for en/decryption. (Unstable)
-//#define KEYOVERWRITE		// Overwrite the used key-sequence in the keyfile
+#define UCRYPT			/* Encryption and decryption only enabled if defined */
+#define HAVEFILE		/* Do you have a file named pad->filename in your working dir? Used for struct *pad generation. (Works) */
+#define HAVEKEYFILE		/* Do you have a file names pad->filename in your working dir? Used for en/decryption. */
+#define KEYOVERWRITE		/* Overwrite the used key-sequence in the keyfile */
 
 
 #define STATICKEY "dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4"
 
+int otp_get_decryptkey_from_file();
+int otp_xor();
+int otp_get_encryptkey_from_file();
+int otp_open_keyfile();
+int otp_close_keyfile();
+void otp_calc_entropy();
+int otp_seek_pos();
 
 
-// ----------------- Lib One-Time Pad Functions (Internal)------------------
-void otp_calc_entropy(struct otp* pad);
+
+/*  ----------------- Lib One-Time Pad Functions (Internal)------------------ */
 
 
 
 /* Encodes message into the base64 form */
-int otp_b64enc(char **message, int *len) {
-	//printf("b64enc:\t\tMessage:\t%s\n",*message);
+int otp_b64enc(char **message,int *len) {
 
-	char* msg = (char*) g_base64_encode((char*) *message,*len);	/* Gnomelib Base64 encode */
+	char* msg = g_base64_encode( (guchar*) *message,*len);	/* Gnomelib Base64 encode */
 	*len = (strlen(msg)+1) * sizeof(char);			/* The size has changed */
 
-	free(*message);
+	g_free(*message);
 	*message = msg;
-	//printf("b64enc:\t\tMessage:\t%s\n",*message);
 	return TRUE;
 }
 
@@ -83,12 +88,10 @@ int otp_b64enc(char **message, int *len) {
 /* Decodes message from the base64 form */
 int otp_b64dec(char **message, int *len) {
 
-	char* msg = (char*) g_base64_decode((char*) *message,len);	/* Gnomelib Base64 decode */
+	guchar* msg = g_base64_decode( *message, (guint*) len);	/* Gnomelib Base64 decode */
 
-
-	free(*message);
-	*message = msg;
-	//printf("b64dec:\t\tMessage:\t%s\n",*message);
+	g_free(*message);
+	*message = (char*) msg;
 	return TRUE;
 }
 
@@ -108,7 +111,7 @@ int otp_udecrypt(char **message, struct otp* pad, int decryptpos) {
 #else
 	char k[]=STATICKEY;
 	char *vkey = (char *) malloc( (*len) * sizeof(char) );
-	memcpy(vkey,k,*len-1); //the pad could be anything... use memcyp
+	memcpy(vkey,k,*len-1); 					/* the pad could be anything... use memcpy */
 	*key=vkey; 
 #endif
 
@@ -134,14 +137,11 @@ int otp_uencrypt(char **message, struct otp* pad) {
 
 	char k[]=STATICKEY; 
 	char *vkey = (char *) malloc( (*len) * sizeof(char) );
-	memcpy(vkey,k,*len-1); //the pad could be anything... use memcyp
+	memcpy(vkey,k,*len-1); 					/* the pad could be anything... use memcpy */
 	*key=vkey;
 #endif
 
-	//otp_printint(*message,*len);
-	//otp_printint(*key,*len);
 	otp_xor( message , key, *len);				/* xor */
-	//otp_printint(*message,*len);
 	otp_b64enc( message , len );				/* encode base64 */
 	
 	return TRUE;
@@ -154,31 +154,31 @@ int otp_get_encryptkey_from_file(char **key , struct otp* pad, int len) {
 	int fd; char *b=""; char **data; data=&b;
 	int i;
 
-	//printf("\ntest\t\t\t:%d\n\n",(pad->filesize / 2 - PROTECTED_ENTROPY));
+/* 	printf("\ntest\t\t\t:%d\n\n",(pad->filesize / 2 - PROTECTED_ENTROPY)); */
 	if ( (pad->position + len >= (pad->filesize / 2 - PROTECTED_ENTROPY) ) || pad->position < 0) {
 		return FALSE;
 	}
 	
 	if (otp_open_keyfile(fd,data,pad)) {		/* Open the keyfile */
 		char *vkey = (char *) malloc( (len) * sizeof(char) );
-		memcpy( vkey, *data+pad->position ,len-1); //the pad could be anything... use memcyp
+		memcpy( vkey, *data+pad->position ,len-1);  		/* the pad could be anything... use memcpy */
 		*key=vkey;
-		//otp_printint(*key,len-1);
+/* 		otp_printint(*key,len-1); */
 
 		char *datpos=*data+pad->position;
 #ifdef KEYOVERWRITE
 		for(i = 0 ; i < ( len - 1) ; i++){		/* Make the used key unusable in the keyfile */
-			//printf(" %d \n",datpos[i]);
+/* 			printf(" %d \n",datpos[i]); */
 			datpos[i] = PAD_EMPTYCHAR;
-			//printf(" %d \n",datpos[i]);
+/* 			printf(" %d \n",datpos[i]); */
 		}
 #endif
 
-		//msync(data, pad->filesize, MS_ASYNC);
-		//usleep(100000);
+/* 		msync(data, pad->filesize, MS_ASYNC); */
+/* 		usleep(100000); */
 		otp_close_keyfile(fd,data,pad);		/* Close the keyfile */
 		pad->position = pad->position + len -1;
-		//printf("\ntest\t\t\t:%d",pad->position);
+/* 		printf("\ntest\t\t\t:%d",pad->position); */
 		otp_calc_entropy(pad);
 		
 	}else{
@@ -194,13 +194,13 @@ int otp_get_encryptkey_from_file(char **key , struct otp* pad, int len) {
 int otp_get_decryptkey_from_file(char **key , struct otp* pad, int len, int decryptpos) {
 	int fd; char *b=""; char **data; data=&b;
 	int i;
-	//printf("\ndecryptpos\t\t\t:%d\n\n",decryptpos);
+/* 	printf("\ndecryptpos\t\t\t:%d\n\n",decryptpos); */
 	if (pad->filesize < (pad->filesize-decryptpos - (len -1)) || (pad->filesize-decryptpos) < 0) {
 		return FALSE;
 	}
 	if (otp_open_keyfile(fd,data,pad)) {		/* Open the keyfile */
 		char *vkey = (char *) malloc( (len) * sizeof(char) );
-		//printf("\ntest\t\t\t:%d\n\n",pad->filesize-decryptpos - (len -1));
+/* 		printf("\ntest\t\t\t:%d\n\n",pad->filesize-decryptpos - (len -1)); */
 
 		char *datpos = *data + pad->filesize - decryptpos - (len - 1);
 		
@@ -209,10 +209,10 @@ int otp_get_decryptkey_from_file(char **key , struct otp* pad, int len, int decr
 		}
 
 		*key=vkey;
-		//otp_printint(*key,len-1);
+/* 		otp_printint(*key,len-1); */
 
-		//msync(data, pad->filesize, MS_ASYNC);
-		//usleep(100000);
+/* 		msync(data, pad->filesize, MS_ASYNC); */
+/* 		usleep(100000); */
 		otp_close_keyfile(fd,data,pad);		/* Close the keyfile */
 	}else{
 		return FALSE;
@@ -228,18 +228,19 @@ int otp_xor(char **message,char **key,int len) {
 	int i;
 	char *m,*k;
 
-	//printf("Warning: XOR disabled!!!!!!!!!!!!!!\n");
-	//return 1;			//Do no XOR
+/* Do no XOR  */
+/* 	printf("Warning: XOR disabled!!!!!!!!!!!!!!\n"); */
+/* 	return 1; */			
 	
 	m = *message;
 	k = *key;
-	//otp_printint(m,len);
-	//otp_printint(p,len);
+/* 	otp_printint(m,len); */
+/* 	otp_printint(p,len); */
 	for (i = 0;i < (len-1);i++) {
-		//printf("%c\t%d\t%c\t%d\t%d\n",m[i],m[i],p[i],p[i],m[i]^p[i]); //debug
+/* 		printf("%c\t%d\t%c\t%d\t%d\n",m[i],m[i],p[i],p[i],m[i]^p[i]); */
 		m[i]=m[i]^k[i];
 	}
-	//otp_printint(m,len);	
+/* 	otp_printint(m,len);	 */
 	*message=m;
 	free(*key);
 	return TRUE;
@@ -249,7 +250,6 @@ int otp_xor(char **message,char **key,int len) {
 
 /* Helper function for debugging */
 int otp_printint(char *m,int len) {
-	//int len=strlen(m);
 	int i;
 	printf("\t\tIntegers:\t");
 	for (i = 0;i < len;i++) {
@@ -263,21 +263,20 @@ int otp_printint(char *m,int len) {
 
 /* Seeks the the starting position,filesize and entropy from the keyfile */
 struct otp* otp_seek_start(struct otp* pad){
-	//char* path = get_current_dir_name();
+/* 	char* path = get_current_dir_name(); */
 	int fd; char *b=""; char **data; data=&b;
-
+	printf(" ");			/* Voodoo? */
 	if (otp_open_keyfile(fd,data,pad)) {		/* Open the keyfile */
-	//otp_printint(*data+99990,100);
+/* 	otp_printint(*data+99990,100); */
 
 		pad->position = otp_seek_pos(*data,pad->filesize);
 		otp_calc_entropy(pad);
-
 		otp_close_keyfile(fd,data,pad);		/* Close the keyfile */
 	}else{
 		return NULL;
 	}
 
-	//printf("\t\tTest%u\n",h);
+/* 	printf("\t\tTest%u\n",h); */
 	return pad;
 }
 
@@ -285,9 +284,6 @@ struct otp* otp_seek_start(struct otp* pad){
 
 /* Opens a keyfile with memory mapping */
 int otp_open_keyfile(int fd, char **data,struct otp* pad){
-
-
-	//printf("test:\t\%s\n",pad->filename);
 	struct stat fstat;
 	if ((fd = open(pad->filename, O_RDWR)) == -1) {
 		perror("open");
@@ -307,6 +303,7 @@ int otp_open_keyfile(int fd, char **data,struct otp* pad){
 		pad=NULL;
 		return FALSE;
 	}
+	return TRUE;
 }
 
 
@@ -323,7 +320,7 @@ int otp_close_keyfile(int fd, char **data,struct otp* pad){
 /* Seek the position where the pad can be used for encryption */
 int otp_seek_pos(char *data,int filesize){
 	int pos=0;
-	//otp_printint(data+pos,10);
+/* 	otp_printint(data+pos,10); */
 
 	while ( ( (data+pos)[0] == PAD_EMPTYCHAR) && (pos < filesize) ) {
 		pos++;
@@ -357,34 +354,20 @@ char* otp_check_id(char* id_str){
 
 
 
-// ----------------- Public One-Time Pad Functions ------------
+/*  ----------------- Public One-Time Pad Functions ------------ */
 
 /* extracts and returns the ID from a given encrypted message. Leaves the message constant. Returns NULL if it fails.*/
 char* otp_get_id_from_message(char **message){
-	const char d[] = MSG_DELI;
-     	char *m,*mrun;
-     	mrun = strdup (*message);
-	if (*message == NULL ) {
-		return NULL;
-	}
-     	m = strsep (&mrun, d);
-	if (m == NULL ) {
-		return NULL;
-	}
-	//printf("id:\tpos:\t%s\n",m);	/* Our position in the pad */
-     	m = strsep (&mrun, d);
-	if (m == NULL ) {
-		return NULL;
-	}
-     	char *id_str = strdup (m);	/* Our ID */
 
-	//printf("id:\tID:\t%s\n",m);
-     	m = strsep (&mrun, d);
-	if (m == NULL ) {
-		return NULL;
-	}					/* Our Message */
+	gchar** m_array = g_strsplit(*message, MSG_DELI, 3);
+
+	if ( (m_array[0] == NULL) || (m_array[1] == NULL) ) {
+		return FALSE;
+	}
+
+	char *id_str = g_strdup(m_array[1]);
+
 	return otp_check_id(id_str);
-
 }
 
 /* Creates an otp struct, returns NULL if the filename is incorrect,
@@ -401,102 +384,65 @@ struct otp* otp_get_from_file(const char* path, const char* input_filename){
 		return NULL;
 	}
 
-
-	char *filename;
-	filename = (char *) malloc((strlen(input_filename) + strlen(path) + 1) * sizeof(char) );
-	strcpy(filename, path);
-	strcat(filename, input_filename);
+	char *filename = g_strconcat(path,input_filename,NULL);
 	pad->filename = filename;
 
+	gchar** f_array = g_strsplit(input_filename, FILE_DELI, 3);
 
-	const char d[] = FILE_DELI;		/* The delimiter */
-     	char *c, *run;
-	run = strdup(input_filename);
-
-
-     	c = strsep (&run, d);		/* Our source i.e alice@yabber.org */
-	if (c == NULL ) {
+	if ( (f_array[0] == NULL) || (f_array[1] == NULL) || (f_array[2] == NULL) ) {
 		return NULL;
 	}
-	char *src;
-	src = (char *) malloc((strlen(c) + 1) * sizeof(char) );
-	src = c; 
+	char *src = g_strdup(f_array[0]);	/* Our source i.e alice@yabber.org */
 	pad->src = src;
 
-
-     	c = strsep (&run, d);		/* Our dest i.e bob@yabber.org */
-	if (c == NULL ) {
-		return NULL;
-	}
-	char *dest;
-	dest = (char *) malloc((strlen(c) + 1) * sizeof(char) );
-	dest = c; 
+	char *dest = g_strdup(f_array[1]);	/* Our dest i.e bob@yabber.org */
 	pad->dest = dest;
 
-     	c = strsep (&run, d);		/* Our ID */
-     	char *x,*xrun=c;
+	gchar** p_array = g_strsplit(f_array[2], ".", 2);
 
-	if (c == NULL ) {
+	if ( (p_array[0] == NULL ) || (p_array[1] == NULL ) ) {
 		return NULL;
 	}
-     	xrun = strdup (c);
-
-	if (c == NULL ) {
+	if ( g_str_has_suffix(f_array[2], FILE_SUFFIX) == FALSE ) {
 		return NULL;
 	}
-
-	x = strsep (&xrun,".");
-
-	if (x == NULL ) {
-		return NULL;
-	}
-
-	char *id;
-	id = (char *) malloc((strlen(c) + 1) * sizeof(char) );
-	id = x;
+	char *id = g_strdup(p_array[0]);	/* Our ID */
 	pad->id = id;
 
-	if (xrun == NULL ) {
-		return NULL;
-	}
+	g_strfreev(p_array);
 
-	if ( strcmp(KEYFILEEND, xrun) == TRUE ) {
-		return NULL;
-	}
+	g_strfreev(f_array);
 
 	if ( otp_check_id(pad->id) == NULL ) {
 		return NULL;
 	}
 
-
-
 #ifdef HAVEFILE
 
-	pad = otp_seek_start(pad);		//Try to open the keyfile and get position ans size
+	pad = otp_seek_start(pad);		/* Try to open the keyfile and get position ans size */
 #else
-	// Dummy-values for development
+/* 	 Dummy-values for development */
 	if (pad != NULL) {
 		pad->position = 10000;
 		pad->filesize = 100000;
 		otp_calc_entropy(pad);
 	}
 #endif
-
 	return pad;
 }
 /* destroys an otp object */
 void otp_destroy(struct otp* pad) {
-	if (pad != NULL) {
-		if (pad->src != NULL)
-			free(pad->src);
-		if (pad->dest != NULL)
-			free(pad->dest);
-		if (pad->id != NULL)
-			free(pad->id);
-		if (pad->filename != NULL)
-			free(pad->filename);
-		free(pad);
-	}
+/* 	if (pad != NULL) { */
+/* 		if (pad->src != NULL) */
+/* 			free(pad->src); */
+/* 		if (pad->dest != NULL) */
+/* 			free(pad->dest); */
+/* 		if (pad->id != NULL) */
+/* 			free(pad->id); */
+/* 		if (pad->filename != NULL) */
+/* 			free(pad->filename); */
+/* 		free(pad); */
+/* 	} */
 }
 
 /* Creates the actual string of the encrypted message that is given to the application.
@@ -507,31 +453,19 @@ unsigned int otp_encrypt(struct otp* pad, char **message){
 	if(pad == NULL) {
 		return 0;
 	}
-				
+			
 	char *pos_str;
 	asprintf (&pos_str, "%ld",pad->position);			/* Our position in the pad*/
-	char *id_str = pad->id;						/* Our ID */
 
+#ifdef UCRYPT
 	if (otp_uencrypt(message,pad) == FALSE) {			/* Encrypt and base64 */
 		return FALSE;
-	}				
+	}
+#endif				
 
-	int size=(strlen(*message) + strlen(pos_str) + strlen(id_str) + 1 + 2) * sizeof(char);
-	//char *new_msg=(char* )g_strnfill((int) size,(gchar) "\0");   //Maybe a better way?
-	char *new_msg = (char *) malloc( size * sizeof(char) ); 	/* Create a new, bigger **message */
-
-	char *p = new_msg;	
-
-	p = stpcpy (p, pos_str);			/*Concatinate everything*/
-	p = stpcpy (p, "|");
-	p = stpcpy (p, id_str);
-	p = stpcpy (p, "|");
-	p = stpcpy (p, *message);
-	//printf("encrypt:\t\tMessage:\t%s\n",new_msg);
-
-	//(new_msg)[(strlen(*message) + strlen(pos_str) + strlen(id_str) + 2) * sizeof(char)] = '\0';
-	free(*message);
-	*message = new_msg;			/*Something like "3EF9|34EF4588|M+Rla2w=" */
+	char *new_msg = g_strconcat(pos_str,MSG_DELI,pad->id,MSG_DELI,*message,NULL);	/*Something like "3EF9|34EF4588|M+Rla2w=" */
+	g_free(*message);
+	*message = new_msg;
 	return TRUE;
 }
 
@@ -539,47 +473,34 @@ unsigned int otp_encrypt(struct otp* pad, char **message){
 returns TRUE if it could decrypt the message  */
 unsigned int otp_decrypt(struct otp* pad, char **message){
 
-	if(pad == NULL) {
-		return 0;
-	}
-
-
-	const char d[] = "|";
-     	char *m;
-	char *mrun=*message;
-
-	//printf("xor:\t\tMessage:\t%s\n",*message);
-	if (*message == NULL ) {
+	if (pad == NULL) {
 		return FALSE;
 	}
-     	m = strsep (&mrun, d);
-	if (m == NULL ) {
+
+	gchar** m_array = g_strsplit(*message, MSG_DELI, 3);
+
+	if ( (m_array[0] == NULL) || (m_array[1] == NULL) || (m_array[2] == NULL) ) {
 		return FALSE;
 	}
-	int decryptpos = (unsigned int) g_ascii_strtoll ( strdup (m) ,NULL,10); 	/* Our position to decrypt in the pad */
-	//printf("decrypt:\tpos:\t%s\n",pos_str);
-     	m = strsep (&mrun, d);
-	if (m == NULL ) {
-		return FALSE;
-	}
-     	pad->id = strdup (m);		/* Our ID */
 
-     	m = strsep (&mrun, d);
-	if (m == NULL ) {
-		return FALSE;
-	}					/* Our Message */
+	int decryptpos = (unsigned int) g_ascii_strtoll ( strdup (m_array[0]) ,NULL,10); 	/* Our position to decrypt in the pad */
+	pad->id = g_strdup(m_array[1]);
 
-     	char *new_msg;				/* Create a new, smaller **message */
-	new_msg = (char *) malloc((strlen(m) + 1) * sizeof(char)); 
-	strcpy(new_msg, m);
-	free(*message);
+	char *new_msg = g_strdup(m_array[2]);
+	g_free(*message);
 	*message = new_msg;
-	//printf("xor:\t\tMessage:\t%s\n",*message);
-	//printf("decrypt:\tMessage:\t%s\n",*message);
+
+	g_strfreev(m_array);
+
+#ifdef UCRYPT
+
 	if ( otp_udecrypt(message,pad,decryptpos) ) {		/* Decrypt and debase64 */
 		return FALSE;
 	}
-	//printf("decrypt:\tMessage:\t%s\n",*message);
+
+#endif
+
+/* 	printf("decrypt:\tMessage:\t%s\n",*message); */
 	return TRUE;
 }
 
@@ -590,26 +511,26 @@ unsigned int otp_decrypt(struct otp* pad, char **message){
 
 
 
-// ----------------- TODO: REMOVE ME ------------------
+/*  ----------------- TODO: REMOVE ME ------------------ */
 void aaaa_encrypt(char **message) {
 
-	//HELP: http://irc.essex.ac.uk/www.iota-six.co.uk/c/g6_strcat_strncat.asp
-	char *a_str = " << this message is encryptet"; // can't be free()-d
+/* 	HELP: http://irc.essex.ac.uk/www.iota-six.co.uk/c/g6_strcat_strncat.asp */
+	char *a_str = " << this message is encryptet"; 
 	char *new_msg = g_strconcat(*message, a_str, NULL);
 
 	g_free(*message);
 	*message = new_msg;
 	
-	//HELP: change single elements of the char array
-	//(*message)[0] = 'A';
+/* 	HELP: change single elements of the char array */
+/* 	(*message)[0] = 'A'; */
 
 	return;
 }
 
 void aaaa_decrypt(char **message) {
 
-	//HELP: http://irc.essex.ac.uk/www.iota-six.co.uk/c/g6_strcat_strncat.asp
-	char *a_str = " << this message is decryptet"; // kann nicht ge-free-t werden
+/* 	HELP: http://irc.essex.ac.uk/www.iota-six.co.uk/c/g6_strcat_strncat.asp */
+	char *a_str = " << this message is decryptet"; 
 	char *new_msg = g_strconcat(*message, a_str, NULL);
 
 	g_free(*message);
