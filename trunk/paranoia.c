@@ -437,13 +437,16 @@ void par_session_close(struct key* used_key, PurpleConversation *conv) {
 // detects request messages and sets the key settings. Returns TRUE if it is found
 static gboolean par_session_check_req(const char* alice, const char* bob, PurpleConversation *conv, char** message_no_header) {
 
-	if(strncmp(*message_no_header, PARANOIA_REQUEST, 70) == 0) {
+	if(strncmp(*message_no_header, PARANOIA_REQUEST, 70) == 0) { // FIXME: dynamic size
 		// TODO src for ID too! Save it in msg before!
 		struct key* temp_key = par_search_key(alice, bob, NULL);
 		if (temp_key != NULL) {
 			temp_key->opt->asked = TRUE;
 			temp_key->opt->has_plugin = TRUE;
 			temp_key->conv = conv;
+			if(temp_key->opt->auto_enable) {
+				temp_key->opt->otp_enabled = TRUE;
+			}
 			par_session_ack(temp_key, conv);
 			purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Checked REQUEST: now has_plugin = TRUE. ACK sent.\n");
 		} else {
@@ -460,14 +463,14 @@ static gboolean par_session_check_req(const char* alice, const char* bob, Purple
 static gboolean par_session_check_msg(struct key* used_key, char** message_decrypted) {
 
 	// check ACK and EXIT
-	if(strncmp(*message_decrypted, PARANOIA_ACK, strlen(PARANOIA_ACK)) == 0) {
+	if(strncmp(*message_decrypted, PARANOIA_ACK, 18) == 0) { // FIXME: dynamic size
 		// set has_plugin, otp_enabled
 		used_key->opt->has_plugin = TRUE;
 		used_key->opt->otp_enabled = TRUE;
 		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "PARANOIA_ACK detected! otp_enabled=TRUE \n");
 		return TRUE;
 	} 
-	else if (strncmp(*message_decrypted, PARANOIA_EXIT, strlen(PARANOIA_EXIT)) == 0) {
+	else if (strncmp(*message_decrypted, PARANOIA_EXIT, 20) == 0) { // FIXME: dynamic size
 		// TODO unset otp_enabled, asked
 		used_key->opt->otp_enabled = FALSE;
 		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "PARANOIA_EXIT detected! otp_enabled=FALSE\n");
