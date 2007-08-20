@@ -109,7 +109,7 @@ static gboolean par_add_status_str(char** message) {
 
 // ----------------- Paranoia Key Management ------------------
 
-// needs to be reseted for every chat session
+// needs to be resetted for every chat session
 struct options {
 	gboolean asked; // already asked for plugin support?
 	gboolean has_plugin; // the result
@@ -309,7 +309,7 @@ static struct key* par_search_key(const char* src, const char* dest, const char*
 
 	gchar** str_array = g_strsplit(src, d, 2);
 	char* src_copy = g_strdup(str_array[0]);
-	printf("paranoia !!!!!!!!!!:\tResource remover: my_acc\t%s\n", src_copy);
+	//printf("paranoia !!!!!!!!!!:\tResource remover: my_acc\t%s\n", src_copy);
 	g_strfreev(str_array);
 
 	/* GLIB FIX char *src_copy, *token;
@@ -326,7 +326,7 @@ static struct key* par_search_key(const char* src, const char* dest, const char*
 	// strip the jabber resource from dest (/home /mobile ect.)
 	str_array = g_strsplit(dest, d, 2);
 	char* dest_copy = g_strdup(str_array[0]);
-	printf("paranoia !!!!!!!!!!:\tResource remover: other_acc\t%s\n", dest_copy);
+	//printf("paranoia !!!!!!!!!!:\tResource remover: other_acc\t%s\n", dest_copy);
 	g_strfreev(str_array);
 
 
@@ -408,12 +408,12 @@ void par_session_ack(struct key* used_key, PurpleConversation *conv) {
 	// encrypt PARANOIA_ACK
 	char *tmp_str = (char *) g_malloc((strlen(PARANOIA_ACK) + 1) * sizeof(char));
 	strcpy(tmp_str, PARANOIA_ACK);
-	char** tmp_msg;
-	tmp_msg = &tmp_str;
-	otp_encrypt(used_key->pad, tmp_msg);
-	par_add_header(tmp_msg);
+	//char** tmp_msg;
+	//tmp_msg = &tmp_str;
+	//otp_encrypt(used_key->pad, tmp_msg);
+	//par_add_header(tmp_msg);
 
-	purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), *tmp_msg, 
+	purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), tmp_str, 
 		PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_RAW); //PURPLE_MESSAGE_SYSTEM | 
 
 	return;
@@ -425,12 +425,12 @@ void par_session_close(struct key* used_key, PurpleConversation *conv) {
 	// encrypt PARANOIA_EXIT
 	char *tmp_str = (char *) g_malloc((strlen(PARANOIA_EXIT) + 1) * sizeof(char));
 	strcpy(tmp_str, PARANOIA_EXIT);
-	char** tmp_msg;
-	tmp_msg = &tmp_str;
-	otp_encrypt(used_key->pad, tmp_msg);
-	par_add_header(tmp_msg);
+	//char** tmp_msg;
+	//tmp_msg = &tmp_str;
+	//otp_encrypt(used_key->pad, tmp_msg);
+	//par_add_header(tmp_msg);
 
-	purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), *tmp_msg, 
+	purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), tmp_str, 
 		PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_RAW); //PURPLE_MESSAGE_SYSTEM | 
 
 	return;
@@ -449,9 +449,10 @@ static gboolean par_session_check_req(const char* alice, const char* bob, Purple
 			if(temp_key->opt->auto_enable) {
 				temp_key->opt->otp_enabled = TRUE;
 				purple_conversation_write(conv, NULL, "Encryption enabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+				par_session_ack(temp_key, conv);
+				purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Checked REQUEST: now otp_enabled = TRUE. ACK sent.\n");
 			}
-			par_session_ack(temp_key, conv);
-			purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Checked REQUEST: now has_plugin = TRUE. ACK sent.\n");
+			purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Checked REQUEST: now has_plugin = TRUE.\n");
 		} else {
 			purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "REQUEST failed! NO key available or auto_enable = FALSE\n");
 		}
@@ -558,9 +559,8 @@ static void par_cli_key_details(PurpleConversation *conv) {
 	char* disp_string = (char *) g_malloc((200) * sizeof(char)); // TODO: SIZE??????????
 	if(used_key != NULL) {
 		sprintf( disp_string, 
-		"Key Infos:\nID: %s\nSize: %i\nPosition: %i\nEntropy: %i\nAsked: %i\nHas plugin: %i\nOTP enabled: %i\nAuto enable: %i",
-		used_key->pad->id, used_key->pad->filesize, used_key->pad->position, used_key->pad->entropy, 
-		used_key->opt->asked, used_key->opt->has_plugin, used_key->opt->otp_enabled, used_key->opt->auto_enable );
+		"Key Infos:\nID: %s\nSize: %i\nPosition: %i\nEntropy: %i\nHas plugin: %i\nOTP enabled: %i\nAuto enable: %i\nConv ptr: %i",
+		used_key->pad->id, used_key->pad->filesize, used_key->pad->position, used_key->pad->entropy, used_key->opt->has_plugin, used_key->opt->otp_enabled, used_key->opt->auto_enable, (int) used_key->conv );
 
 	//missing: gboolean no_entropy;
 
@@ -678,7 +678,6 @@ void par_deleting_conversation(PurpleConversation *conv) {
 		used_key->opt->asked = FALSE;
 		used_key->opt->has_plugin = FALSE;
 		used_key->opt->otp_enabled = FALSE;
-		purple_conversation_write(conv, NULL, "Encryption disabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
 		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Reset conversation in key list.\n");
 	}
 
@@ -743,8 +742,10 @@ static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
 			used_key->conv = conv;
 
 			// disable encryption if active key is found and unencrypted message received
-			used_key->opt->otp_enabled = FALSE;
-			purple_conversation_write(conv, NULL, "Encryption disabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+			if (used_key->opt->otp_enabled) {
+				used_key->opt->otp_enabled = FALSE;
+				purple_conversation_write(conv, NULL, "Encryption disabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+			}
 		}
 
 		// free the jabber/msn strip!
