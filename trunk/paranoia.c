@@ -301,6 +301,8 @@ static gboolean par_free_key_list() {
 // searches a key in the keylist, ID is optional, if no ID: searches first src/dest match
 static struct key* par_search_key(const char* src, const char* dest, const char* id) {
 
+	// FIXME: optimize function!
+
 	// TODO: only for jabber?
 	// strip the jabber resource from src (/home /mobile ect.)
 	const char d[] = "/";
@@ -440,17 +442,18 @@ static gboolean par_session_check_req(const char* alice, const char* bob, Purple
 	if(strncmp(*message_no_header, PARANOIA_REQUEST, 70) == 0) { // FIXME: dynamic size
 		// TODO src for ID too! Save it in msg before!
 		struct key* temp_key = par_search_key(alice, bob, NULL);
-		if (temp_key != NULL) {
+		if (temp_key != NULL && temp_key->opt->auto_enable == TRUE) {
 			temp_key->opt->asked = TRUE;
 			temp_key->opt->has_plugin = TRUE;
 			temp_key->conv = conv;
 			if(temp_key->opt->auto_enable) {
 				temp_key->opt->otp_enabled = TRUE;
+				purple_conversation_write(conv, NULL, "Encryption enabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
 			}
 			par_session_ack(temp_key, conv);
 			purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Checked REQUEST: now has_plugin = TRUE. ACK sent.\n");
 		} else {
-			purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "REQUEST failed! NO key available\n");
+			purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "REQUEST failed! NO key available or auto_enable = FALSE\n");
 		}
 		return TRUE;
 	}
@@ -460,19 +463,22 @@ static gboolean par_session_check_req(const char* alice, const char* bob, Purple
 }
 
 // detects ack and exit messages and sets the key settings. Returns TRUE if one of them is found
-static gboolean par_session_check_msg(struct key* used_key, char** message_decrypted) {
+static gboolean par_session_check_msg(struct key* used_key, char** message_decrypted, PurpleConversation *conv) {
 
 	// check ACK and EXIT
 	if(strncmp(*message_decrypted, PARANOIA_ACK, 18) == 0) { // FIXME: dynamic size
 		// set has_plugin, otp_enabled
 		used_key->opt->has_plugin = TRUE;
+		// TODO enable only if auto_enable = TRUE
 		used_key->opt->otp_enabled = TRUE;
+		purple_conversation_write(conv, NULL, "Encryption enabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
 		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "PARANOIA_ACK detected! otp_enabled=TRUE \n");
 		return TRUE;
 	} 
 	else if (strncmp(*message_decrypted, PARANOIA_EXIT, 20) == 0) { // FIXME: dynamic size
 		// TODO unset otp_enabled, asked
 		used_key->opt->otp_enabled = FALSE;
+		purple_conversation_write(conv, NULL, "Encryption disabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
 		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "PARANOIA_EXIT detected! otp_enabled=FALSE\n");
 		return TRUE;
 	} 
@@ -501,13 +507,40 @@ static void set_default_cli_error(gchar **error) {
 // tries to enable the encryption 
 static gboolean par_cli_try_enable_enc(PurpleConversation *conv) {
 
-	return TRUE;
+	// search by conv
+	struct key* used_key = par_search_key_by_conv(conv);
+	if(used_key != NULL) {
+		if (used_key->opt->has_plugin == TRUE) {
+			used_key->opt->otp_enabled = TRUE;
+			purple_conversation_write(conv, NULL, "Encryption enabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+		} else {
+			purple_conversation_write(conv, NULL, "Trying to enable encryption.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+			par_session_request(conv);
+		}
+		used_key->opt->auto_enable = TRUE;
+		return TRUE;
+	}
+
+	purple_conversation_write(conv, NULL, "Couldn't enable the encryption. No key available.",
+		PURPLE_MESSAGE_NO_LOG, time(NULL));
+	return FALSE;
 }
 
 // disables encryption
 static gboolean par_cli_disable_enc(PurpleConversation *conv) {
 
-	return TRUE;
+	// search by conv
+	struct key* used_key = par_search_key_by_conv(conv);
+	if(used_key != NULL) {
+		used_key->opt->otp_enabled = FALSE;
+		used_key->opt->auto_enable = FALSE;
+		purple_conversation_write(conv, NULL, "Encryption disabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+		return TRUE;
+	}
+
+	purple_conversation_write(conv, NULL, "Couldn't disable the encryption. No key available.",
+		PURPLE_MESSAGE_NO_LOG, time(NULL));
+	return FALSE;
 }
 
 // lists all keys in the im window for a certain src/dest combination 
@@ -532,7 +565,7 @@ static void par_cli_key_details(PurpleConversation *conv) {
 	//missing: gboolean no_entropy;
 
 	} else {
-		strcpy(disp_string, "There is no key available (yet) for this conversation.");
+		strcpy(disp_string, "There is no key available for this conversation.");
 	}
 
 	purple_conversation_write(conv, NULL, disp_string, PURPLE_MESSAGE_NO_LOG, time(NULL));
@@ -598,11 +631,11 @@ static PurpleCmdRet par_check_command(PurpleConversation *conv, const gchar *cmd
 		}
 		else if(strcmp("start", *args) == 0){
 			// otp start
-			purple_conversation_write(conv, NULL, "This should start the encryption.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+			par_cli_try_enable_enc(conv);
 		}
 		else if(strcmp("stop", *args) == 0){
 			// otp stop
-			purple_conversation_write(conv, NULL, "This should stop the encryption.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+			par_cli_disable_enc(conv);
 		}
 		else if(strcmp("keys", *args) == 0){
 			// otp keys
@@ -645,6 +678,7 @@ void par_deleting_conversation(PurpleConversation *conv) {
 		used_key->opt->asked = FALSE;
 		used_key->opt->has_plugin = FALSE;
 		used_key->opt->otp_enabled = FALSE;
+		purple_conversation_write(conv, NULL, "Encryption disabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
 		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Reset conversation in key list.\n");
 	}
 
@@ -700,11 +734,22 @@ static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
 
 		//FIXME: add or remove header has a bug! message is not identical. REQ check should be here.
 		
+		// save conv if a key is available
+		struct key* used_key = par_search_key(my_acc_name, *sender, NULL);
+		if(used_key != NULL) {
+			// debug
+			purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Found a matching Key with pad ID: %s\n", used_key->pad->id);
+			// save conversation ptr
+			used_key->conv = conv;
+
+			// disable encryption if active key is found and unencrypted message received
+			used_key->opt->otp_enabled = FALSE;
+			purple_conversation_write(conv, NULL, "Encryption disabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+		}
+
 		// free the jabber/msn strip!
 		g_free(*stripped_message);
 		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "This is not a paranoia message.\n");
-
-		// TODO: disable encryption if active key is found and unencrypted message received
 
 		return FALSE;
 	}
@@ -734,6 +779,7 @@ static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
 			//can I activate an encrypted conversation too?
 			if (used_key->opt->has_plugin && used_key->opt->auto_enable) {
 				used_key->opt->otp_enabled = TRUE;
+				purple_conversation_write(conv, NULL, "Encryption enabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
 				purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "This conversation was already initialized! otp_enabled is now TRUE\n");
 			} else {
 				purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "He sends us an encrypted message, but has no plugin? strange!\n");
@@ -750,7 +796,7 @@ static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
 #endif
 
 		// Detect ACK and EXIT message.
-		if(par_session_check_msg(used_key, message)) {
+		if(par_session_check_msg(used_key, message, conv)) {
 			return TRUE;
 		}
 
