@@ -56,7 +56,7 @@ CFLAGS_save="$CFLAGS"
 AC_PROG_CC_STDC
 CFLAGS="$CFLAGS_save"
 
-CFLAGS="$CFLAGS -Wall -pedantic"
+CFLAGS="$CFLAGS -Wall"
 
 AC_SUBST(CFLAGS)
 
