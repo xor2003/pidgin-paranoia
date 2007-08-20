@@ -47,7 +47,7 @@ extern char *stpncpy (char *restrict, const char *restrict, size_t);
 #endif
 
 // test
-//#define HAVEFILE
+#define HAVEFILE
 
 // ----------------- General Paranoia Stuff ------------------
 #define PARANOIA_HEADER "*** Encrypted with the Pidgin-Paranoia plugin: "
