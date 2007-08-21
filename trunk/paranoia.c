@@ -64,10 +64,6 @@ char* global_otp_path;
 /* adds the paranoia header */
 void par_add_header(char** message) {
 
-	// GLIB_FIX
-	//char* new_msg = (char *) malloc((strlen(*message) + strlen(PARANOIA_HEADER) + 1) * sizeof(char));
-	//strcpy(new_msg, PARANOIA_HEADER);
-	//strcat(new_msg, *message);
 	char* new_msg = g_strconcat(PARANOIA_HEADER, *message, NULL);
 
 	g_free(*message);
@@ -96,10 +92,6 @@ static gboolean par_remove_header(char** message) {
 /* adds a string at the beginning of the message (if encrypted) */
 static gboolean par_add_status_str(char** message) {
 
-	// GLIB FIX
-	//char* new_msg = (char *) malloc((strlen(*message) + strlen(PARANOIA_STATUS) + 1) * sizeof(char));
-	//strcpy(new_msg, PARANOIA_STATUS);
-	//strcat(new_msg, *message);
 	char* new_msg = g_strconcat(PARANOIA_STATUS, *message, NULL);
 
 	g_free(*message);
@@ -192,10 +184,6 @@ static gboolean par_init_key_list() {
 			g_error_free(error);
 		}
 
-		// GLIB FIX
-		//tmp_path = (char *) malloc((strlen(global_otp_path) + strlen(tmp_filename) + 1) * sizeof(char));
-		//strcpy(tmp_path, global_otp_path);
-		//strcat(tmp_path, tmp_filename);
 		char* tmp_path = g_strconcat(global_otp_path, tmp_filename, NULL);
 		
 		if(g_file_test(tmp_path, G_FILE_TEST_IS_REGULAR)) {
@@ -312,36 +300,11 @@ static struct key* par_search_key(const char* src, const char* dest, const char*
 	//printf("paranoia !!!!!!!!!!:\tResource remover: my_acc\t%s\n", src_copy);
 	g_strfreev(str_array);
 
-	/* GLIB FIX char *src_copy, *token;
-
-	src_copy = strdup(src);   // Make writable copy.
-	token = strsep(&src_copy, d);
-	printf("paranoia !!!!!!!!!!:\tResource remover: my_acc\t%s\n", token);
-	
-	if(token != NULL) {
-		src = g_strdup(token);
-		free(src_copy);
-	} */
-
 	// strip the jabber resource from dest (/home /mobile ect.)
 	str_array = g_strsplit(dest, d, 2);
 	char* dest_copy = g_strdup(str_array[0]);
 	//printf("paranoia !!!!!!!!!!:\tResource remover: other_acc\t%s\n", dest_copy);
 	g_strfreev(str_array);
-
-
-	/* GLIB FIX char *dest_copy;
-     	token = NULL;
-
-	dest_copy = strdup(dest);   // Make writable copy.
-	token = strsep(&dest_copy, d);
-	printf("paranoia !!!!!!!!!!:\tResource remover: other_acc\t%s\n", token);
-	
-	if(token != NULL) {
-		dest = g_strdup(token);
-		//free(token);
-		free(dest_copy);
-	} */
 
 	// ---- end stripping -----
 
@@ -405,13 +368,9 @@ static void par_session_request(PurpleConversation *conv) {
 // sends an otp acknowledge message
 void par_session_ack(struct key* used_key, PurpleConversation *conv) {
 
-	// encrypt PARANOIA_ACK
+	// PARANOIA_ACK
 	char *tmp_str = (char *) g_malloc((strlen(PARANOIA_ACK) + 1) * sizeof(char));
 	strcpy(tmp_str, PARANOIA_ACK);
-	//char** tmp_msg;
-	//tmp_msg = &tmp_str;
-	//otp_encrypt(used_key->pad, tmp_msg);
-	//par_add_header(tmp_msg);
 
 	purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), tmp_str, 
 		PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_RAW); //PURPLE_MESSAGE_SYSTEM | 
@@ -422,13 +381,9 @@ void par_session_ack(struct key* used_key, PurpleConversation *conv) {
 // sends an otp termination message
 void par_session_close(struct key* used_key, PurpleConversation *conv) {
 
-	// encrypt PARANOIA_EXIT
+	// PARANOIA_EXIT
 	char *tmp_str = (char *) g_malloc((strlen(PARANOIA_EXIT) + 1) * sizeof(char));
 	strcpy(tmp_str, PARANOIA_EXIT);
-	//char** tmp_msg;
-	//tmp_msg = &tmp_str;
-	//otp_encrypt(used_key->pad, tmp_msg);
-	//par_add_header(tmp_msg);
 
 	purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), tmp_str, 
 		PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_RAW); //PURPLE_MESSAGE_SYSTEM | 
@@ -724,7 +679,7 @@ static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
 	// check for PARANOIA_REQUEST
 	if(par_session_check_req(my_acc_name, *sender, conv, stripped_message)) {
 		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "PARANOIA_REQUEST detected!!!\n");
-		return TRUE;
+		return FALSE;
 	}
 
 	// --- checks for the Paranoia Header ---
@@ -798,7 +753,7 @@ static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
 
 		// Detect ACK and EXIT message.
 		if(par_session_check_msg(used_key, message, conv)) {
-			return TRUE;
+			return FALSE;
 		}
 
 		// debug
@@ -841,7 +796,7 @@ static void par_sending_im_msg(PurpleAccount *account, const char *receiver,
 		if (!used_key->opt->otp_enabled) {
 			//TODO: initialize an encrypted conversation. already asked?
 			//purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "This conversation was not initialized! otp_enabled == FALSE. But we encrypt it anyway...(FIXME) \n");
-			return;
+			//return;
 		}
 
 		// TODO: check for remaining entropy
@@ -921,10 +876,6 @@ static gboolean plugin_load(PurplePlugin *plugin) {
 
 	// set the global key folder
 	const gchar* home = g_get_home_dir();
-	// GLIB FIX
-	//global_otp_path = (char *) malloc((strlen(home) + strlen(PARANOIA_PATH) + 1) * sizeof(char));
-	//strcpy(global_otp_path, (char *) home);
-	//strcat(global_otp_path, PARANOIA_PATH);
 	global_otp_path = g_strconcat(home, PARANOIA_PATH, NULL);
 
 	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Key Path: %s\n", global_otp_path);
@@ -938,7 +889,6 @@ static gboolean plugin_load(PurplePlugin *plugin) {
 	par_init_key_list();
 
 	// connect to signals
-	// HELP: gulong purple_signal_connect (void *instance, const char *signal, void *handle, PurpleCallback func, void *data)
 	purple_signal_connect(conv_handle, "receiving-im-msg", plugin,
 		PURPLE_CALLBACK(par_receiving_im_msg), NULL);
 	purple_signal_connect(conv_handle, "sending-im-msg", plugin,
