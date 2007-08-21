@@ -394,17 +394,17 @@ struct otp* otp_get_from_file(const char* path, const char* input_filename){
 }
 /* destroys an otp object */
 void otp_destroy(struct otp* pad) {
-/* 	if (pad != NULL) { */
-/* 		if (pad->src != NULL) */
-/* 			free(pad->src); */
-/* 		if (pad->dest != NULL) */
-/* 			free(pad->dest); */
-/* 		if (pad->id != NULL) */
-/* 			free(pad->id); */
-/* 		if (pad->filename != NULL) */
-/* 			free(pad->filename); */
-/* 		free(pad); */
-/* 	} */
+	if (pad != NULL) {
+		if (pad->src != NULL)
+			g_free(pad->src);
+		if (pad->dest != NULL)
+			g_free(pad->dest);
+		if (pad->id != NULL)
+			g_free(pad->id);
+		if (pad->filename != NULL)
+			g_free(pad->filename);
+		g_free(pad);
+	}
 }
 
 /* Creates the actual string of the encrypted message that is given to the application.
