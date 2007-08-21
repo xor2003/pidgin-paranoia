@@ -49,12 +49,12 @@ int main(void) {
 
 	/* Message creation */
 	char **message;
-	char *vmessage = (char *) malloc((strlen(m) + 1) * sizeof(char));
+	char *vmessage = (char *) g_malloc((strlen(m) + 1) * sizeof(char));
 	strcpy(vmessage, m);
 	message=&vmessage;
 
 	const gchar* home = g_get_home_dir();		/* set the global key folder  TODO: REMOVE! */
-	char* path = (char *) malloc((strlen(home) + strlen(PARANOIA_PATH) + 1) * sizeof(char));
+	char* path = (char *) g_malloc((strlen(home) + strlen(PARANOIA_PATH) + 1) * sizeof(char));
 	strcpy(path, (char*) home);
 	strcat(path, PARANOIA_PATH);
 
@@ -72,7 +72,8 @@ int main(void) {
 
 /* 	char filename[]=" hello world.txt"; */
 /* 	char filename[]="aa aa aa"; */
-	char filename[]="alexapfel@gmail.com alexapfel@gmail.com 11111111.entropy";
+/* 	char filename[]="alexapfel@gmail.com alexapfel@gmail.com 11111111.entropy"; */
+	char filename[]="test2 test2 11111111.entropy";
 	struct otp* pad = otp_get_from_file(path,filename);
 	if (pad == NULL) {
 		printf("Tester:File can not be opened!\n");
