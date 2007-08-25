@@ -11,6 +11,7 @@ Simon Wenner:
  * Paranoia: Key list search functions
  * Paranoia: Key list is generated from files
  * Paranoia: Basic session initialisation
+ * Paranoia: Basic session closing
 
 Christan Wäckerlin:
  * One-time pad documentation

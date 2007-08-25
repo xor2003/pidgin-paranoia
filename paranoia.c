@@ -363,7 +363,7 @@ static void par_session_request(PurpleConversation *conv) {
 
 /*
 // sends an otp acknowledge message
-void par_session_ack(struct key* used_key, PurpleConversation *conv) {
+void par_session_ack(PurpleConversation *conv) {
 
 	// PARANOIA_ACK
 	char *tmp_str = (char *) g_malloc((strlen(PARANOIA_ACK) + 1) * sizeof(char));
@@ -375,8 +375,8 @@ void par_session_ack(struct key* used_key, PurpleConversation *conv) {
 	return;
 } */
 
-// sends an otp termination message
-void par_session_close(struct key* used_key, PurpleConversation *conv) {
+/* sends an otp termination message */
+void par_session_close(PurpleConversation *conv) {
 
 	// PARANOIA_EXIT
 	char *tmp_str = (char *) g_malloc((strlen(PARANOIA_EXIT) + 1) * sizeof(char));
@@ -388,7 +388,7 @@ void par_session_close(struct key* used_key, PurpleConversation *conv) {
 	return;
 }
 
-// detects request messages and sets the key settings. Returns TRUE if it is found
+/* detects request messages and sets the key settings. Returns TRUE if found */
 static gboolean par_session_check_req(const char* alice, const char* bob, PurpleConversation *conv, char** message_no_header) {
 
 	if(strncmp(*message_no_header, PARANOIA_REQUEST, 70) == 0) { // FIXME: dynamic size
@@ -420,16 +420,18 @@ static gboolean par_session_check_msg(struct key* used_key, char** message_decry
 
 	// check ACK and EXIT
 	if(strncmp(*message_decrypted, PARANOIA_ACK, 18) == 0) { // FIXME: dynamic size
+		// TODO: move inside the first sent message
 		used_key->opt->has_plugin = TRUE;
-		// TODO enable only if auto_enable = TRUE
-		used_key->opt->otp_enabled = TRUE;
-		purple_conversation_write(conv, NULL, "Encryption enabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
-		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "PARANOIA_ACK detected! otp_enabled=TRUE \n");
+		if(used_key->opt->auto_enable) {
+			used_key->opt->otp_enabled = TRUE;
+			purple_conversation_write(conv, NULL, "Encryption enabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+			purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "PARANOIA_ACK detected! otp_enabled=TRUE \n");
+		}
 		return TRUE;
 	} 
 	else if (strncmp(*message_decrypted, PARANOIA_EXIT, 20) == 0) { // FIXME: dynamic size
-		// TODO unset otp_enabled
 		used_key->opt->otp_enabled = FALSE;
+		used_key->opt->has_plugin = FALSE;
 		purple_conversation_write(conv, NULL, "Encryption disabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
 		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "PARANOIA_EXIT detected! otp_enabled=FALSE\n");
 		return TRUE;
@@ -614,13 +616,18 @@ void par_deleting_conversation(PurpleConversation *conv) {
 	// Reset the pad
 	struct key* used_key = par_search_key_by_conv(conv);
 	if(used_key != NULL) {
+				
+		// send an EXIT message
+		if(used_key->opt->otp_enabled) {
+			par_session_close(conv);
+		}
+		
 		used_key->conv = NULL;
 		used_key->opt->has_plugin = FALSE;
 		used_key->opt->otp_enabled = FALSE;
-		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Reset conversation in key list.\n");
+		
+		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Reset conversation in key list. EXIT sent.\n");
 	}
-
-	//TODO: send an EXIT message
 
 	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Conversation deleted.\n");
 }
@@ -714,7 +721,7 @@ static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
 		// save conversation ptr
 		used_key->conv = conv;
 		
-		// TODO: detect ACK and EXIT messages
+		// TODO: detect ACK message
 
 		// encryption not enabled?
 		if (!used_key->opt->otp_enabled) {
@@ -740,10 +747,10 @@ static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
 		aaaa_decrypt(message);
 #endif
 
-		// Detect ACK and EXIT message.
-		/* if(par_session_check_msg(used_key, message, conv)) {
+		// detect EXIT message
+		if(par_session_check_msg(used_key, message, conv)) {
 			return FALSE;
-		} */
+		}
 
 		// debug
 		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Dec.Msg: %s\n", *message);
