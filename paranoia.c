@@ -19,7 +19,7 @@
 // GNOMElib
 #include <glib.h>
 
-// GNUlibc stuff
+// GNUlibc
 #include <string.h>
 #include <stddef.h>
 #include <errno.h>
@@ -34,19 +34,18 @@ extern char *stpncpy (char *restrict, const char *restrict, size_t);
 #include "version.h"
 #include "signals.h"
 #include "debug.h"
-// commands
 #include "cmds.h"
 //debug only:
 #include "core.h"
 
-// great stuff
+// Lib One-Time Pad
 #include "libotp.h"
 
 #ifdef HAVE_CONFIG_H
 #include "paranoia_config.h"
 #endif
 
-// test
+// test defines
 #define HAVEFILE
 #define SHOW_STATUS
 
@@ -383,7 +382,7 @@ void par_session_close(PurpleConversation *conv) {
 	strcpy(tmp_str, PARANOIA_EXIT);
 
 	purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), tmp_str, 
-		PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_RAW); //PURPLE_MESSAGE_SYSTEM | 
+		PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_RAW);
 
 	return;
 }
@@ -584,7 +583,7 @@ static PurpleCmdRet par_check_command(PurpleConversation *conv, const gchar *cmd
 		}
 		else if(strcmp("test", *args) == 0){
 			// FIXME: just a test.
-			purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), "Just a test string.", 
+			purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), "This is just a test string.", 
 				PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_RAW); //PURPLE_MESSAGE_SYSTEM | 
 		}	
 		// TODO: add more commands
@@ -654,7 +653,6 @@ static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
 	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Rcv.Msg: %s\n", *message);
 
 	// --- Strip all the HTML crap (Jabber, MSN) ---
-	// TODO: does that hurt?
 	// TODO: only strip, if jabber or msn or ???
 	// HELP: To detect the protcol id:
 	// purple_account_get_protocol_id(account)
@@ -671,7 +669,8 @@ static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
 
 	// check for PARANOIA_REQUEST
 	if(par_session_check_req(my_acc_name, *sender, conv, stripped_message)) {
-		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "PARANOIA_REQUEST detected!!!\n");
+				
+		g_free(*stripped_message);
 		return FALSE;
 	}
 
@@ -749,7 +748,7 @@ static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
 
 		// detect EXIT message
 		if(par_session_check_msg(used_key, message, conv)) {
-			return FALSE;
+			return TRUE;
 		}
 
 		// debug
@@ -786,11 +785,10 @@ static void par_sending_im_msg(PurpleAccount *account, const char *receiver,
 		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Found a matching Key with pad ID: %s\n", used_key->pad->id);
 		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "otp_enabled == %i\n", used_key->opt->otp_enabled);
 
-		// (TODO: search conversation and save conversation ptr (if possible?))
+		// TODO: search conversation and save conversation ptr (if possible?) How???
 
 		// encryption enabled?
 		if (!used_key->opt->otp_enabled) {
-			//TODO: re-initialize an encrypted conversation?
 			purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "This conversation was not initialized! otp_enabled == FALSE.\n");
 			return;
 		}
@@ -842,6 +840,8 @@ static gboolean par_change_displayed_msg(PurpleAccount *account, const char *sen
 
 	// FIXME: -> sender bug?
 	//purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "WHO? (FIXME): %s\n", sender);
+
+	// TODO: Or save the first conv ptr here... -> bug.
 
 #ifdef SHOW_STATUS
 
@@ -940,36 +940,10 @@ static PurplePluginInfo info = {
     PURPLE_PLUGIN_MAGIC,    /* Plugin magic, this must be PURPLE_PLUGIN_MAGIC. */
     PURPLE_MAJOR_VERSION,   /* This is also defined in libpurple. */
     PURPLE_MINOR_VERSION,   /* See previous */
-    PURPLE_PLUGIN_STANDARD, /* PurplePluginType: There are 4 different
-                                   values for this field.  The first is
-                                   PURPLE_PLUGIN_UNKNOWN, which should not be
-                                   used.  The second is PURPLE_PLUGIN_STANDARD;
-                                   this is the value most plugins will use.
-                                   Next, we have PURPLE_PLUGIN_LOADER; this is
-                                   the type you want to load if your plugin
-                                   is going to make it possible to load non-
-                                   native plugins.  For example, the Perl and
-                                   Tcl loader plugins are of this type.
-                                   Last, we have PURPLE_PLUGIN_PROTOCOL.  If
-                                   your plugin is going to allow the user to
-                                   connect to another network, this is the
-                                   type you'd want to use.
-                                 */
-    NULL,                   /* This field is the UI requirement.  If you're
-                                   writing a core plugin, this must be NULL
-                                   and the plugin must not contain any UI
-                                   code.  If you're writing a Pidgin plugin,
-                                   you need to use PIDGIN_PLUGIN_TYPE.  If you
-                                   are writing a Finch plugin, you would use
-                                   FINCH_PLUGIN_TYPE.
-                                 */
-    0,                      /* This field is for plugin flags.  Currently,
-                                   the only flag available to plugins is
-                                   invisible (PURPLE_PLUGIN_FLAG_INVISIBLE).
-                                   It causes the plugin to NOT appear in the
-                                   list of plugins.
-                                 */
-    NULL,                   	/* This is a GList of plugin dependencies. */
+    PURPLE_PLUGIN_STANDARD, /* PurplePluginType */
+    NULL,                   /* UI requirement. */
+    0,                      /* Plugin flags. */
+    NULL,                   	/* GList of plugin dependencies. */
     PURPLE_PRIORITY_DEFAULT,	/* This is the priority libpurple with give your
                                    plugin.  There are three possible values
                                    for this field, PURPLE_PRIORITY_DEFAULT,
