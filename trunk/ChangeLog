@@ -2,14 +2,15 @@
      Pidgin Paranoia Plug-in Change Log
 ---------------------------------------------
 
-0.0.1
+0.1.0
 Simon Wenner:
  * Paranoia: Basic plugin structure, libotp API
  * A build system 'from hell'! (but it seems to work)
  * Session and key management documentation
  * Paranoia: CLI functionality
- * Paranoia: Key list search function
+ * Paranoia: Key list search functions
  * Paranoia: Key list is generated from files
+ * Paranoia: Basic session initialisation
 
 Christan Wäckerlin:
  * One-time pad documentation
@@ -20,3 +21,7 @@ Christan Wäckerlin:
  * Libotp: struct *mypad is generated from keyfile
  * Keyfile templates added
  
+
+Known Bugs:
+ * /otp info is only working after one message was received
+ * leaving and returning to a session works under certain circumstances
