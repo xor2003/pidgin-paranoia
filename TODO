@@ -8,7 +8,6 @@ libotp.c
 paranoia.c
  * Enhanced session management
  * Hide all these annoying messages
- * Free the key list
  * Entropy checks and warnings
 
 other

@@ -100,7 +100,7 @@ static gboolean par_add_status_str(char** message) {
 
 // ----------------- Paranoia Key Management ------------------
 
-// needs to be resetted for every chat session
+/* key options struct */
 struct options {
 	//gboolean wait; // wait for ACK, do not disable enc. if blank message arrives
 	gboolean has_plugin; // the result of the request
@@ -109,7 +109,7 @@ struct options {
 	gboolean no_entropy; // if it is used completely: TRUE
 };
 
-// paranoia key struct (a linked list)
+/* paranoia key struct (a linked list) */
 struct key {
 	struct otp* pad; // see libotp.h
 	struct options* opt; // key options
@@ -117,10 +117,10 @@ struct key {
 	struct key* next;
 };
 
-// paranoia keylist pointer
+/* paranoia keylist pointer */
 struct key* keylist = NULL;
 
-// creates a key struct
+/* creates a key struct */
 static struct key* par_create_key(const char* filename) {
 
 	// get otp object
@@ -148,7 +148,7 @@ static struct key* par_create_key(const char* filename) {
 	return key;
 }
 
-// counts all keys in the list
+/* counts all keys in the list */
 static int par_count_keys() {
 	int sum = 0;
 	struct key* tmp_ptr = keylist;
@@ -162,7 +162,7 @@ static int par_count_keys() {
 	return sum;
 }
 
-// loads all available keys from the global otp folder into the keylist
+/* loads all keys from the global otp folder into the key list */
 static gboolean par_init_key_list() {
 	
 #ifdef HAVEFILE
@@ -277,11 +277,22 @@ static gboolean par_init_key_list() {
 	return TRUE;
 }
 
-// frees all memory of the keylist
-static gboolean par_free_key_list() {
+/* frees all memory of the keylist */
+static void par_free_key_list() {
 
-	// TODO
-	return TRUE;
+	struct key* tmp_key = keylist;
+	struct key* next_key_ptr = NULL;
+
+	while(tmp_key != NULL) {
+		next_key_ptr = tmp_key->next;
+		otp_destroy(tmp_key->pad);
+		g_free(tmp_key->opt);
+		g_free(tmp_key);
+		tmp_key = next_key_ptr;
+		printf("paranoia !!!!!!!!!!:\tKey freed!\n");
+	}
+	
+	return;
 }
 
 // searches a key in the keylist, ID is optional, if no ID: searches first src/dest match
@@ -609,10 +620,8 @@ void par_conversation_created(PurpleConversation *conv) {
 }
 
 /* --- signal handler for "deleting-conversation" --- */
-// Emitted just before a conversation is to be destroyed.
 void par_deleting_conversation(PurpleConversation *conv) {
 
-	// Reset the pad
 	struct key* used_key = par_search_key_by_conv(conv);
 	if(used_key != NULL) {
 				
@@ -620,7 +629,7 @@ void par_deleting_conversation(PurpleConversation *conv) {
 		if(used_key->opt->otp_enabled) {
 			par_session_close(conv);
 		}
-		
+		// reset the pad
 		used_key->conv = NULL;
 		used_key->opt->has_plugin = FALSE;
 		used_key->opt->otp_enabled = FALSE;
