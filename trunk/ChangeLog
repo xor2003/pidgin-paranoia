@@ -9,7 +9,7 @@ Simon Wenner:
  * Session and key management documentation
  * Paranoia: CLI functionality
  * Paranoia: Key list search functions
- * Paranoia: Key list is generated from files
+ * Paranoia: Key list is generated from files and can be freed
  * Paranoia: Basic session initialisation
  * Paranoia: Basic session closing
  * Paranoia: Encryptet messages are labelled
