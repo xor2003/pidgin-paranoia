@@ -28,4 +28,4 @@ Christan Wäckerlin:
 Known bugs:
  * /otp info is only working after one message was received
  * the first encrypted sent message is not marked with <secure>
- * leaving and returning to a session works under certain circumstances
+ * /me does not work encrypted
