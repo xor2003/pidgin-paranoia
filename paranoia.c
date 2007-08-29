@@ -863,7 +863,7 @@ static gboolean par_change_displayed_msg(PurpleAccount *account, const char *sen
 	struct key* used_key = par_search_key_by_conv(conv);
 	
 	if(used_key != NULL) {
-		if (used_key->opt->otp_enabled) {
+		if (used_key->opt->otp_enabled && used_key->opt->ack_sent) {
 			// Add the status string
 			par_add_status_str(message);
 		}
