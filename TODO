@@ -7,8 +7,9 @@ libotp.c
 
 paranoia.c
  * Enhanced session management
- * Hide all these annoying messages
- * Entropy checks and warnings
+ * Hide or change all these annoying messages
+ * Send entropy warnings
+ * Remove <secure> from system messages
 
 other
  * Design a simple web page
