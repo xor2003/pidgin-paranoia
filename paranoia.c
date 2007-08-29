@@ -102,7 +102,7 @@ static gboolean par_add_status_str(char** message) {
 
 /* key options struct */
 struct options {
-	//gboolean wait; // wait for ACK, do not disable enc. if blank message arrives
+	gboolean ack_sent; // TRUE if a message with ACK was sent
 	gboolean has_plugin; // the result of the request
 	gboolean otp_enabled; // on/off
 	gboolean auto_enable; // needed to be able to force disable
@@ -134,6 +134,7 @@ static struct key* par_create_key(const char* filename) {
 	//default option struct
 	static struct options* test_opt;
    	test_opt = (struct options *) g_malloc(sizeof(struct options));
+   	test_opt->ack_sent = TRUE;
 	test_opt->has_plugin = FALSE;
 	test_opt->otp_enabled = FALSE;
 	test_opt->auto_enable = TRUE;
@@ -289,13 +290,13 @@ static void par_free_key_list() {
 		g_free(tmp_key->opt);
 		g_free(tmp_key);
 		tmp_key = next_key_ptr;
-		printf("paranoia !!!!!!!!!!:\tKey freed!\n");
+		//printf("paranoia !!!!!!!!!!:\tKey freed!\n");
 	}
 	
 	return;
 }
 
-// searches a key in the keylist, ID is optional, if no ID: searches first src/dest match
+/* searches a key in the keylist, ID is optional, if no ID: searches first src/dest match */
 static struct key* par_search_key(const char* src, const char* dest, const char* id) {
 
 	// FIXME: optimize function!
@@ -343,7 +344,7 @@ static struct key* par_search_key(const char* src, const char* dest, const char*
 	return NULL;
 }
 
-// searches a key in the keylist by PurpleConversation
+/* searches a key in the keylist by PurpleConversation */
 static struct key* par_search_key_by_conv(PurpleConversation *conv) {
 
 	struct key* tmp_ptr = keylist;
@@ -408,6 +409,7 @@ static gboolean par_session_check_req(const char* alice, const char* bob, Purple
 			temp_key->opt->has_plugin = TRUE;
 			temp_key->conv = conv;
 			if(temp_key->opt->auto_enable) {
+				temp_key->opt->ack_sent = FALSE;
 				temp_key->opt->otp_enabled = TRUE;
 				purple_conversation_write(conv, NULL, "Encryption enabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
 				//par_session_ack(temp_key, conv);
@@ -624,13 +626,14 @@ void par_deleting_conversation(PurpleConversation *conv) {
 
 	struct key* used_key = par_search_key_by_conv(conv);
 	if(used_key != NULL) {
-				
+		
 		// send an EXIT message
 		if(used_key->opt->otp_enabled) {
 			par_session_close(conv);
 		}
 		// reset the pad
 		used_key->conv = NULL;
+		used_key->opt->ack_sent = TRUE;
 		used_key->opt->has_plugin = FALSE;
 		used_key->opt->otp_enabled = FALSE;
 		
@@ -697,7 +700,7 @@ static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
 			used_key->conv = conv;
 
 			// disable encryption if unencrypted message received
-			if (used_key->opt->otp_enabled) {
+			if (used_key->opt->otp_enabled && used_key->opt->ack_sent) {
 				used_key->opt->otp_enabled = FALSE;
 				purple_conversation_write(conv, NULL, "Encryption disabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
 			}
@@ -794,7 +797,9 @@ static void par_sending_im_msg(PurpleAccount *account, const char *receiver,
 		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Found a matching Key with pad ID: %s\n", used_key->pad->id);
 		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "otp_enabled == %i\n", used_key->opt->otp_enabled);
 
-		// TODO: search conversation and save conversation ptr (if possible?) How???
+		// TODO: search conversation and save conversation ptr (if possible?)
+
+		used_key->opt->ack_sent = TRUE;
 
 		// encryption enabled?
 		if (!used_key->opt->otp_enabled) {
