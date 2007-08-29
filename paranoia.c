@@ -56,6 +56,7 @@ extern char *stpncpy (char *restrict, const char *restrict, size_t);
 
 #define PARANOIA_ACK "%!()!%paranoia ack"
 #define PARANOIA_EXIT "%!()!%paranoia exit"
+#define PARANOIA_START "%!()!%paranoia start"
 #define PARANOIA_STOP "%!()!%paranoia stop"
 
 #define PARANOIA_PATH "/.paranoia/"
@@ -423,7 +424,6 @@ static gboolean par_session_check_req(const char* alice, const char* bob, Purple
 // detects ack and exit messages and sets the key settings. Returns TRUE if one of them is found
 static gboolean par_session_check_msg(struct key* used_key, char** message_decrypted, PurpleConversation *conv) {
 
-	// check ACK and EXIT
 	// TODO check START, STOP and EXIT
 	if(strncmp(*message_decrypted, PARANOIA_ACK, 18) == 0) { // FIXME: dynamic size
 		// TODO: move ACK inside the first sent message
@@ -434,14 +434,20 @@ static gboolean par_session_check_msg(struct key* used_key, char** message_decry
 			purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "PARANOIA_ACK detected! otp_enabled=TRUE \n");
 		}
 		return TRUE;
-	} 
-	else if (strncmp(*message_decrypted, PARANOIA_EXIT, 20) == 0) { // FIXME: dynamic size
+	}
+	if (strncmp(*message_decrypted, PARANOIA_EXIT, 20) == 0) { // FIXME: dynamic size
 		used_key->opt->otp_enabled = FALSE;
 		used_key->opt->has_plugin = FALSE;
 		purple_conversation_write(conv, NULL, "Encryption disabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
 		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "PARANOIA_EXIT detected! otp_enabled=FALSE\n");
 		return TRUE;
-	} 
+	}
+	if (strncmp(*message_decrypted, PARANOIA_STOP, 20) == 0) { // FIXME: dynamic size
+		used_key->opt->otp_enabled = FALSE;
+		purple_conversation_write(conv, NULL, "Encryption disabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "PARANOIA_STOP detected! otp_enabled=FALSE\n");
+		return TRUE;
+	}
 	else {
 		return FALSE;
 	}
@@ -473,7 +479,7 @@ static gboolean par_cli_try_enable_enc(PurpleConversation *conv) {
 			used_key->opt->otp_enabled = TRUE;
 			used_key->opt->ack_sent = FALSE;
 			purple_conversation_write(conv, NULL, "Encryption enabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
-			// TODO send a START message
+			// TODO send a START message if needed
 		} else {
 			purple_conversation_write(conv, NULL, "Trying to enable encryption.", PURPLE_MESSAGE_NO_LOG, time(NULL));
 			par_session_request(conv);
@@ -492,11 +498,15 @@ static gboolean par_cli_disable_enc(PurpleConversation *conv) {
 
 	struct key* used_key = par_search_key_by_conv(conv);
 	if(used_key != NULL) {
-		used_key->opt->otp_enabled = FALSE;
-		used_key->opt->auto_enable = FALSE;
-		purple_conversation_write(conv, NULL, "Encryption disabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
-		purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), PARANOIA_STOP, 
-				PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
+		if (used_key->opt->otp_enabled) {
+			purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), PARANOIA_STOP, 
+			PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
+			used_key->opt->otp_enabled = FALSE;
+			used_key->opt->auto_enable = FALSE;
+			purple_conversation_write(conv, NULL, "Encryption disabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+		} else {
+			purple_conversation_write(conv, NULL, "Encryption already disabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+		}
 		return TRUE;
 	}
 	
