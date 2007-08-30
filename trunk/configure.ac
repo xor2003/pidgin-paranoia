@@ -31,9 +31,9 @@ LIBTOOL="$LIBTOOL --silent"
 # Additional paranoia_config.h entires!
 #
 
-AC_DEFINE_UNQUOTED(OTP_WEBSITE, "http://sourceforge.net/projects/pidgin-paranoia", [Pidgin-Paranoia's Website])
-AC_DEFINE_UNQUOTED(OTP_AUTHORS, "Simon Wenner <simon@wenner.ch> Christian Wäckerlin <christian@waeckerlin.com>", [Pidgin-Paranoia's Authors])
-AC_DEFINE_UNQUOTED(OTP_ID, "core-paranoia", [Pidgin-Paranoia Plugin ID])
+AC_DEFINE_UNQUOTED(PARANOIA_WEBSITE, "http://sourceforge.net/projects/pidgin-paranoia", [Pidgin-Paranoia's Website])
+AC_DEFINE_UNQUOTED(PARANOIA_AUTHORS, "Simon Wenner <simon@wenner.ch> Christian Wäckerlin <christian@waeckerlin.com>", [Pidgin-Paranoia's Authors])
+AC_DEFINE_UNQUOTED(PARANOIA_ID, "core-paranoia", [Pidgin-Paranoia Plugin ID])
 
 # Swich for realotp support: 
 # See: http://sourceware.org/autobook/autobook/autobook_283.html#SEC283
@@ -43,7 +43,7 @@ AC_ARG_ENABLE(otp,
 ],
 [
   if test "$withval"; then
-    AC_DEFINE([NOOTP],[1],[Define if otp support is disabled in paranoia.c])
+    AC_DEFINE([NO_OTP],[1],[Define if otp support is disabled in paranoia.c])
   fi
 ],[
   AC_MSG_RESULT(no)

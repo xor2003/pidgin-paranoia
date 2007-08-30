@@ -45,7 +45,6 @@ extern char *stpcpy (char *, const char *);
 #define PAD_EMPTYCHAR '\0'	/* Char that is used to mark the pad as used. */
 #define PROTECTED_ENTROPY 100	/* The amount of entropy that is only used for "out of entropy" messages */ 
 #define	FILE_SUFFIX ".entropy"	/* The keyfiles have to end with this string to be valid. This string has to be separated by ".". */
-#define ID_LENGTH 8			/* Size of the ID-string */
 #define NOENTROPY_SIGNAL "*** I'm out of entropy!"	/* The message that is send in case the sender is out of entropy */
 
 
