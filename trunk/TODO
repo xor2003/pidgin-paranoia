@@ -10,6 +10,7 @@ paranoia.c
  * Hide or change all these annoying messages
  * Send entropy warnings
  * Remove <secure> from system messages
+ * evaluate "buddy offline signal"
 
 other
  * Design a simple web page

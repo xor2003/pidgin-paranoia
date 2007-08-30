@@ -398,7 +398,7 @@ void par_session_close(PurpleConversation *conv) {
 /* detects request messages and sets the key settings. Returns TRUE if found */
 static gboolean par_session_check_req(const char* alice, const char* bob, PurpleConversation *conv, char** message_no_header) {
 
-	if(strncmp(*message_no_header, PARANOIA_REQUEST, 70) == 0) {
+	if(strncmp(*message_no_header, PARANOIA_REQUEST, 60) == 0) {
 		// TODO src for ID too! Save it in msg before!
 		struct key* temp_key = par_search_key(alice, bob, NULL);
 		if (temp_key != NULL) {
@@ -438,13 +438,13 @@ static gboolean par_session_check_msg(struct key* used_key, char** message_decry
 	if (strncmp(*message_decrypted, PARANOIA_EXIT, 20) == 0) { // FIXME: dynamic size
 		used_key->opt->otp_enabled = FALSE;
 		used_key->opt->has_plugin = FALSE;
-		purple_conversation_write(conv, NULL, "Encryption disabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+		purple_conversation_write(conv, NULL, "Encryption disabled (remote).", PURPLE_MESSAGE_NO_LOG, time(NULL));
 		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "PARANOIA_EXIT detected! otp_enabled=FALSE\n");
 		return TRUE;
 	}
 	if (strncmp(*message_decrypted, PARANOIA_STOP, 20) == 0) { // FIXME: dynamic size
 		used_key->opt->otp_enabled = FALSE;
-		purple_conversation_write(conv, NULL, "Encryption disabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+		purple_conversation_write(conv, NULL, "Encryption disabled (remote).", PURPLE_MESSAGE_NO_LOG, time(NULL));
 		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "PARANOIA_STOP detected! otp_enabled=FALSE\n");
 		return TRUE;
 	}
@@ -629,6 +629,7 @@ void par_conversation_created(PurpleConversation *conv) {
 }
 
 /* --- signal handler for "deleting-conversation" --- */
+// TODO rename
 void par_deleting_conversation(PurpleConversation *conv) {
 
 	struct key* used_key = par_search_key_by_conv(conv);
@@ -757,9 +758,9 @@ static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
 				purple_conversation_write(conv, NULL, "Encryption enabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
 				purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "This conversation was already initialized! otp_enabled is now TRUE\n");
 				// detect REQUEST; needed for a auto-init
-				if(strncmp(*message, PARANOIA_REQUEST, 70) == 0) {
+				if(strncmp(*message, PARANOIA_REQUEST, 60) == 0) {
 					purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "He sends us an encrypted REQUEST message. otp_enabled is now TRUE\n");
-					return FALSE;
+					return TRUE;
 				}
 			}
 		}
@@ -802,6 +803,13 @@ static void par_sending_im_msg(PurpleAccount *account, const char *receiver,
 		// debug
 		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Found a matching Key with pad ID: %s\n", used_key->pad->id);
 		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "otp_enabled == %i\n", used_key->opt->otp_enabled);
+
+		// add the ID to the request message
+		if(strncmp(*message, PARANOIA_REQUEST, 60) == 0) {
+			char *req_msg = g_strdup_printf(*message, used_key->pad->id);
+			g_free(*message);
+			*message = req_msg;
+		}
 
 		// TODO: search conversation and save conversation ptr (if possible?)
 
@@ -850,7 +858,7 @@ static void par_sending_im_msg(PurpleAccount *account, const char *receiver,
 
 	} else {
 		// don't send requests to users with no key.
-		if(strncmp(*message, PARANOIA_REQUEST, 70) == 0) {
+		if(strncmp(*message, PARANOIA_REQUEST, 60) == 0) {
 			purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Found NO matching Key. Won't sent REQUEST.\n");
 			g_free(*message);
 			*message = NULL;
@@ -874,7 +882,7 @@ static gboolean par_change_displayed_msg(PurpleAccount *account, const char *sen
 
 	// TODO hide or change REQ messages
 
-	// FIXME: -> sender bug?
+	// FIXME: the sender is always NULL, a bug?
 	//purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "WHO? (FIXME): %s\n", sender);
 
 	// TODO: (Or) save the first conv ptr here... -> bug.
