@@ -25,8 +25,6 @@
 #include <errno.h>
 #include <ctype.h>
 
-extern char *stpncpy (char *restrict, const char *restrict, size_t);
-
 // libpurple
 #define PURPLE_PLUGINS
 #include "notify.h"
@@ -46,7 +44,6 @@ extern char *stpncpy (char *restrict, const char *restrict, size_t);
 #endif
 
 // test defines
-#define HAVEFILE
 #define SHOW_STATUS
 
 // ----------------- General Paranoia Stuff ------------------
@@ -54,13 +51,13 @@ extern char *stpncpy (char *restrict, const char *restrict, size_t);
 #define PARANOIA_REQUEST "*** Request for conversation with the Pidgin-Paranoia plugin (%s): I'm paranoid, please download the One-Time Pag plugin (link) to communicate encryptet."
 #define PARANOIA_STATUS "&lt;secure&gt; "
 
-#define PARANOIA_ACK "%!()!%paranoia ack"
+#define PARANOIA_ACK "%!()!%paranoia ack" // not used atm
 #define PARANOIA_EXIT "%!()!%paranoia exit"
 #define PARANOIA_START "%!()!%paranoia start"
 #define PARANOIA_STOP "%!()!%paranoia stop"
 
 #define PARANOIA_PATH "/.paranoia/"
-#define ENTROPY_LIMIT 1500 //has to be bigger then the message limit
+#define ENTROPY_LIMIT 1500 //has to be bigger then the message size limit
 
 char* global_otp_path;
 
@@ -159,7 +156,6 @@ static int par_count_keys() {
 	struct key* tmp_ptr = keylist;
 
 	while(!(tmp_ptr == NULL)) {
-		// possible edless loop! make sure the last otp->next == NULL
 		sum++;
 		tmp_ptr = tmp_ptr->next;
 	}
@@ -170,8 +166,7 @@ static int par_count_keys() {
 /* loads all keys from the global otp folder into the key list */
 static gboolean par_init_key_list() {
 	
-#ifdef HAVEFILE
-
+	
 	struct key* prev_key_ptr = NULL;
 	struct key* tmp_key = NULL;
 	GError* error = NULL;
@@ -207,75 +202,6 @@ static gboolean par_init_key_list() {
 	g_dir_close(directoryhandle);
 	keylist = tmp_key;
 
-#else
-
-	// just a test, no files needed
-	struct key* test_key1 = NULL;
-	struct key* working = NULL;
-	test_key1 = par_create_key("simon.wenner@gmail.com simon.wenner@gmail.com 01010101.otp"); // nowic loop
-	if(test_key1 != NULL) {
-		keylist = test_key1;
-		working = test_key1;
-	}
-
-	struct key* test_key2 = NULL;
-	test_key2 = par_create_key("alexapfel@swissjabber.ch alexapfel@swissjabber.ch 02020202.otp"); //chri loop
-	if(test_key2 != NULL) {
-		working->next = test_key2;
-		working = test_key2;
-	}
-
-	struct key* test_key3 = NULL;
-	test_key3 = par_create_key("simon.wenner@gmail.com alexapfel@swissjabber.ch 03030303.otp");
-	if(test_key3 != NULL) {
-		working->next = test_key3;
-		working = test_key3;
-	}
-
-	struct key* test_key4 = NULL;
-	test_key4 = par_create_key("alexapfel@swissjabber.ch simon.wenner@gmail.com 04040404.otp");
-	if(test_key4 != NULL) {
-		working->next = test_key4;
-		working = test_key4;
-	}
-/*
-	struct key* test_key5 = NULL;
-	test_key5 = par_create_key("simon.wenner@gmail.com alexapfel@gmail.com 05050505.otp");
-	test_key4->next = test_key5;
-
-	struct key* test_key6 = NULL;
-	test_key6 = par_create_key("alexapfel@gmail.com simon.wenner@gmail.com 06060606.otp");
-	test_key5->next = test_key6;
-
-	struct key* test_key7 = NULL;
-	test_key7 = par_create_key("76239710 76239710 07070707.otp"); //nowic loop
-	test_key6->next = test_key7;
-
-	struct key* test_key8 = NULL;
-	test_key8 = par_create_key("112920906 112920906 08080808.otp"); //chri loop
-	test_key7->next = test_key8;
-
-	struct key* test_key9 = NULL;
-	test_key9 = par_create_key("76239710 112920906 09090909.otp"); //nowic->chri
-	test_key8->next = test_key9;
-
-	struct key* test_key10 = NULL;
-	test_key10 = par_create_key("112920906 76239710 10101010.otp"); //chri->nowic
-	test_key9->next = test_key10;
-
-	struct key* test_key11 = NULL;
-	test_key11 = par_create_key("alexapfel@gmail.com alexapfel@swissjabber.ch 11111111.otp"); //chri->chri
-	test_key10->next = test_key11;
-
-	struct key* test_key12 = NULL;
-	test_key12 = par_create_key("alexapfel@swissjabber.ch alexapfel@gmail.com 12121212.otp"); //chri->chri
-	test_key11->next = test_key12;
-
-	struct key* test_key13 = NULL;
-	test_key13 = par_create_key("fredibraatsmaal@hotmail.com fredibraatsmaal@hotmail.com 13131313.otp"); //chri->chri
-	test_key12->next = test_key13; */
-
-#endif
 	// debug
 	purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "Key list of %i keys generated!\n", par_count_keys());
 
@@ -468,7 +394,7 @@ PurpleCmdId otp_cmd_id;
 #define PARANOIA_ERROR_STR "Wrong argument(s). Type '/otp help' for help."
 
 /* sets the default paranoia cli error */
-static void set_default_cli_error(gchar **error) {
+static void par_cli_set_default_error(gchar **error) {
 	char *tmp_error = (char *) g_malloc((strlen(PARANOIA_ERROR_STR) + 1) * sizeof(char));
 	strcpy(tmp_error, PARANOIA_ERROR_STR);
 	g_free(*error);
@@ -550,7 +476,7 @@ static PurpleCmdRet par_check_command(PurpleConversation *conv, const gchar *cmd
 
 	if(args[0] == NULL){
 		// no arguments
-		set_default_cli_error(error);
+		par_cli_set_default_error(error);
 		return PURPLE_CMD_RET_FAILED;
 	}
 	else {
@@ -573,7 +499,7 @@ static PurpleCmdRet par_check_command(PurpleConversation *conv, const gchar *cmd
 				// TODO: Display a special error?
 				// debug
 				purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "The size value caused an int overflow!\n");
-				set_default_cli_error(error);
+				par_cli_set_default_error(error);
 				return PURPLE_CMD_RET_FAILED;
 
 			} else {
@@ -582,7 +508,7 @@ static PurpleCmdRet par_check_command(PurpleConversation *conv, const gchar *cmd
 					// no positive integer found!
 					// debug
 					purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "The size value is not a positive int!\n");
-					set_default_cli_error(error);
+					par_cli_set_default_error(error);
 					return PURPLE_CMD_RET_FAILED;
 				} else {
 					// found a positive int -> DO IT!
@@ -607,15 +533,10 @@ static PurpleCmdRet par_check_command(PurpleConversation *conv, const gchar *cmd
 			// otp key info
 			par_cli_key_details(conv);
 		}
-		else if(strcmp("test", *args) == 0){
-			// FIXME: just a test.
-			purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), "This is just a test string.", 
-				PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_RAW); //PURPLE_MESSAGE_SYSTEM | 
-		}
 		// TODO: add more commands
 		else {
 			// unknown arg
-			set_default_cli_error(error);
+			par_cli_set_default_error(error);
 			return PURPLE_CMD_RET_FAILED;
 		}
 	}
@@ -635,8 +556,7 @@ void par_conversation_created(PurpleConversation *conv) {
 }
 
 /* --- signal handler for "deleting-conversation" --- */
-// TODO rename
-void par_deleting_conversation(PurpleConversation *conv) {
+void par_conversation_deleting(PurpleConversation *conv) {
 
 	struct key* used_key = par_search_key_by_conv(conv);
 	if(used_key != NULL) {
@@ -695,7 +615,7 @@ static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
 
 	// check for PARANOIA_REQUEST
 	if(par_session_check_req(my_acc_name, *sender, conv, stripped_message)) {
-				
+		
 		g_free(*stripped_message);
 		return FALSE;
 	}
@@ -751,6 +671,7 @@ static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
 		// DISABLE LIBOTP
 #else
 		// ENABLE LIBOTP
+		// TODO: error handling
 		otp_decrypt(used_key->pad, message);
 #endif
 
@@ -884,7 +805,7 @@ static void par_sending_im_msg(PurpleAccount *account, const char *receiver,
 static gboolean par_change_displayed_msg(PurpleAccount *account, const char *sender, char **message, 
 		PurpleConversation *conv, PurpleMessageFlags flags) {
 
-	// TODO hide or change REQ messages
+	// TODO: hide or change REQ messages
 
 	// FIXME: the sender is always NULL, a bug?
 	//purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "WHO? (FIXME): %s\n", sender);
@@ -947,7 +868,7 @@ static gboolean plugin_load(PurplePlugin *plugin) {
 	purple_signal_connect(conv_handle, "conversation-created", plugin,
 		PURPLE_CALLBACK(par_conversation_created), NULL);
 	purple_signal_connect(conv_handle, "deleting-conversation", plugin, 
-		PURPLE_CALLBACK(par_deleting_conversation), NULL);
+		PURPLE_CALLBACK(par_conversation_deleting), NULL);
 
 	// register commands
 	// "/otp" + a string of args

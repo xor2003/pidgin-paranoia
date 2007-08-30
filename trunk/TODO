@@ -12,6 +12,7 @@ paranoia.c
  * Send entropy warnings
  * Remove <secure> from system messages
  * evaluate "buddy offline signal"
+ * check message size limits
 
 other
  * Design a simple web page
