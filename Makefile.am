@@ -22,7 +22,7 @@ BUILT_SOURCES = paranoia_config.h
 $(OBJECTS): $(BUILT_SOURCES)
 
 paranoia_config.h: pre_config.h
-	$(sedpath) 's/\#define PACKAGE/\#define OTP/g' pre_config.h > $@
+	$(sedpath) 's/\#define PACKAGE/\#define PARANOIA/g' pre_config.h > $@
 
 EXTRA_DIST = \
 	AUTHORS \
