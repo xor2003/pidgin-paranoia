@@ -416,11 +416,15 @@ static gboolean par_cli_try_enable_enc(PurpleConversation *conv) {
 	struct key* used_key = par_search_key_by_conv(conv);
 	if(used_key != NULL) {
 		if (used_key->opt->has_plugin == TRUE) {
-			used_key->opt->otp_enabled = TRUE;
-			used_key->opt->ack_sent = FALSE;
-			purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), PARANOIA_START, 
-				PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
-			purple_conversation_write(conv, NULL, "Encryption enabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+			if(!used_key->opt->otp_enabled) {
+				used_key->opt->otp_enabled = TRUE;
+				used_key->opt->ack_sent = FALSE;
+				purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), PARANOIA_START, 
+					PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
+				purple_conversation_write(conv, NULL, "Encryption enabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+			} else {
+				purple_conversation_write(conv, NULL, "Encryption already enabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+			}
 		} else {
 			purple_conversation_write(conv, NULL, "Trying to enable encryption.", PURPLE_MESSAGE_NO_LOG, time(NULL));
 			par_session_request(conv);
@@ -684,6 +688,11 @@ static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
 		otp_decrypt(used_key->pad, message);
 #endif
 
+		// detect START, STOP and EXIT message
+		if(par_session_check_msg(used_key, message, conv)) {
+			return TRUE;
+		}
+
 		// encryption not enabled?
 		if (!used_key->opt->otp_enabled) {
 			//can I activate an encrypted conversation too?
@@ -698,11 +707,6 @@ static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
 					return TRUE;
 				}
 			}
-		}
-
-		// detect START, STOP and EXIT message
-		if(par_session_check_msg(used_key, message, conv)) {
-			return TRUE;
 		}
 
 		// debug
