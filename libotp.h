@@ -16,28 +16,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-/* ----------------- TODO: REMOVE ME ------------------ */
-
-/* For Nowic (semistable) */
-/* for testing only */
-void aaaa_encrypt(char **message);
-/* for testing only */
-void aaaa_decrypt(char **message);
-
-
-/* public for development only (for boognu, unstable) */
-/* int otp_xor(char **message,char **pad,int len); */
-/* int otp_uencrypt(char **message); */
-/* int otp_udecrypt(char **message); */
-/* int otp_b64enc(char **message, int *len); */
-/* int otp_b64dec(char **message, int *len); */
-/* int otp_printint(char *m, int len); */
-/* searches the position of the first non zero value in the pad (maybe not a public function?, boognu:yes) */
-/* struct otp* otp_seek_start(struct otp* mypad); */
-
-
 /*  ----------------- OTP Crypto Functions API ------------------ */
-
 
 struct otp {
  	char* src; 		/* for pidgin: 'account' like alice@jabber.org */
@@ -66,8 +45,7 @@ void otp_destroy(struct otp* mypad);
 /* extracts and returns the ID from a given encrypted message. Leaves the message constant. Returns NULL if it fails.*/
 char* otp_get_id_from_message(char **message);
 
-/* generates a new key pair (two files) with the name alice and bob 
-   of 'size' bytes. TODO*/
+/* generates a new key pair (two files) with the name alice and bob of 'size' bytes. TODO*/
 unsigned int otp_generate_key_pair(char* alice, char* bob, char* path, unsigned int size);
 
 /* encrypts a message that signals that the sender is out of entropy */

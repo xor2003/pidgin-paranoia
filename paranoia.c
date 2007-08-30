@@ -747,7 +747,9 @@ static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
 		
 		// TODO: detect ACK message
 
-#ifdef REALOTP
+#ifdef NOOTP
+		// DISABLE LIBOTP
+#else
 		// ENABLE LIBOTP
 		otp_decrypt(used_key->pad, message);
 #endif
@@ -844,8 +846,10 @@ static void par_sending_im_msg(PurpleAccount *account, const char *receiver,
 		}
 		
 
-#ifdef REALOTP
-		// ENABLE LIBOTP
+#ifdef NOOTP
+		// DISABLE LIBOTP
+#else
+		// ENABLE LIBOT
 		// TODO: error handling
 		otp_encrypt(used_key->pad, message);
 #endif

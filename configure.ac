@@ -38,12 +38,12 @@ AC_DEFINE_UNQUOTED(OTP_ID, "core-paranoia", [Pidgin-Paranoia Plugin ID])
 # Swich for realotp support: 
 # See: http://sourceware.org/autobook/autobook/autobook_283.html#SEC283
 AC_MSG_CHECKING(for realotp support)
-AC_ARG_ENABLE(realotp,
-[  --enable-realop       Enable realotp support.
+AC_ARG_ENABLE(otp,
+[  --disable-otp       Enable realotp support.
 ],
 [
   if test "$withval"; then
-    AC_DEFINE([REALOTP],[1],[Define if realotp support is enabled in paranoia.c])
+    AC_DEFINE([NOOTP],[1],[Define if otp support is disabled in paranoia.c])
   fi
 ],[
   AC_MSG_RESULT(no)

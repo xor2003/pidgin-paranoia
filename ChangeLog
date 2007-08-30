@@ -18,11 +18,12 @@ Simon Wenner:
 Christan Wäckerlin:
  * One-time pad documentation
  * Libotp: xor function
- * Libotp: base64 encode and decode using gnomelib (maybe broken)
+ * Libotp: base64 encode and decode using gnomelib
  * Libotp: encrypt and decrypt
- * Added support for the ./configure --enable-realotp swich that enables otp support for testing.
  * Libotp: struct *mypad is generated from keyfile
- * Keyfile templates added
+ * Libotp: Keyfile templates added
+ * Libotp: Full keyfile support
+ * Added support for the ./configure --disable-otp swich that disables libotp support for development.
  
 
 
