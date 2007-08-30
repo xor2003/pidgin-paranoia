@@ -4,7 +4,7 @@
 # gaim-encryption configure script, thanks guys ;)
 #
 
-AC_INIT([pidgin-paranoia], [0.0.1], [there are no bugs!])
+AC_INIT([pidgin-paranoia], [0.1.0], [there are no bugs!])
 AC_CANONICAL_SYSTEM
 AC_GNU_SOURCE
 AM_CONFIG_HEADER(pre_config.h)
