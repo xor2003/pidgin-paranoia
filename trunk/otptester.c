@@ -73,7 +73,7 @@ int main(void) {
 /* 	char filename[]=" hello world.txt"; */
 /* 	char filename[]="aa aa aa"; */
 /* 	char filename[]="alexapfel@gmail.com alexapfel@gmail.com 11111111.entropy"; */
-	char filename[]="test2 test2 11111111.entropy";
+	char filename[]="alexapfel@gmail.com alexapfel@gmail.com 11111111.entropy";
 	struct otp* pad = otp_get_from_file(path,filename);
 	if (pad == NULL) {
 		printf("Tester:File can not be opened!\n");
