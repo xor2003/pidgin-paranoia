@@ -399,8 +399,12 @@ void par_session_close(PurpleConversation *conv) {
 static gboolean par_session_check_req(const char* alice, const char* bob, PurpleConversation *conv, char** message_no_header) {
 
 	if(strncmp(*message_no_header, PARANOIA_REQUEST, 60) == 0) {
-		// TODO src for ID too! Save it in msg before!
-		struct key* temp_key = par_search_key(alice, bob, NULL);
+		// extract ID
+		char* tmp_ptr = *message_no_header + 62; //TODO: dynamic sizes
+		char* id = g_strndup(tmp_ptr, 8); //TODO: dynamic sizes
+		purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "REQUEST ID EXTRACTED: %s\n", id);
+		
+		struct key* temp_key = par_search_key(alice, bob, id);
 		if (temp_key != NULL) {
 			temp_key->opt->has_plugin = TRUE;
 			temp_key->conv = conv;
@@ -414,6 +418,8 @@ static gboolean par_session_check_req(const char* alice, const char* bob, Purple
 		} else {
 			purple_debug(PURPLE_DEBUG_INFO, OTP_ID, "REQUEST failed! NO key available.\n");
 		}
+		
+		g_free(id);
 		return TRUE;
 	}
 	else {
@@ -519,7 +525,7 @@ static gboolean par_cli_disable_enc(PurpleConversation *conv) {
 static void par_cli_key_details(PurpleConversation *conv) {
 
 	struct key* used_key = par_search_key_by_conv(conv);
-	char* disp_string = (char *) g_malloc((200) * sizeof(char)); // TODO: SIZE??????????
+	char* disp_string = (char *) g_malloc((200) * sizeof(char)); // TODO: SIZE???
 	if(used_key != NULL) {
 		sprintf( disp_string, 
 		"Key Infos:\nID: %s\nSize: %i\nPosition: %i\nEntropy: %i\nAck sent: %i\nHas plugin: %i\nOTP enabled: %i\nAuto enable: %i\nNo entropy: %i\nConv. pointer: %i",
@@ -744,9 +750,6 @@ static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
 #ifdef REALOTP
 		// ENABLE LIBOTP
 		otp_decrypt(used_key->pad, message);
-#else
-		// Test function
-		aaaa_decrypt(message);
 #endif
 
 		// encryption not enabled?
@@ -845,9 +848,6 @@ static void par_sending_im_msg(PurpleAccount *account, const char *receiver,
 		// ENABLE LIBOTP
 		// TODO: error handling
 		otp_encrypt(used_key->pad, message);
-#else
-		// Test function
-		aaaa_encrypt(message);
 #endif
 
 		// add the paranoia header string
