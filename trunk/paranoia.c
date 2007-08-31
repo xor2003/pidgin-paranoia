@@ -45,6 +45,7 @@
 
 // test defines
 #define SHOW_STATUS
+#define CENSORSHIP
 
 // ----------------- General Paranoia Stuff ------------------
 #define PARANOIA_HEADER "*** Encrypted with the Pidgin-Paranoia plugin: "
@@ -97,6 +98,16 @@ static gboolean par_add_status_str(char** message) {
 	g_free(*message);
 	*message = new_msg;
 	return TRUE;
+}
+
+/* detects all internal messages */
+static gboolean par_censor_internal_msg(char** message) {
+	
+	if (strncmp(*message, PARANOIA_EXIT, 7) == 0) {
+		return TRUE;
+	}
+	
+	return FALSE;
 }
 
 // ----------------- Paranoia Key Management ------------------
@@ -376,10 +387,14 @@ static gboolean par_session_check_msg(struct key* used_key, char** message_decry
 		return TRUE;
 	}
 	if (strncmp(*message_decrypted, PARANOIA_START, 21) == 0) { // FIXME: dynamic size
-		used_key->opt->has_plugin = TRUE;
-		used_key->opt->otp_enabled = TRUE;
-		purple_conversation_write(conv, NULL, "Encryption enabled (remote).", PURPLE_MESSAGE_NO_LOG, time(NULL));
-		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "PARANOIA_START detected! otp_enabled=TRUE\n");
+		if(used_key->opt->auto_enable) {
+			used_key->opt->has_plugin = TRUE;
+			used_key->opt->otp_enabled = TRUE;
+			purple_conversation_write(conv, NULL, "Encryption enabled (remote).", PURPLE_MESSAGE_NO_LOG, time(NULL));
+			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "PARANOIA_START detected! otp_enabled=TRUE\n");
+		} else {
+			purple_conversation_write(conv, NULL, "This buddy would like to chat encrypted.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+		}
 		return TRUE;
 	}
 	if (strncmp(*message_decrypted, PARANOIA_STOP, 20) == 0) { // FIXME: dynamic size
@@ -395,7 +410,7 @@ static gboolean par_session_check_msg(struct key* used_key, char** message_decry
 
 // ----------------- Paranoia CLI ------------------
 
-PurpleCmdId otp_cmd_id;
+PurpleCmdId par_cmd_id;
 
 #define PARANOIA_HELP_STR "Welcome to the One-Time Pad CLI.\notp help: shows this message \notp genkey &lt;size&gt;: generates a key pair of &lt;size&gt; MB\notp on: tries to start the encryption\notp off: stops the encryption\notp info: shows details about the used key"
 
@@ -482,7 +497,7 @@ static void par_cli_key_details(PurpleConversation *conv) {
 
 
 /* otp commads check function */
-static PurpleCmdRet par_check_command(PurpleConversation *conv, const gchar *cmd, gchar **args, gchar **error, void *data) {
+static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv, const gchar *cmd, gchar **args, gchar **error, void *data) {
 
 	// debug
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "the otp command was recived! sweet!\n");
@@ -684,7 +699,7 @@ static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
 		// DISABLE LIBOTP
 #else
 		// ENABLE LIBOTP
-		// TODO: error handling
+		// FIXME: error handling
 		otp_decrypt(used_key->pad, message);
 #endif
 
@@ -784,7 +799,7 @@ static void par_sending_im_msg(PurpleAccount *account, const char *receiver,
 		// DISABLE LIBOTP
 #else
 		// ENABLE LIBOT
-		// TODO: error handling
+		// FIXME: error handling
 		otp_encrypt(used_key->pad, message);
 #endif
 
@@ -818,8 +833,6 @@ static void par_sending_im_msg(PurpleAccount *account, const char *receiver,
 static gboolean par_change_displayed_msg(PurpleAccount *account, const char *sender, char **message, 
 		PurpleConversation *conv, PurpleMessageFlags flags) {
 
-	// TODO: hide or change REQ messages
-
 	// FIXME: the sender is always NULL, a bug?
 	//purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "WHO? (FIXME): %s\n", sender);
 
@@ -832,15 +845,27 @@ static gboolean par_change_displayed_msg(PurpleAccount *account, const char *sen
 		}
 	} */
 
+#ifdef CENSORSHIP
+
+	// TODO: replace session init message
+
+	if(par_censor_internal_msg(message)) {
+		return TRUE;
+	}
+
+#endif
+
 #ifdef SHOW_STATUS
 
-	// TODO: check for certain PurpleMessageFlags flags
-	struct key* used_key = par_search_key_by_conv(conv);
+	// System messages and warnings should not be labelled
+	if(!(flags & PURPLE_MESSAGE_NO_LOG)) {
+		struct key* used_key = par_search_key_by_conv(conv);
 	
-	if(used_key != NULL) {
-		if (used_key->opt->otp_enabled && used_key->opt->ack_sent) {
-			// Add the status string
-			par_add_status_str(message);
+		if(used_key != NULL) {
+			if (used_key->opt->otp_enabled && used_key->opt->ack_sent) {
+				// Add the status string
+				par_add_status_str(message);
+			}
 		}
 	}
 		
@@ -885,8 +910,8 @@ static gboolean plugin_load(PurplePlugin *plugin) {
 
 	// register commands
 	// "/otp" + a string of args
-	otp_cmd_id = purple_cmd_register ("otp", "s", PURPLE_CMD_P_DEFAULT,
-		PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_ALLOW_WRONG_ARGS, NULL, PURPLE_CMD_FUNC(par_check_command), 
+	par_cmd_id = purple_cmd_register ("otp", "s", PURPLE_CMD_P_DEFAULT,
+		PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_ALLOW_WRONG_ARGS, NULL, PURPLE_CMD_FUNC(par_cli_check_cmd), 
 		"otp &lt;command&gt: type /otp to get help", NULL);
 
 	// debug
@@ -902,7 +927,7 @@ gboolean plugin_unload(PurplePlugin *plugin) {
 	purple_signals_disconnect_by_handle(plugin);
 	
 	// unregister command(s)
-	purple_cmd_unregister(otp_cmd_id);
+	purple_cmd_unregister(par_cmd_id);
 
 	// free the key list
 	par_free_key_list();
@@ -938,15 +963,17 @@ static PurplePluginInfo info = {
                                  */
 
     PARANOIA_ID,     		/* plugin id */
-    "One-Time Pad Encryption",         /* plugin name */
-    PARANOIA_VERSION,                /* version */
+    "One-Time Pad Encryption",   /* plugin name */
+    PARANOIA_VERSION,            /* version */
 
-    "Paranoia One-Time Pad Encryption Plugin",   /* This is the summary of your plugin.  It
+    "Paranoia One-Time Pad Encryption Plugin",   
+							/* This is the summary of your plugin.  It
                                    should be a short little blurb.  The UI
                                    determines where, if at all, to display
                                    this.
                                  */
-    "The Paranoia plugin allows you to encrypt your messages with one-time pads.",   /* This is the description of your plugin. It
+    "The Paranoia plugin allows you to encrypt your messages with one-time pads.",   
+							/* This is the description of your plugin. It
                                    can be as long and as descriptive as you
                                    like.  And like the summary, it's up to the
                                    UI where, if at all, to display this (and
@@ -977,30 +1004,14 @@ static PurplePluginInfo info = {
                                    void plugin_destroy(PurplePlugin *plugin)
                                  */
 
-    NULL,                   /* This is a pointer to a UI-specific struct.
-                                   For a Pidgin plugin it will be a pointer to a
-                                   PidginPluginUiInfo struct, for example.
-                                 */
-    NULL,                   /* This is a pointer to either a 
-                                   PurplePluginLoaderInfo struct or a
-                                   PurplePluginProtocolInfo struct.
-                                 */
-    NULL,                   /* This is a pointer to a PurplePluginUiInfo
-                                   struct.  It is a core/ui split way for
-                                   core plugins to have a UI configuration
-                                   frame.  You can find an example of this
-                                   code in:
-                                     libpurple/plugins/pluginpref_example.c
-                                 */
-    NULL,                    /* Finally, the last member of the structure
-                                   is a function pointer where you can define
-                                   "plugin actions".  The UI controls how
+    NULL,                   /* a pointer to a PidginPluginUiInfo struct */
+    NULL,                   /* PurplePluginLoaderInfo or PurplePluginProtocolInfo struct. */
+    NULL,                   /* PurplePluginUiInfo struct. */
+    NULL,                   /* "plugin actions".  The UI controls how
                                    they're displayed.  It should be of the
                                    type:
-
                                    GList *function_name(PurplePlugin *plugin, 
                                                         gpointer context)
-
                                     It must return a GList of
                                     PurplePluginActions.
                                  */
