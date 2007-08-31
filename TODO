@@ -8,12 +8,12 @@ libotp.c
 
 paranoia.c
  * Enhanced session management
- * Hide or change all these annoying messages
+ * Hide or change the session init messages
  * Send entropy warnings
- * Remove <secure> from system messages
  * evaluate "buddy offline signal"
  * check message size limits
 
 other
  * Design a simple web page
  * Debian/Ubuntu package
+ * Test all the less common protocols (Gadu-Gadu, QQ, SIMPLE...)
