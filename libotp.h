@@ -18,7 +18,8 @@
 
 /* ----------------- OTP Crypto Functions API ------------------ */
 
-#define ID_LENGTH 8			/* Size of the ID-string */
+#define OTP_ID_LENGTH 8			/* Size of the ID-string */
+#define OTP_PROTECTED_ENTROPY 100	/* The amount of entropy that is only used for "out of entropy" messages */ 
 
 struct otp {
  	char* src; 		/* for pidgin: 'account' like alice@jabber.org */
@@ -26,6 +27,7 @@ struct otp {
 	char* id; 		/* 8 digits unique random number of the key pair (hex) */
 	char* filename; 	/* The full path and the filename defined in the libotp spec */
 	unsigned int position; 	/* start positon for the next encryption */
+	unsigned int protected_position;	/* Only used for messages and signals from the protected entropy. Otherwise set to zero */
 	unsigned int entropy; 	/* the size (in bytes) of the entropy left for the sender */
 	unsigned int filesize; 	/* The size of the file in bytes */
 };
@@ -49,8 +51,11 @@ char* otp_get_id_from_message(char **message);
 /* generates a new key pair (two files) with the name alice and bob of 'size' bytes. TODO */
 unsigned int otp_generate_key_pair(char* alice, char* bob, char* path, unsigned int size);
 
-/* encrypts a message that signals that the sender is out of entropy */
-unsigned int otp_encrypt_noentropy_warning(struct otp* mypad);
+/* encrypts a message with the protected entropy. protected_pos is the position in bytes to use. 
+ The entropy is not consumed by this function. 
+ To used the function securely, the signal-messages should not overlap and every signal has to stay constant! 
+ When only one signal is used, use protected_pos=0.*/
+unsigned int otp_encrypt_warning(struct otp* mypad, char **message, int protected_pos);
 
 
 

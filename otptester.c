@@ -34,7 +34,7 @@
 
 #define PARANOIA_PATH "/.paranoia/"		/* TODO: REMOVE */
 
-#define STATICMSG "1234           1234"
+#define STATICMSG "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567"
 
 int main(void) {
 /* 	int a=0; int *size=&a; */
@@ -45,6 +45,7 @@ int main(void) {
 
 /* 	char m[]="123456789012"; // IMPORTANT: (pad has to be longer) */
 	char m[]= STATICMSG;
+	char m2[]= "1";
 /* 	char m[]="sdanfnmadsbfmnbdsafnmbadsfmnbsadmfnbasdmfndasnbfm,sfnb,mnsadfm,nadbfmndsbaf,mnbasdfn"; */
 
 	/* Message creation */
@@ -52,6 +53,11 @@ int main(void) {
 	char *vmessage = (char *) g_malloc((strlen(m) + 1) * sizeof(char));
 	strcpy(vmessage, m);
 	message=&vmessage;
+	
+	char **message2;
+	char *vmessage2 = (char *) g_malloc((strlen(m2) + 1) * sizeof(char));
+	strcpy(vmessage2, m2);
+	message2=&vmessage2;
 
 	const gchar* home = g_get_home_dir();		/* set the global key folder  TODO: REMOVE! */
 	char* path = (char *) g_malloc((strlen(home) + strlen(PARANOIA_PATH) + 1) * sizeof(char));
@@ -79,27 +85,32 @@ int main(void) {
 		printf("Tester:File can not be opened!\n");
 	}else{
 
-		printf("Pad:filename:\t\t\t%s\n",pad->filename);
-		printf("Pad:Pos:\t\t\t%u\n",pad->position);
-		printf("Pad:entropy:\t\t\t%u\n",pad->entropy);
+//		printf("Pad:filename:\t\t\t%s\n",pad->filename);
+//		printf("Pad:Pos:\t\t\t%u\n",pad->position);
+//		printf("Pad:entropy:\t\t\t%u\n",pad->entropy);
 
-		printf("Pad:src:\t\t\t%s\n",pad->src);
-		printf("Pad:dest:\t\t\t%s\n",pad->dest);
-		printf("Pad:id:\t\t\t\t%s\n",pad->id);
-		printf("Pad:filesize:\t\t\t%u\n",pad->filesize);
+//		printf("Pad:src:\t\t\t%s\n",pad->src);
+//		printf("Pad:dest:\t\t\t%s\n",pad->dest);
+//		printf("Pad:id:\t\t\t\t%s\n",pad->id);
+//		printf("Pad:filesize:\t\t\t%u\n",pad->filesize);
 
 
 /* 		printf("\n--------------------------------------\n\n"); */
 /* 		printf("tester encrypted:\t\tMessage:\t%s\n",*message); */
-		otp_encrypt(pad,message);
 		printf("tester encrypted:\t\tMessage:\t%s\n",*message);
+		printf("tester encrypted:\t\tMessage:\t%s\n",*message2);
 		printf("Pad:Pos:\t\t\t%u\n",pad->position);
-		printf("Pad:entropy:\t\t\t%u\n",pad->entropy);
+		otp_encrypt_warning(pad,message,0);
+		otp_encrypt(pad,message2);
+		printf("tester encrypted:\t\tMessage:\t%s\n",*message);
+		printf("tester encrypted:\t\tMessage:\t%s\n",*message2);
+		printf("Pad:Pos:\t\t\t%u\n",pad->position);
+//		printf("Pad:entropy:\t\t\t%u\n",pad->entropy);
 		otp_destroy(pad);
 	}
-
+	printf("\n--------------------------------------\n\n"); 
 	char *id=otp_get_id_from_message(message);
-	printf("tester encrypted:\t\tMessage:\t%s\n",id);
+	//printf("tester encrypted:\t\tMessage:\t%s\n",id);
 
 
 	char filename2[]="alexapfel@gmail.com alexapfel@gmail.com 11111111.entropy";
@@ -123,9 +134,11 @@ int main(void) {
 /* 		otp_encrypt(pad2,message); */
 /* 		printf("tester encrypted:\t\tMessage:\t%s\n",*message); */
 		otp_decrypt(pad,message);
+		otp_decrypt(pad,message2);
 		printf("tester decrypted:\t\tMessage:\t%s\n",*message);
-		printf("Pad:Pos:\t\t\t%u\n",pad->position);
-		printf("Pad:entropy:\t\t\t%u\n",pad->entropy);
+		printf("tester decrypted:\t\tMessage:\t%s\n",*message2);
+		//printf("Pad:Pos:\t\t\t%u\n",pad->position);
+		//printf("Pad:entropy:\t\t\t%u\n",pad->entropy);
 		otp_destroy(pad2);
 	}
 	
