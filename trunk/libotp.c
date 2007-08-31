@@ -28,10 +28,6 @@
 #include <sys/stat.h>
 #include <time.h>
 
-/* strange fixes for strange warnings */
-extern char *stpcpy (char *, const char *);
-
-
 /* GNOMElib */
 #include <glib.h>
 
@@ -43,7 +39,6 @@ extern char *stpcpy (char *, const char *);
 #define FILE_DELI " "		/* Delimiter in the filename */
 #define MSG_DELI "|"		/* Delimiter in the encrypted message */
 #define PAD_EMPTYCHAR '\0'	/* Char that is used to mark the pad as used. */
-#define PROTECTED_ENTROPY 100	/* The amount of entropy that is only used for "out of entropy" messages */ 
 #define	FILE_SUFFIX ".entropy"	/* The keyfiles have to end with this string to be valid. This string has to be separated by ".". */
 #define NOENTROPY_SIGNAL "*** I'm out of entropy!"	/* The message that is send in case the sender is out of entropy */
 
@@ -97,7 +92,7 @@ static int otp_printint(char *m,int len) {
 
 /* Calculate the free entropy */
 static void otp_calc_entropy(struct otp* pad){
-	int entropy = pad->filesize / 2 - pad->position - PROTECTED_ENTROPY;		/* Calculate the free entropy */
+	int entropy = pad->filesize / 2 - pad->position - OTP_PROTECTED_ENTROPY;		/* Calculate the free entropy */
 
 	if (entropy < 0){
 		pad->entropy = 0;
@@ -169,7 +164,7 @@ static struct otp* otp_seek_start(struct otp* pad){
 
 /* Check if the ID is valid */
 static char* otp_check_id(char* id_str){
-	if ( strlen(id_str) == ID_LENGTH * sizeof(char)) {
+	if ( strlen(id_str) == OTP_ID_LENGTH * sizeof(char)) {
 		return id_str;				/* The ID only if the message was extracted as well.*/	
 	}else{
 		return NULL;
@@ -180,32 +175,45 @@ static char* otp_check_id(char* id_str){
 static int otp_get_encryptkey_from_file(char **key , struct otp* pad, int len) {
 	int fd=0; char *b=""; char **data; data=&b;
 	int i=0;
+	int protected_entropy=OTP_PROTECTED_ENTROPY;
+	int position=pad->position;
+	
+	if (pad->protected_position != 0) {								
+		protected_entropy=0;						/* allow usage of protected entropy*/
+		position=pad->protected_position;
+	}
 
-/* 	printf("\ntest\t\t\t:%d\n\n",(pad->filesize / 2 - PROTECTED_ENTROPY)); */
-	if ( (pad->position + len >= (pad->filesize / 2 - PROTECTED_ENTROPY) ) || pad->position < 0) {
+
+	if ( (position + len >= (pad->filesize / 2 - protected_entropy) ) || position < 0) {
 		return FALSE;
 	}
 	
 	if (otp_open_keyfile(fd,data,pad)) {		/* Open the keyfile */
 		char *vkey = (char *) malloc( (len) * sizeof(char) );
-		memcpy( vkey, *data+pad->position ,len-1);  		/* the pad could be anything... use memcpy */
+		memcpy( vkey, *data+position ,len-1);  		/* the pad could be anything... use memcpy */
 		*key=vkey;
 /* 		otp_printint(*key,len-1); */
+	
+		char *datpos=*data+position;
+	
 
-		char *datpos=*data+pad->position;
-#ifdef KEYOVERWRITE
-		for(i = 0 ; i < ( len - 1) ; i++){		/* Make the used key unusable in the keyfile */
-/* 			printf(" %d \n",datpos[i]); */
-			datpos[i] = PAD_EMPTYCHAR;
-/* 			printf(" %d \n",datpos[i]); */
+#ifdef KEYOVERWRITE	
+		if (pad->protected_position != 0) {	/* using protected entropy, do not destroy the protected entropy */
+		}else{						
+			for(i = 0 ; i < ( len - 1) ; i++){		/* Make the used key unusable in the keyfile */
+/* 				printf(" %d \n",datpos[i]); */
+				datpos[i] = PAD_EMPTYCHAR;
+/* 				printf(" %d \n",datpos[i]); */
+			}
 		}
 #endif
 
 /* 		msync(data, pad->filesize, MS_ASYNC); */
 /* 		usleep(100000); */
 		otp_close_keyfile(fd,data,pad);		/* Close the keyfile */
-		pad->position = pad->position + len -1;
-/* 		printf("\ntest\t\t\t:%d",pad->position); */
+		if (pad->protected_position == 0) {	/* In all cases where the protected entropy is not used */
+			pad->position = pad->position + len -1;
+		}
 		otp_calc_entropy(pad);
 		
 	}else{
@@ -295,6 +303,7 @@ static int otp_uencrypt(char **message, struct otp* pad) {
 	int *len=&a;
 	char *b=""; char **key; key=&b;
 
+
 #ifdef HAVEKEYFILE
 	if ( otp_get_encryptkey_from_file(key,pad,*len) == FALSE ) {
 		return FALSE;
@@ -316,6 +325,32 @@ static int otp_uencrypt(char **message, struct otp* pad) {
 
 /*  ----------------- Public One-Time Pad Functions ------------ */
 
+/* encrypts a message with the protected entropy. protected_pos is the position in bytes to use. */
+unsigned int otp_encrypt_warning(struct otp* pad, char **message, int protected_pos) {
+
+	if(pad == NULL) {
+		return 0;
+	}
+	pad->protected_position = pad->filesize / 2 - OTP_PROTECTED_ENTROPY-protected_pos;  /* Assign a position in the protected entropy */
+	
+	char *pos_str = g_strdup_printf ("%u",pad->protected_position);			/* Our position in the pad*/
+#ifdef UCRYPT
+	if (otp_uencrypt(message,pad) == FALSE) {			/* Encrypt and base64 */
+		pad->protected_position=0;
+		return FALSE;
+	}
+#endif				
+
+	char *new_msg = g_strconcat(pos_str,MSG_DELI,pad->id,MSG_DELI,*message,NULL);	/*Something like "3EF9|34EF4588|M+Rla2w=" */
+	g_free(*message);
+	g_free(pos_str);
+	*message = new_msg;
+	
+	
+	pad->protected_position=0;
+	return TRUE;
+}
+
 /* extracts and returns the ID from a given encrypted message. Leaves the message constant. Returns NULL if it fails.*/
 char* otp_get_id_from_message(char **message){
 
@@ -335,6 +370,7 @@ char* otp_get_id_from_message(char **message){
 struct otp* otp_get_from_file(const char* path, const char* input_filename){
 	static struct otp* pad;
    	pad = (struct otp *) malloc(sizeof(struct otp));
+   	pad->protected_position=0;
 
 	if (input_filename == NULL ) {	/* empty filename */
 		return NULL;
@@ -413,7 +449,7 @@ unsigned int otp_encrypt(struct otp* pad, char **message){
 	if(pad == NULL) {
 		return 0;
 	}
-			
+	pad->protected_position=0;
 	char *pos_str = g_strdup_printf ("%u",pad->position);			/* Our position in the pad*/
 
 #ifdef UCRYPT
@@ -436,7 +472,7 @@ unsigned int otp_decrypt(struct otp* pad, char **message){
 	if (pad == NULL) {
 		return FALSE;
 	}
-
+	pad->protected_position=0;
 	gchar** m_array = g_strsplit(*message, MSG_DELI, 3);
 
 	if ( (m_array[0] == NULL) || (m_array[1] == NULL) || (m_array[2] == NULL) ) {

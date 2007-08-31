@@ -338,7 +338,7 @@ static gboolean par_session_check_req(const char* alice, const char* bob, Purple
 	if(strncmp(*message_no_header, PARANOIA_REQUEST, 60) == 0) {
 		// extract ID
 		char* tmp_ptr = *message_no_header + 62;
-		char* id = g_strndup(tmp_ptr, ID_LENGTH);
+		char* id = g_strndup(tmp_ptr, OTP_ID_LENGTH);
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "REQUEST ID EXTRACTED: %s\n", id);
 		
 		struct key* temp_key = par_search_key(alice, bob, id);
