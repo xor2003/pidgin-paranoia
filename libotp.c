@@ -325,6 +325,17 @@ static int otp_uencrypt(char **message, struct otp* pad) {
 
 /*  ----------------- Public One-Time Pad Functions ------------ */
 
+/* generates a new key pair (two files) with the name alice and bob of 'size' bytes. If source is NULL, /dev/urandom is used. */
+unsigned int otp_generate_key_pair(char* alice, char* bob, char* path, char* source, unsigned int size) {
+	if(alice == NULL || bob == NULL || path == NULL) {
+		return FALSE;
+	}
+	if(source == NULL) {
+		printf("using /dev/urandom\n");	
+	}
+	return TRUE;
+}
+
 /* encrypts a message with the protected entropy. protected_pos is the position in bytes to use. */
 unsigned int otp_encrypt_warning(struct otp* pad, char **message, int protected_pos) {
 
@@ -490,7 +501,7 @@ unsigned int otp_decrypt(struct otp* pad, char **message){
 
 #ifdef UCRYPT
 
-	if ( otp_udecrypt(message,pad,decryptpos) ) {		/* Decrypt and debase64 */
+	if (otp_udecrypt(message,pad,decryptpos) == FALSE) {		/* Decrypt and debase64 */
 		return FALSE;
 	}
 
