@@ -1,5 +1,5 @@
 /*
-    Pidgin-Paranoia Libotp Tester - Useful for the development of libotp.
+    Pidgin-Paranoia Libotp Tester Application - Useful for the development of libotp.
     Copyright (C) 2007  Simon Wenner, Christian Wäckerlin
 
     This program is free software: you can redistribute it and/or modify
@@ -34,117 +34,303 @@
 
 #define PARANOIA_PATH "/.paranoia/"		/* TODO: REMOVE */
 
-#define STATICMSG "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567"
-
-int main(void) {
-/* 	int a=0; int *size=&a; */
-/* 	*size=10; */
-/* 	       "123456789012" */
-
-
-
-/* 	char m[]="123456789012"; // IMPORTANT: (pad has to be longer) */
-	char m[]= STATICMSG;
-	char m2[]= "1";
-/* 	char m[]="sdanfnmadsbfmnbdsafnmbadsfmnbsadmfnbasdmfndasnbfm,sfnb,mnsadfm,nadbfmndsbaf,mnbasdfn"; */
-
-	/* Message creation */
-	char **message;
-	char *vmessage = (char *) g_malloc((strlen(m) + 1) * sizeof(char));
-	strcpy(vmessage, m);
-	message=&vmessage;
-	
-	char **message2;
-	char *vmessage2 = (char *) g_malloc((strlen(m2) + 1) * sizeof(char));
-	strcpy(vmessage2, m2);
-	message2=&vmessage2;
-
-	const gchar* home = g_get_home_dir();		/* set the global key folder  TODO: REMOVE! */
-	char* path = (char *) g_malloc((strlen(home) + strlen(PARANOIA_PATH) + 1) * sizeof(char));
-	strcpy(path, (char*) home);
-	strcat(path, PARANOIA_PATH);
-
-	
-
-/* 	long int i=384242343; */
-/* 	printf("tester:\t\%s\n",global_otp_path); */
-/* 	char *c=l64a(i); */
-/* 	printf("tester:\t\tint:\t\t%s\n",c); */
-/* 	long int x=a64l (c); */
-/* 	printf("tester:\t\tint:\t\t%ld\n",x); */
+char *programname;
+int *argnumber;
+int *argpos;
+char **argvalue;
+char *path;
+struct otp* pad;
+int debuglevel=0;
+char **permmessage;
 
 
-	/* Pad Testing .... */
+/* Usage */
+int usage() {
+    printf("%s: Usage: \"%s [OPTIONS] \"\n",programname,programname);
+    printf("\
+--setmessage message\n\
+--encrypt\n\
+--decrypt\n\
+--create alice bob\n\
+--openpad filename\n\
+--closepad\n\
+--test\n\
+--debug\n\
+--nodebug\n\
+");
+	return TRUE;
+}
 
-/* 	char filename[]=" hello world.txt"; */
-/* 	char filename[]="aa aa aa"; */
-/* 	char filename[]="alexapfel@gmail.com alexapfel@gmail.com 11111111.entropy"; */
-	char filename[]="alexapfel@gmail.com alexapfel@gmail.com 11111111.entropy";
-	struct otp* pad = otp_get_from_file(path,filename);
-	if (pad == NULL) {
-		printf("Tester:File can not be opened!\n");
-	}else{
-
-//		printf("Pad:filename:\t\t\t%s\n",pad->filename);
-//		printf("Pad:Pos:\t\t\t%u\n",pad->position);
-//		printf("Pad:entropy:\t\t\t%u\n",pad->entropy);
-
-//		printf("Pad:src:\t\t\t%s\n",pad->src);
-//		printf("Pad:dest:\t\t\t%s\n",pad->dest);
-//		printf("Pad:id:\t\t\t\t%s\n",pad->id);
-//		printf("Pad:filesize:\t\t\t%u\n",pad->filesize);
-
-
-/* 		printf("\n--------------------------------------\n\n"); */
-/* 		printf("tester encrypted:\t\tMessage:\t%s\n",*message); */
-		printf("tester encrypted:\t\tMessage:\t%s\n",*message);
-		printf("tester encrypted:\t\tMessage:\t%s\n",*message2);
-		printf("Pad:Pos:\t\t\t%u\n",pad->position);
-		otp_encrypt_warning(pad,message,0);
-		otp_encrypt(pad,message2);
-		printf("tester encrypted:\t\tMessage:\t%s\n",*message);
-		printf("tester encrypted:\t\tMessage:\t%s\n",*message2);
-		printf("Pad:Pos:\t\t\t%u\n",pad->position);
-//		printf("Pad:entropy:\t\t\t%u\n",pad->entropy);
-		otp_destroy(pad);
+int create() {
+	int takes=2;
+	if(*argpos+takes-1 >= *argnumber) {
+		return FALSE;
 	}
-	printf("\n--------------------------------------\n\n"); 
-	char *id=otp_get_id_from_message(message);
-	//printf("tester encrypted:\t\tMessage:\t%s\n",id);
+	printf("%s\n",argvalue[*argpos]);
+	printf("%s\n",argvalue[*argpos+1]);
+	*argpos=*argpos+takes;
+	return TRUE;	
+}
 
-
-	char filename2[]="alexapfel@gmail.com alexapfel@gmail.com 11111111.entropy";
-	struct otp* pad2 = otp_get_from_file(path,filename2);
-	if (pad2 == NULL) {
-		printf("Tester:File can not be opened!\n");
-	}else{
-/*
-		printf("Pad:filename:\t\t\t%s\n",pad2->filename);
-		printf("Pad:Pos:\t\t\t%ld\n",pad2->position);
-		printf("Pad:entropy:\t\t\t%ld\n",pad2->entropy);
-
-		printf("Pad:src:\t\t\t%s\n",pad2->src);
-		printf("Pad:dest:\t\t\t%s\n",pad2->dest);
-		printf("Pad:id:\t\t\t\t%s\n",pad2->id);
-		printf("Pad:filesize:\t\t\t%ld\n",pad2->filesize);
-*/
-
-/* 		printf("\n--------------------------------------\n\n"); */
-/* 		printf("tester encrypted:\t\tMessage:\t%s\n",*message); */
-/* 		otp_encrypt(pad2,message); */
-/* 		printf("tester encrypted:\t\tMessage:\t%s\n",*message); */
-		otp_decrypt(pad,message);
-		otp_decrypt(pad,message2);
-		printf("tester decrypted:\t\tMessage:\t%s\n",*message);
-		printf("tester decrypted:\t\tMessage:\t%s\n",*message2);
-		//printf("Pad:Pos:\t\t\t%u\n",pad->position);
-		//printf("Pad:entropy:\t\t\t%u\n",pad->entropy);
-		otp_destroy(pad2);
+int test() {
+	int takes=0;
+	if(*argpos+takes-1 >= *argnumber) {
+		return FALSE;
 	}
-	
-	
-	
-	return 0;
+	printf("Test point reached!\n");
+	*argpos=*argpos+takes;
+	return TRUE;	
+}
+
+int debug() {
+	int takes=0;
+	if(*argpos+takes-1 >= *argnumber) {
+		return FALSE;
+	}
+	debuglevel=1;
+	*argpos=*argpos+takes;
+	return TRUE;	
+}
+
+int nodebug() {
+	int takes=0;
+	if(*argpos+takes-1 >= *argnumber) {
+		return FALSE;
+	}
+	debuglevel=0;
+	*argpos=*argpos+takes;
+	return TRUE;	
 }
 
 
+int openpad() {
+	int takes=1;
+	if(*argpos+takes-1 >= *argnumber) {
+		return FALSE;
+	}
+	
+	pad = otp_get_from_file(path,argvalue[*argpos]);
+	if (pad == NULL) {
+		printf("Keyfile '%s' can not be opened!\n",argvalue[*argpos]);
+		return FALSE;
+	}
+	
+	
+	if (debuglevel) {
+		printf("* Keyfile '%s' opened!\n",argvalue[*argpos]);
+		printf("* Pad:\tfilename:\t%s\n",pad->filename);
+		printf("* Pad:\tPos:\t\t%u\n",pad->position);
+		printf("* Pad:\tentropy:\t%u\n",pad->entropy);
+		printf("* Pad:\tsrc:\t\t%s\n",pad->src);
+		printf("* Pad:\tdest:\t\t%s\n",pad->dest);
+		printf("* Pad:\tid:\t\t%s\n",pad->id);
+		printf("* Pad:\tfilesize:\t%u\n",pad->filesize);
+	}
+	
+	*argpos=*argpos+takes;
+	return TRUE;	
+}
+
+int closepad() {
+	int takes=0;
+	if(*argpos+takes-1 >= *argnumber) {
+		return FALSE;
+	}
+	if (pad == NULL) {
+		printf("Can not destroy a pad that does not exist!\n");
+		return FALSE;
+	}
+	otp_destroy(pad);
+	
+	*argpos=*argpos+takes;
+	return TRUE;	
+}
+	
+int setmessage() {
+	int takes=1;
+	if(*argpos+takes-1 >= *argnumber) {
+		return FALSE;
+	}
+	
+	if (permmessage!=NULL) {
+		g_free(*permmessage);
+	}
+	char *vmessage = g_strdup(argvalue[*argpos]);
+	permmessage = &vmessage;
+	if (debuglevel) {
+		printf("* Message:\t\t%s\n",*permmessage);
+	}
+
+	*argpos=*argpos+takes;
+	return TRUE;	
+}
+
+int encrypt() {
+	int takes=0;
+	if(*argpos+takes-1 >= *argnumber) {
+		return FALSE;
+	}
+	
+	if (permmessage == NULL) {
+		printf("No message set!\n");
+		return FALSE;	
+	}
+	if (otp_encrypt(pad,permmessage) == FALSE) {
+		printf("Encrypt failed!\n");		
+		return FALSE;	
+	}
+	printf("Encrypted message:\t%s\n",*permmessage);
+	if (debuglevel) {
+		printf("* Pad:\tPos:\t\t%u\n",pad->position);
+		printf("* Pad:\tentropy:\t%u\n",pad->entropy);
+	}
+	
+	*argpos=*argpos+takes;
+	return TRUE;	
+}
+
+
+		
+int signalencrypt() {
+	int takes=1;
+	if(*argpos+takes-1 >= *argnumber) {
+		return FALSE;
+	}
+	
+	char *vmessage = g_strdup(argvalue[*argpos]);
+	char **message = &vmessage;
+	if (debuglevel) {
+		printf("* Message:\t\t%s\n",*message);
+	}
+	if (otp_encrypt_warning(pad,message,0) == FALSE) {
+		printf("Signalencrypt failed!\n");	
+		return FALSE;	
+	}
+	printf("Enc. signal message:\t%s\n",*message);	
+	
+	if (debuglevel) {
+		printf("* Pad:\tPos:\t\t%u\n",pad->position);
+		printf("* Pad:\tentropy:\t%u\n",pad->entropy);
+	}
+
+	if (permmessage != NULL) {
+		//g_free(**permmessage);
+	}
+	permmessage=message;
+	
+	
+	*argpos=*argpos+takes;
+	return TRUE;	
+}
+
+int decrypt() {
+	int takes=0;
+	if(*argpos+takes-1 >= *argnumber) {
+		return FALSE;
+	}
+	
+	if (permmessage == NULL) {
+		printf("No message set!\n");
+		return FALSE;	
+	}
+	if (otp_decrypt(pad,permmessage) == FALSE) {
+		printf("Decrypt failed!\n");	
+		return FALSE;	
+	}
+	printf("Decrypted message:\t%s\n",*permmessage);
+	
+	*argpos=*argpos+takes;
+	return TRUE;	
+}
+
+
+int main ( int argc , char *argv[] ) {
+	printf("--------------------------------------------------------------------------------\n");
+	programname=argv[0];
+	argnumber=&argc;
+	*argnumber=*argnumber-1;
+	argvalue=&argv[1];
+	int i=0;
+	argpos=&i;
+	
+	const gchar* home = g_get_home_dir();		/* set the global key folder  TODO: REMOVE! */
+	path = (char *) g_malloc((strlen(home) + strlen(PARANOIA_PATH) + 1) * sizeof(char));
+	strcpy(path, (char*) home);
+	strcat(path, PARANOIA_PATH);
+	
+	
+	//printf("%d\n",*argnumber);
+		
+	if (*argnumber <= 0)
+	{
+		usage();		/* Show usage */
+    	return(1);
+	}
+	for(i=0;i <= *argnumber;i++){
+		//printf("argument:%s\n",argv[i+1]);
+		
+		if (!strcmp(argv[i],"--setmessage")) {
+			if(setmessage()==FALSE){
+				return 1;
+			}
+		}
+		
+		if (!strcmp(argv[i],"--encrypt")) {
+			if(encrypt()==FALSE){
+				return 1;
+			}
+		}
+		
+		if (!strcmp(argv[i],"--signalencrypt")) {
+			if(signalencrypt()==FALSE){
+				return 1;
+			}
+		}
+		
+		if (!strcmp(argv[i],"--decrypt")) {
+			if(decrypt()==FALSE){
+				return 1;
+			}
+		}	
+
+		if (!strcmp(argv[i],"--create")) {
+			if(create()==FALSE){
+				return 1;
+			}
+		}	
+		
+		if (!strcmp(argv[i],"--openpad")) {
+			if(openpad()==FALSE){
+				return 1;
+			}
+		}
+		
+		if (!strcmp(argv[i],"--closepad")) {
+			if(closepad()==FALSE){
+				return 1;
+			}
+		}
+		
+		if (!strcmp(argv[i],"--test")) {
+			if(test()==FALSE){
+				return 1;
+			}
+		}
+		
+		if (!strcmp(argv[i],"--debug")) {
+			if(debug()==FALSE){
+				return 1;
+			}
+		}
+		
+		if (!strcmp(argv[i],"--nodebug")) {
+			if(nodebug()==FALSE){
+				return 1;
+			}
+		}
+	}
+	printf("--------------------------------------------------------------------------------\n");
+	printf("Reporting: All commands executed successfully!\n");
+	
+	return(0);
+}
