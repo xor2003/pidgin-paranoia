@@ -409,7 +409,7 @@ static gboolean par_session_check_msg(struct key* used_key, char** message_decry
 	if (strncmp(*message_decrypted, PARANOIA_NO_ENTROPY, 21) == 0) { // FIXME: dynamic size
 		used_key->opt->otp_enabled = FALSE;
 		used_key->opt->no_entropy = TRUE;
-		purple_conversation_write(conv, NULL, "All the entropy of this key has been used. Encryption disabled (remote).", PURPLE_MESSAGE_NO_LOG, time(NULL));
+		purple_conversation_write(conv, NULL, "All entropy of this key has been used. Encryption disabled (remote).", PURPLE_MESSAGE_NO_LOG, time(NULL));
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "PARANOIA_NO_ENTROPY detected! otp_enabled=FALSE\n");
 		return TRUE;
 	}
@@ -792,7 +792,7 @@ static void par_sending_im_msg(PurpleAccount *account, const char *receiver,
 				used_key->opt->no_entropy = TRUE;
 				used_key->opt->otp_enabled = FALSE;
 				used_key->opt->auto_enable = FALSE;
-				purple_conversation_write(used_key->conv, NULL, "All your entropy has benn used. Encryption disabled. The last Message could not be sent.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+				purple_conversation_write(used_key->conv, NULL, "All your entropy has been used. Encryption disabled. The last Message could not be sent.", PURPLE_MESSAGE_NO_LOG, time(NULL));
 				// TODO: display the message too
 				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "You have not enought entropy! no_entropy = TRUE\n");
 				// delete message and send no entropy msg
@@ -801,9 +801,11 @@ static void par_sending_im_msg(PurpleAccount *account, const char *receiver,
 				if(!otp_encrypt_warning(used_key->pad, message, 0)) {
 					purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, "Could not send an entropy warning! That's a serious error!.\n");
 				}
+				par_add_header(message);
 				return;
 			} else {
 				// TODO: send an entropy warning (inside the msg)
+				purple_conversation_write(used_key->conv, NULL, "Your entropy is low!\n", PURPLE_MESSAGE_NO_LOG, time(NULL));
 				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Your entropy is low!\n");
 			}
 		}

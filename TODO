@@ -11,7 +11,6 @@ paranoia.c
  * Send entropy warnings (inside messages)
  * evaluate "buddy offline signal"
  * check message size limits
- * replace fake <otp>
  * gettext support
  * send PARANOIA_CLOSE to all conversations on plugin unload
  
@@ -20,3 +19,7 @@ other
  * Design a simple web page
  * Debian/Ubuntu package
  * Test all the less common protocols (Gadu-Gadu, QQ, SIMPLE...)
+
+Wishlist
+ * /otp scan, to read in new keys
+ * replace fake <otp>

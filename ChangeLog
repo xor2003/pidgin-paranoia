@@ -36,3 +36,4 @@ Known bugs:
  * there are some anomalies if both set /otp off and one tries to reenable
  * libotp: 2 bytes of unprotected entropy are not allowed to be used
  * Keyfile creation function is not threaded and therfore locks pidgin
+ * More then one key per conversation is not supported yet.
