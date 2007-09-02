@@ -25,6 +25,7 @@ Christan Wäckerlin:
  * Libotp: Full keyfile support
  * Added support for the ./configure --disable-otp swich that disables libotp support for development.
  * Added support for protected entropy signaling (i.e. no entropy  signal)
+ * Added support for keyfile creation
  
 
 
@@ -33,3 +34,5 @@ Known bugs:
  * the first encrypted sent message is not marked with <secure>
  * /me does not work encrypted
  * there are some anomalies if both set /otp off and one tries to reenable
+ * libotp: 2 bytes of unprotected entropy are not allowed to be used
+ * Keyfile creation function is not threaded and therfore locks pidgin

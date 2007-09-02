@@ -38,10 +38,11 @@
 /* Some defintions */
 #define FILE_DELI " "		/* Delimiter in the filename */
 #define MSG_DELI "|"		/* Delimiter in the encrypted message */
+#define PATH_DELI "/"		/* For some reason some strange operatingsystems use "\" */
 #define PAD_EMPTYCHAR '\0'	/* Char that is used to mark the pad as used. */
 #define	FILE_SUFFIX ".entropy"	/* The keyfiles have to end with this string to be valid. This string has to be separated by ".". */
 #define NOENTROPY_SIGNAL "*** I'm out of entropy!"	/* The message that is send in case the sender is out of entropy */
-
+#define BLOCKSIZE 1024		/* The blocksize used in the keyfile creation function */
 
 /* All defines needed for full opt functionality! */
 
@@ -327,12 +328,120 @@ static int otp_uencrypt(char **message, struct otp* pad) {
 
 /* generates a new key pair (two files) with the name alice and bob of 'size' bytes. If source is NULL, /dev/urandom is used. */
 unsigned int otp_generate_key_pair(char* alice, char* bob, char* path, char* source, unsigned int size) {
-	if(alice == NULL || bob == NULL || path == NULL) {
+	if(alice == NULL || bob == NULL || path == NULL || source == NULL || size==0) {
 		return FALSE;
 	}
-	if(source == NULL) {
-		printf("using /dev/urandom\n");	
+	if ( size/BLOCKSIZE==(float) size/BLOCKSIZE ) { /* The function can only generate Keyfiles with a filesize of n*BLOCKSIZE */
+		size=size/BLOCKSIZE;
+	}else{
+		size=size/BLOCKSIZE+1;
+	}	
+	
+	int rfd=0;
+	if ((rfd = open(source, O_RDONLY)) == -1) {
+		perror("open");
+		return FALSE;
 	}
+
+	unsigned int id;
+	read (rfd,&id,sizeof(id));		/* Our ID */
+	//id=1000;
+
+	char *idstr=g_strdup_printf ("%.8X",id);			/* Our ID string */;
+	
+		
+
+	/* Opening the first file */
+	char *afilename=g_strconcat(path,alice,FILE_DELI,bob,FILE_DELI,idstr,".entropy",NULL);
+	//printf("%s\n",afilename);
+	
+	int afd=0; char *ab=""; char **adata; adata=&ab;
+	
+	if ((afd = open(afilename, O_RDWR)) == -1) {
+	}else{
+		return FALSE; 	/* File already exists. I will not overwrite any existing file!*/
+	}
+
+	if ((afd = open(afilename, O_RDWR|O_CREAT)) == -1) {
+		perror("open");
+		return FALSE;
+	}
+		
+	char rand[BLOCKSIZE];
+	int i=0;
+	
+	/* Filling the first file */
+	for(i=0;i<size;i++) {
+		read (rfd, rand, BLOCKSIZE);
+		write (afd, rand, BLOCKSIZE);	
+	}
+	
+	/* Close the entropy source */
+	close(rfd);
+	
+	
+	/* Opening the secound file */
+#ifdef USEDESKTOP	
+	char *desktoppath=g_get_user_special_dir(G_USER_DIRECTORY_DESKTOP);
+	char *bfilename=g_strconcat(desktoppath,PATH_DELI,bob,FILE_DELI,alice,FILE_DELI,idstr,".entropy",NULL);
+	g_free(desktoppath);
+#else
+	char *bfilename=g_strconcat(path,bob,FILE_DELI,alice,FILE_DELI,idstr,".entropy",NULL);
+#endif	
+
+	//printf("%s\n",bfilename);
+	
+	int bfd=0; 
+	
+	if ((bfd = open(bfilename, O_RDWR)) == -1) {
+	}else{
+		return FALSE; 	/* File already exists. I will not overwrite any existing file!*/
+	}
+	if ((bfd = open(bfilename, O_RDWR|O_CREAT)) == -1) {
+		perror("open");
+		return FALSE;
+	}
+	
+	
+	/* Opening a memory map for the first file */
+	struct stat fstat;
+	if (stat(afilename, &fstat) == -1) {
+		perror("stat");
+		return FALSE;
+	}
+	int filesize=filesize=fstat.st_size;
+	if ((*adata = mmap((caddr_t)0, filesize, PROT_READ , MAP_SHARED, afd, 0)) == (caddr_t)(-1)) {
+		perror("mmap");
+		return FALSE;
+	}
+	
+	
+	/* Create the reversed second file from the first one */
+	int j=0;
+	char temp[BLOCKSIZE];
+	//otp_printint(*adata,filesize);
+	printf("Filesize:%u\n",filesize);
+	for(i=filesize-BLOCKSIZE;i>=0;i=i-BLOCKSIZE) {
+			for(j=0;j<BLOCKSIZE;j++) {
+				temp[BLOCKSIZE-1-j]=*(*adata+i+j);
+			}
+		//otp_printint(temp,BLOCKSIZE);
+		write(bfd,temp,BLOCKSIZE);
+	}
+	
+	
+	/* Close the secound file */
+	close(bfd);
+	chmod (bfilename, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+	
+	/* Clos the first file */
+	munmap(adata, filesize);
+	close(afd);
+	chmod (afilename, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+	
+	/* Cleanup */
+	g_free(idstr);
+	
 	return TRUE;
 }
 

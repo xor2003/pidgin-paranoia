@@ -67,12 +67,23 @@ int usage() {
 }
 
 int create() {
-	int takes=2;
+	int takes=4;
 	if(*argpos+takes-1 >= *argnumber) {
 		return FALSE;
 	}
-	printf("%s\n",argvalue[*argpos]);
-	printf("%s\n",argvalue[*argpos+1]);
+	
+	unsigned int size = (unsigned int) g_ascii_strtoll (argvalue[*argpos+3] ,NULL,10); 
+	if (debuglevel) {
+		printf("* Username1:\t%s\n",argvalue[*argpos]);
+		printf("* Username2:\t%s\n",argvalue[*argpos+1]);
+		printf("* Sourcefile:\t%s\n",argvalue[*argpos+2]);
+		printf("* Keypath:\t%s\n",path);
+		printf("* Keysize:\t%u\n",size);
+	}
+	if (otp_generate_key_pair(argvalue[*argpos],argvalue[*argpos+1], path, argvalue[*argpos+2],size) == FALSE) {
+		return FALSE;
+	}
+	
 	*argpos=*argpos+takes;
 	return TRUE;	
 }
@@ -285,10 +296,9 @@ int main ( int argc , char *argv[] ) {
 	*argnumber=*argnumber-1;
 	argvalue=&argv[1];
 	int i=0;
-	int count;
 	argpos=&i;
 	
-	const gchar* home = g_get_home_dir();		/* set the global key folder  TODO: REMOVE! */
+	const gchar* home = g_get_home_dir();
 	path = (char *) g_malloc((strlen(home) + strlen(PARANOIA_PATH) + 1) * sizeof(char));
 	strcpy(path, (char*) home);
 	strcat(path, PARANOIA_PATH);
