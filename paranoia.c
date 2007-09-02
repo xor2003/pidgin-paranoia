@@ -149,6 +149,7 @@ static struct key* par_create_key(const char* filename) {
 	test_opt->has_plugin = FALSE;
 	test_opt->otp_enabled = FALSE;
 	test_opt->auto_enable = TRUE;
+	// TODO: check for remaining entropy?
 	test_opt->no_entropy = FALSE;
 
 	static struct key* key;
@@ -261,8 +262,7 @@ static struct key* par_search_key(const char* src, const char* dest, const char*
 	struct key* tmp_ptr = keylist;
 
 	while(!(tmp_ptr == NULL)) {
-		if ((strcmp(tmp_ptr->pad->src, src_copy) == 0) && (strcmp(tmp_ptr->pad->dest, dest_copy) == 0) 
-			&& !tmp_ptr->opt->no_entropy) {
+		if ((strcmp(tmp_ptr->pad->src, src_copy) == 0) && (strcmp(tmp_ptr->pad->dest, dest_copy) == 0)) {
 			//  check ID too?
 			if (id == NULL) {
 				// takes the first matching key, any id
@@ -288,7 +288,7 @@ static struct key* par_search_key_by_conv(PurpleConversation *conv) {
 	struct key* tmp_ptr = keylist;
 
 	while(!(tmp_ptr == NULL)) {
-		if (tmp_ptr->conv == conv && !tmp_ptr->opt->no_entropy) {
+		if (tmp_ptr->conv == conv) {
 		
 			return tmp_ptr;
 		}
@@ -344,7 +344,7 @@ static gboolean par_session_check_req(const char* alice, const char* bob, Purple
 		if (temp_key != NULL) {
 			temp_key->opt->has_plugin = TRUE;
 			temp_key->conv = conv;
-			if(temp_key->opt->auto_enable) {
+			if(temp_key->opt->auto_enable && !temp_key->opt->no_entropy) {
 				temp_key->opt->ack_sent = FALSE;
 				temp_key->opt->otp_enabled = TRUE;
 				purple_conversation_write(conv, NULL, "Encryption enabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
@@ -409,6 +409,7 @@ static gboolean par_session_check_msg(struct key* used_key, char** message_decry
 	if (strncmp(*message_decrypted, PARANOIA_NO_ENTROPY, 21) == 0) { // FIXME: dynamic size
 		used_key->opt->otp_enabled = FALSE;
 		used_key->opt->no_entropy = TRUE;
+		used_key->opt->auto_enable = FALSE;
 		purple_conversation_write(conv, NULL, "All entropy of this key has been used. Encryption disabled (remote).", PURPLE_MESSAGE_NO_LOG, time(NULL));
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "PARANOIA_NO_ENTROPY detected! otp_enabled=FALSE\n");
 		return TRUE;
@@ -440,26 +441,31 @@ static gboolean par_cli_try_enable_enc(PurpleConversation *conv) {
 
 	struct key* used_key = par_search_key_by_conv(conv);
 	if(used_key != NULL) {
-		if (used_key->opt->has_plugin == TRUE) {
-			if(!used_key->opt->otp_enabled) {
-				used_key->opt->otp_enabled = TRUE;
-				used_key->opt->ack_sent = FALSE;
-				purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), PARANOIA_START, 
-					PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
-				purple_conversation_write(conv, NULL, "Encryption enabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+		if (!used_key->opt->no_entropy) {	
+			if (used_key->opt->has_plugin == TRUE) {
+				if(!used_key->opt->otp_enabled) {
+					used_key->opt->otp_enabled = TRUE;
+					used_key->opt->ack_sent = FALSE;
+					purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), PARANOIA_START, 
+						PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
+					purple_conversation_write(conv, NULL, "Encryption enabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+				} else {
+					purple_conversation_write(conv, NULL, "Encryption already enabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+				}
 			} else {
-				purple_conversation_write(conv, NULL, "Encryption already enabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+				purple_conversation_write(conv, NULL, "Trying to enable encryption.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+				par_session_request(conv);
 			}
-		} else {
-			purple_conversation_write(conv, NULL, "Trying to enable encryption.", PURPLE_MESSAGE_NO_LOG, time(NULL));
-			par_session_request(conv);
+			used_key->opt->auto_enable = TRUE;
+			return TRUE;
 		}
-		used_key->opt->auto_enable = TRUE;
-		return TRUE;
+		purple_conversation_write(conv, NULL, "Couldn't enable the encryption. No entropy available.",
+				PURPLE_MESSAGE_NO_LOG, time(NULL));
+		return FALSE;
 	}
 	
 	purple_conversation_write(conv, NULL, "Couldn't enable the encryption. No key available.",
-		PURPLE_MESSAGE_NO_LOG, time(NULL));
+			PURPLE_MESSAGE_NO_LOG, time(NULL));
 	return FALSE;
 }
 
@@ -805,7 +811,7 @@ static void par_sending_im_msg(PurpleAccount *account, const char *receiver,
 				return;
 			} else {
 				// TODO: send an entropy warning (inside the msg)
-				purple_conversation_write(used_key->conv, NULL, "Your entropy is low!\n", PURPLE_MESSAGE_NO_LOG, time(NULL));
+				purple_conversation_write(used_key->conv, NULL, "Your entropy is low!", PURPLE_MESSAGE_NO_LOG, time(NULL));
 				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Your entropy is low!\n");
 			}
 		}
