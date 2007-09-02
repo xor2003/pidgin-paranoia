@@ -39,9 +39,11 @@ int *argnumber;
 int *argpos;
 char **argvalue;
 char *path;
-struct otp* pad;
+struct otp* encryptpad;
+struct otp* decryptpad;
 int debuglevel=0;
 char **permmessage;
+int repeatnumber=1;
 
 
 /* Usage */
@@ -49,15 +51,18 @@ int usage() {
     printf("%s: Usage: \"%s [OPTIONS] \"\n",programname,programname);
     printf("\
 --setmessage message\n\
+--repeat # TODO\n\
 --encrypt\n\
 --decrypt\n\
 --create alice bob\n\
---openpad filename\n\
---closepad\n\
+--openpad filename encrypt|decrypt\n\
+--closepad encrypt|decrypt\n\
 --test\n\
 --debug\n\
 --nodebug\n\
-");
+\n\
+%s --openpad \"bob@jabber.org alice@jabber.org 22222222.entropy\" encrypt --openpad \"alice@jabber.org bob@jabber.org 22222222.entropy\" decrypt --setmessage \"test\" --encrypt --decrypt --closepad encrypt --closepad decrypt\n\
+",programname);
 	return TRUE;
 }
 
@@ -104,27 +109,44 @@ int nodebug() {
 
 
 int openpad() {
-	int takes=1;
+	int takes=2;
 	if(*argpos+takes-1 >= *argnumber) {
 		return FALSE;
 	}
 	
-	pad = otp_get_from_file(path,argvalue[*argpos]);
-	if (pad == NULL) {
-		printf("Keyfile '%s' can not be opened!\n",argvalue[*argpos]);
+	if (!strcmp(argvalue[*argpos+1],"encrypt")) {
+		encryptpad = otp_get_from_file(path,argvalue[*argpos]);	
+		if (encryptpad == NULL) {
+			printf("Keyfile '%s' can not be opened!\n",argvalue[*argpos]);
 		return FALSE;
+		}	
+		if (debuglevel) {
+			printf("* Keyfile '%s' opened!\n",argvalue[*argpos]);
+			printf("* Pad:\tfilename:\t%s\n",encryptpad->filename);
+			printf("* Pad:\tPos:\t\t%u\n",encryptpad->position);
+			printf("* Pad:\tentropy:\t%u\n",encryptpad->entropy);
+			printf("* Pad:\tsrc:\t\t%s\n",encryptpad->src);
+			printf("* Pad:\tdest:\t\t%s\n",encryptpad->dest);
+			printf("* Pad:\tid:\t\t%s\n",encryptpad->id);
+			printf("* Pad:\tfilesize:\t%u\n",encryptpad->filesize);
+		}
 	}
-	
-	
-	if (debuglevel) {
-		printf("* Keyfile '%s' opened!\n",argvalue[*argpos]);
-		printf("* Pad:\tfilename:\t%s\n",pad->filename);
-		printf("* Pad:\tPos:\t\t%u\n",pad->position);
-		printf("* Pad:\tentropy:\t%u\n",pad->entropy);
-		printf("* Pad:\tsrc:\t\t%s\n",pad->src);
-		printf("* Pad:\tdest:\t\t%s\n",pad->dest);
-		printf("* Pad:\tid:\t\t%s\n",pad->id);
-		printf("* Pad:\tfilesize:\t%u\n",pad->filesize);
+	if (!strcmp(argvalue[*argpos+1],"decrypt")) {
+		decryptpad = otp_get_from_file(path,argvalue[*argpos]);	
+		if (decryptpad == NULL) {
+			printf("Keyfile '%s' can not be opened!\n",argvalue[*argpos]);
+		return FALSE;
+		}	
+		if (debuglevel) {
+			printf("* Keyfile '%s' opened!\n",argvalue[*argpos]);
+			printf("* Pad:\tfilename:\t%s\n",decryptpad->filename);
+			printf("* Pad:\tPos:\t\t%u\n",decryptpad->position);
+			printf("* Pad:\tentropy:\t%u\n",decryptpad->entropy);
+			printf("* Pad:\tsrc:\t\t%s\n",decryptpad->src);
+			printf("* Pad:\tdest:\t\t%s\n",decryptpad->dest);
+			printf("* Pad:\tid:\t\t%s\n",decryptpad->id);
+			printf("* Pad:\tfilesize:\t%u\n",decryptpad->filesize);
+		}	
 	}
 	
 	*argpos=*argpos+takes;
@@ -132,15 +154,25 @@ int openpad() {
 }
 
 int closepad() {
-	int takes=0;
+	int takes=1;
 	if(*argpos+takes-1 >= *argnumber) {
 		return FALSE;
 	}
-	if (pad == NULL) {
-		printf("Can not destroy a pad that does not exist!\n");
-		return FALSE;
+	if (!strcmp(argvalue[*argpos],"decrypt")) {
+		if (decryptpad == NULL) {
+			printf("Can not destroy a pad that does not exist!\n");
+			return FALSE;
+		}
+		otp_destroy(decryptpad);
 	}
-	otp_destroy(pad);
+	
+	if (!strcmp(argvalue[*argpos],"encrypt")) {
+		if (encryptpad == NULL) {
+			printf("Can not destroy a pad that does not exist!\n");
+			return FALSE;
+		}
+		otp_destroy(encryptpad);
+	}
 	
 	*argpos=*argpos+takes;
 	return TRUE;	
@@ -175,16 +207,15 @@ int encrypt() {
 		printf("No message set!\n");
 		return FALSE;	
 	}
-	if (otp_encrypt(pad,permmessage) == FALSE) {
+	if (otp_encrypt(encryptpad,permmessage) == FALSE) {
 		printf("Encrypt failed!\n");		
 		return FALSE;	
 	}
 	printf("Encrypted message:\t%s\n",*permmessage);
 	if (debuglevel) {
-		printf("* Pad:\tPos:\t\t%u\n",pad->position);
-		printf("* Pad:\tentropy:\t%u\n",pad->entropy);
+		printf("* Pad:\tPos:\t\t%u\n",encryptpad->position);
+		printf("* Pad:\tentropy:\t%u\n",encryptpad->entropy);
 	}
-	
 	*argpos=*argpos+takes;
 	return TRUE;	
 }
@@ -200,17 +231,17 @@ int signalencrypt() {
 	char *vmessage = g_strdup(argvalue[*argpos]);
 	char **message = &vmessage;
 	if (debuglevel) {
-		printf("* Message:\t\t%s\n",*message);
+		printf("* Message:\t%s\n",*message);
 	}
-	if (otp_encrypt_warning(pad,message,0) == FALSE) {
+	if (otp_encrypt_warning(encryptpad,message,0) == FALSE) {
 		printf("Signalencrypt failed!\n");	
 		return FALSE;	
 	}
 	printf("Enc. signal message:\t%s\n",*message);	
 	
 	if (debuglevel) {
-		printf("* Pad:\tPos:\t\t%u\n",pad->position);
-		printf("* Pad:\tentropy:\t%u\n",pad->entropy);
+		printf("* Pad:\tPos:\t\t%u\n",encryptpad->position);
+		printf("* Pad:\tentropy:\t%u\n",encryptpad->entropy);
 	}
 
 	if (permmessage != NULL) {
@@ -233,7 +264,10 @@ int decrypt() {
 		printf("No message set!\n");
 		return FALSE;	
 	}
-	if (otp_decrypt(pad,permmessage) == FALSE) {
+	if (debuglevel) {
+		printf("* Encrypted message:\t%s\n",*permmessage);
+	}
+	if (otp_decrypt(decryptpad,permmessage) == FALSE) {
 		printf("Decrypt failed!\n");	
 		return FALSE;	
 	}
@@ -251,6 +285,7 @@ int main ( int argc , char *argv[] ) {
 	*argnumber=*argnumber-1;
 	argvalue=&argv[1];
 	int i=0;
+	int count;
 	argpos=&i;
 	
 	const gchar* home = g_get_home_dir();		/* set the global key folder  TODO: REMOVE! */
@@ -274,7 +309,6 @@ int main ( int argc , char *argv[] ) {
 				return 1;
 			}
 		}
-		
 		if (!strcmp(argv[i],"--encrypt")) {
 			if(encrypt()==FALSE){
 				return 1;
