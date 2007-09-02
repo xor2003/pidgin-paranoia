@@ -7,11 +7,15 @@ libotp.c
  * Support for signal messages using protected entropy
 
 paranoia.c
- * Enhanced session management
+ * Enhanced session management (ack)
  * Hide or change the session init messages
- * Send entropy warnings
+ * Send entropy warnings (inside messages)
  * evaluate "buddy offline signal"
  * check message size limits
+ * replace fake <otp>
+ * gettext support
+ * send PARANOIA_CLOSE to all conversations on plugin unload
+ 
 
 other
  * Design a simple web page
