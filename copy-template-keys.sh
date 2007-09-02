@@ -7,28 +7,8 @@ echo
 echo  Hit Enter to continue....
 read
 
-echo "Select the size of your templates:"
-OPT="large small EXIT"
-select opt in $OPT; do
- 	 	if [ "$opt" = "EXIT" ]; then
-			exit
-  		fi
+DIR="$HOME/.paranoia/"
 
- 	 	if [ "$opt" = "large" ]; then
-			SUFF=""	
-			IDLOOP="11111111"
-			ID="22222222"
-			break
-  		fi
-
- 	 	if [ "$opt" = "small" ]; then
-			SUFF="-small"
-			IDLOOP="1111111F"
-			ID="2222222F"
-			break
-  		fi
-		exit
-done
 
 
 copyfiles() {
@@ -49,11 +29,8 @@ done
 
 }
 
-DIR="$HOME/.paranoia/"
-
+makefiles() {
 mkdir $DIR
-rm $DIR/*
-
 
 SRC="simon.wenner@gmail.com alexapfel@gmail.com alexapfel@swissjabber.ch nowic@swissjabber.ch"
 DST=$SRC
@@ -78,5 +55,41 @@ copyfiles
 echo
 echo "Done! Your keys are stored in $DIR".
 echo
+
+}
+
+
+
+
+echo "Select the size of your templates:"
+OPT="large small delete EXIT"
+select opt in $OPT; do
+ 	 	if [ "$opt" = "EXIT" ]; then
+			exit
+  		fi
+
+ 	 	if [ "$opt" = "large" ]; then
+			SUFF=""	
+			IDLOOP="11111111"
+			ID="22222222"
+			makefiles
+			break
+  		fi
+
+ 	 	if [ "$opt" = "small" ]; then
+			SUFF="-small"
+			IDLOOP="1111111F"
+			ID="2222222F"
+			makefiles
+			break
+  		fi
+
+ 	 	if [ "$opt" = "delete" ]; then
+			rm $DIR/*11111111* $DIR/*1111111F* $DIR/*22222222* $DIR/*2222222F*
+			break
+  		fi
+
+		exit
+done
 
 

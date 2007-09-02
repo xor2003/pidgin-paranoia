@@ -3,8 +3,7 @@
 =============
 
 libotp.c
- * Key generation
- * Support for signal messages using protected entropy
+ * Bugfixing
 
 paranoia.c
  * Enhanced session management (ack)
