@@ -21,13 +21,10 @@
 
 // GNUlibc
 #include <string.h>
-#include <stddef.h>
 #include <errno.h>
-#include <ctype.h>
 
 // libpurple
 #define PURPLE_PLUGINS
-#include "notify.h"
 #include "plugin.h"
 #include "version.h"
 #include "signals.h"
@@ -50,12 +47,14 @@
 // ----------------- General Paranoia Stuff ------------------
 #define PARANOIA_HEADER "*** Encrypted with the Pidgin-Paranoia plugin: "
 #define PARANOIA_REQUEST "*** Request for conversation with the Pidgin-Paranoia plugin (%s): I'm paranoid, please download the One-Time Pag plugin (link) to communicate encryptet."
-#define PARANOIA_STATUS "&lt;secure&gt; "
+#define PARANOIA_STATUS "&lt;otp&gt; "
 
 #define PARANOIA_ACK "%!()!%paranoia ack" // not used atm
 #define PARANOIA_EXIT "%!()!%paranoia exit"
 #define PARANOIA_START "%!()!%paranoia start"
 #define PARANOIA_STOP "%!()!%paranoia stop"
+#define PARANOIA_NO_ENTROPY "%!()!%paranoia noent"
+#define PARANOIA_PREFIX_LEN 6
 
 #define PARANOIA_PATH "/.paranoia/"
 #define ENTROPY_LIMIT 1500 //has to be bigger then the message size limit
@@ -239,7 +238,7 @@ static void par_free_key_list() {
 /* searches a key in the keylist, ID is optional, if no ID: searches first src/dest match */
 static struct key* par_search_key(const char* src, const char* dest, const char* id) {
 
-	// FIXME: cleanup function!
+	// FIXME: cleanup
 
 	// TODO: only for jabber and msn?
 	// strip the jabber resource from src (/home /mobile ect.)
@@ -367,7 +366,10 @@ static gboolean par_session_check_req(const char* alice, const char* bob, Purple
 // detects ack and exit messages and sets the key settings. Returns TRUE if one of them is found
 static gboolean par_session_check_msg(struct key* used_key, char** message_decrypted, PurpleConversation *conv) {
 
-	// check START, STOP and EXIT
+	// check prefix
+	if (!(strncmp(*message_decrypted, PARANOIA_EXIT, PARANOIA_PREFIX_LEN) == 0)) {
+		return FALSE;
+	}
 	/*
 	if(strncmp(*message_decrypted, PARANOIA_ACK, 18) == 0) { // FIXME: dynamic size
 		// TODO: move ACK inside the first sent message
@@ -379,6 +381,7 @@ static gboolean par_session_check_msg(struct key* used_key, char** message_decry
 		}
 		return TRUE;
 	} */
+	// check START, STOP and EXIT
 	if (strncmp(*message_decrypted, PARANOIA_EXIT, 20) == 0) { // FIXME: dynamic size
 		used_key->opt->otp_enabled = FALSE;
 		used_key->opt->has_plugin = FALSE;
@@ -401,6 +404,13 @@ static gboolean par_session_check_msg(struct key* used_key, char** message_decry
 		used_key->opt->otp_enabled = FALSE;
 		purple_conversation_write(conv, NULL, "Encryption disabled (remote).", PURPLE_MESSAGE_NO_LOG, time(NULL));
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "PARANOIA_STOP detected! otp_enabled=FALSE\n");
+		return TRUE;
+	}
+	if (strncmp(*message_decrypted, PARANOIA_NO_ENTROPY, 21) == 0) { // FIXME: dynamic size
+		used_key->opt->otp_enabled = FALSE;
+		used_key->opt->no_entropy = TRUE;
+		purple_conversation_write(conv, NULL, "All the entropy of this key has been used. Encryption disabled (remote).", PURPLE_MESSAGE_NO_LOG, time(NULL));
+		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "PARANOIA_NO_ENTROPY detected! otp_enabled=FALSE\n");
 		return TRUE;
 	}
 	else {
@@ -699,8 +709,9 @@ static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
 		// DISABLE LIBOTP
 #else
 		// ENABLE LIBOTP
-		// FIXME: error handling
-		otp_decrypt(used_key->pad, message);
+		if(!otp_decrypt(used_key->pad, message)) {
+			purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, "Could not decrypt the message! That's a serious error!.\n");
+		}
 #endif
 
 		// detect START, STOP and EXIT message
@@ -778,18 +789,21 @@ static void par_sending_im_msg(PurpleAccount *account, const char *receiver,
 		// check for remaining entropy
 		if(used_key->pad->entropy < ENTROPY_LIMIT) {
 			if(used_key->pad->entropy < strlen(*message)) {
-				// TODO: send a no entropy message
 				used_key->opt->no_entropy = TRUE;
 				used_key->opt->otp_enabled = FALSE;
 				used_key->opt->auto_enable = FALSE;
-				// TODO: display the message too.
-				purple_conversation_write(used_key->conv, NULL, "Encryption disabled. The last Message could not be sent, because you have not enought entropy.", PURPLE_MESSAGE_NO_LOG, time(NULL));
-				g_free(*message);
-				*message = NULL;
+				purple_conversation_write(used_key->conv, NULL, "All your entropy has benn used. Encryption disabled. The last Message could not be sent.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+				// TODO: display the message too
 				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "You have not enought entropy! no_entropy = TRUE\n");
+				// delete message and send no entropy msg
+				g_free(*message);
+				*message = g_strdup(PARANOIA_NO_ENTROPY);
+				if(!otp_encrypt_warning(used_key->pad, message, 0)) {
+					purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, "Could not send an entropy warning! That's a serious error!.\n");
+				}
 				return;
 			} else {
-				// TODO: send an entropy warning
+				// TODO: send an entropy warning (inside the msg)
 				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Your entropy is low!\n");
 			}
 		}
@@ -799,8 +813,9 @@ static void par_sending_im_msg(PurpleAccount *account, const char *receiver,
 		// DISABLE LIBOTP
 #else
 		// ENABLE LIBOT
-		// FIXME: error handling
-		otp_encrypt(used_key->pad, message);
+		if(!otp_encrypt(used_key->pad, message)) {
+			purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, "Could not encrypt the message! That's a serious error!.\n");
+		}
 #endif
 
 		// add the paranoia header string
@@ -922,6 +937,8 @@ static gboolean plugin_load(PurplePlugin *plugin) {
 
 /* --- gets called when disabling the plugin --- */
 gboolean plugin_unload(PurplePlugin *plugin) {
+
+	// FIXME: send PARANOIA_CLOSE to all conversations
 
 	// disconnect all signals
 	purple_signals_disconnect_by_handle(plugin);
