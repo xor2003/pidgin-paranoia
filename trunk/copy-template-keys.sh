@@ -61,7 +61,7 @@ echo
 
 
 
-echo "Select the size of your templates:"
+echo "Select an action:"
 OPT="large small delete EXIT"
 select opt in $OPT; do
  	 	if [ "$opt" = "EXIT" ]; then
@@ -73,7 +73,6 @@ select opt in $OPT; do
 			IDLOOP="11111111"
 			ID="22222222"
 			makefiles
-			break
   		fi
 
  	 	if [ "$opt" = "small" ]; then
@@ -81,15 +80,12 @@ select opt in $OPT; do
 			IDLOOP="1111111F"
 			ID="2222222F"
 			makefiles
-			break
   		fi
 
  	 	if [ "$opt" = "delete" ]; then
 			rm $DIR/*11111111* $DIR/*1111111F* $DIR/*22222222* $DIR/*2222222F*
-			break
   		fi
-
-		exit
+		echo "Select an action:"
 done
 
 
