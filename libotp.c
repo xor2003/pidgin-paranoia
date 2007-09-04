@@ -331,7 +331,7 @@ unsigned int otp_generate_key_pair(char* alice, char* bob, char* path, char* sou
 	if(alice == NULL || bob == NULL || path == NULL || source == NULL || size==0) {
 		return FALSE;
 	}
-	if ( size/BLOCKSIZE==(float) size/BLOCKSIZE ) { /* The function can only generate Keyfiles with a filesize of n*BLOCKSIZE */
+	if ( size/BLOCKSIZE == (float) size/BLOCKSIZE ) { /* The function can only generate Keyfiles with a filesize of n*BLOCKSIZE */
 		size=size/BLOCKSIZE;
 	}else{
 		size=size/BLOCKSIZE+1;
@@ -340,6 +340,17 @@ unsigned int otp_generate_key_pair(char* alice, char* bob, char* path, char* sou
 	int rfd=0;
 	if ((rfd = open(source, O_RDONLY)) == -1) {
 		perror("open");
+		return FALSE;
+	}
+	struct stat rfstat;
+	if (stat(source, &rfstat) == -1) {
+		perror("stat");
+		return FALSE;
+	}
+	
+	unsigned int rfilesize = rfstat.st_size;
+	if ( !( ((rfstat.st_mode|S_IFCHR) == rfstat.st_mode) || (rfilesize >= size*BLOCKSIZE) ) ) {		/* If the source is to small and not a character dev */
+		//printf("The source '%s' is too small!\n",source);
 		return FALSE;
 	}
 
@@ -404,13 +415,13 @@ unsigned int otp_generate_key_pair(char* alice, char* bob, char* path, char* sou
 	
 	
 	/* Opening a memory map for the first file */
-	struct stat fstat;
-	if (stat(afilename, &fstat) == -1) {
+	struct stat afstat;
+	if (stat(afilename, &afstat) == -1) {
 		perror("stat");
 		return FALSE;
 	}
-	int filesize=filesize=fstat.st_size;
-	if ((*adata = mmap((caddr_t)0, filesize, PROT_READ , MAP_SHARED, afd, 0)) == (caddr_t)(-1)) {
+	int afilesize=afstat.st_size;
+	if ((*adata = mmap((caddr_t)0, afilesize, PROT_READ , MAP_SHARED, afd, 0)) == (caddr_t)(-1)) {
 		perror("mmap");
 		return FALSE;
 	}
@@ -419,9 +430,9 @@ unsigned int otp_generate_key_pair(char* alice, char* bob, char* path, char* sou
 	/* Create the reversed second file from the first one */
 	int j=0;
 	char temp[BLOCKSIZE];
-	//otp_printint(*adata,filesize);
-	printf("Filesize:%u\n",filesize);
-	for(i=filesize-BLOCKSIZE;i>=0;i=i-BLOCKSIZE) {
+	//otp_printint(*adata,afilesize);
+	printf("Filesize:%u\n",afilesize);
+	for(i=afilesize-BLOCKSIZE;i>=0;i=i-BLOCKSIZE) {
 			for(j=0;j<BLOCKSIZE;j++) {
 				temp[BLOCKSIZE-1-j]=*(*adata+i+j);
 			}
@@ -435,7 +446,7 @@ unsigned int otp_generate_key_pair(char* alice, char* bob, char* path, char* sou
 	chmod (bfilename, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 	
 	/* Clos the first file */
-	munmap(adata, filesize);
+	munmap(adata, afilesize);
 	close(afd);
 	chmod (afilename, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 	

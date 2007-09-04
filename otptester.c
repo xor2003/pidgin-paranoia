@@ -54,7 +54,7 @@ int usage() {
 --repeat # TODO\n\
 --encrypt\n\
 --decrypt\n\
---create alice bob\n\
+--create alice bob sourcefile size\n\
 --openpad filename encrypt|decrypt\n\
 --closepad encrypt|decrypt\n\
 --test\n\
