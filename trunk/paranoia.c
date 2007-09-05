@@ -46,7 +46,7 @@
 
 // ----------------- General Paranoia Stuff ------------------
 #define PARANOIA_HEADER "*** Encrypted with the Pidgin-Paranoia plugin: "
-#define PARANOIA_REQUEST "*** Request for conversation with the Pidgin-Paranoia plugin (%s): I'm paranoid, please download the One-Time Pag plugin (link) to communicate encryptet."
+#define PARANOIA_REQUEST "*** Request for conversation with the Pidgin-Paranoia plugin (%s): I'm paranoid, please download the One-Time Pag plugin (link) to communicate encrypted."
 #define PARANOIA_STATUS "&lt;otp&gt; "
 
 #define PARANOIA_ACK "%!()!%paranoia ack" // not used atm
@@ -423,7 +423,7 @@ static gboolean par_session_check_msg(struct key* used_key, char** message_decry
 
 PurpleCmdId par_cmd_id;
 
-#define PARANOIA_HELP_STR "Welcome to the One-Time Pad CLI.\notp help: shows this message \notp genkey &lt;size&gt;: generates a key pair of &lt;size&gt; MB\notp on: tries to start the encryption\notp off: stops the encryption\notp info: shows details about the used key"
+#define PARANOIA_HELP_STR "Welcome to the One-Time Pad CLI.\notp help: shows this message \notp genkey &lt;destination account&gt; &lt;size&gt;: generates a key pair of &lt;size&gt; MB\notp on: tries to start the encryption\notp off: stops the encryption\notp info: shows details about the used key"
 
 #define PARANOIA_ERROR_STR "Wrong argument(s). Type '/otp help' for help."
 
@@ -533,16 +533,27 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv, const gchar *cmd
 
 			//skip "genkey "
 			*args += 7;
+			gchar** param_array = g_strsplit(*args, " ", 2);
+			//purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "dest: %s\n", param_array[0]);
+			//purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "size: %s\n", param_array[1]);
+			// check
+			if(param_array[1] == NULL || param_array[0] == NULL) {
+				g_strfreev(param_array);
+				par_cli_set_default_error(error);
+				return PURPLE_CMD_RET_FAILED;
+			}
+			
 			int size;
-         		// Parse it
+         	// Parse it
 			errno = 0;
-         		size = strtol(*args, 0, 0);
-         		// overflow detection
+         	size = strtol(param_array[1], 0, 0);
+         	// overflow detection
 			if (errno){
 				// OVERFLOW!
 				// TODO: Display a special error?
 				// debug
 				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "The size value caused an int overflow!\n");
+				g_strfreev(param_array);
 				par_cli_set_default_error(error);
 				return PURPLE_CMD_RET_FAILED;
 
@@ -552,17 +563,26 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv, const gchar *cmd
 					// no positive integer found!
 					// debug
 					purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "The size value is not a positive int!\n");
+					g_strfreev(param_array);
 					par_cli_set_default_error(error);
 					return PURPLE_CMD_RET_FAILED;
 				} else {
 					// found a positive int -> DO IT!
 					// FIXME: additional garbage is just ignored
 					// FIXME: size limit?
-					purple_conversation_write(conv, NULL, "This should generate two key files.", PURPLE_MESSAGE_NO_LOG, time(NULL));
-					// debug
-					purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Generate two otp files of %d MB size.\n", (gint) size);
+					purple_conversation_write(conv, NULL, "Please wait. Generating keys...", PURPLE_MESSAGE_NO_LOG, time(NULL));
+					const char* my_acc = purple_account_get_username(purple_conversation_get_account(conv));
+					
+					if(otp_generate_key_pair(my_acc, param_array[0], global_otp_path, "/dev/urandom", size*1024*1024)) {
+						purple_conversation_write(conv, NULL, "Two key files successfully generated.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+						// debug
+						purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Generated two otp files of %d MB size.\n", (gint) size);
+					} else {
+						purple_conversation_write(conv, NULL, "Key files could not be generated.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+					}
 				}
 			}
+			g_strfreev(param_array);
 
 		}
 		else if(strcmp("on", *args) == 0){
