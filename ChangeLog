@@ -13,7 +13,7 @@ Simon Wenner:
  * Paranoia: Basic session initialisation
  * Paranoia: Basic session closing
  * Paranoia: Encryptet messages are labelled
- * Paranoia: Working commands: /otp help, info, on, off
+ * Paranoia: Working commands: /otp help, info, on, off, genkey
 
 Christan Wäckerlin:
  * One-time pad documentation

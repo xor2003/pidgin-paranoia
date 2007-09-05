@@ -423,7 +423,7 @@ static gboolean par_session_check_msg(struct key* used_key, char** message_decry
 
 PurpleCmdId par_cmd_id;
 
-#define PARANOIA_HELP_STR "Welcome to the One-Time Pad CLI.\notp help: shows this message \notp genkey &lt;destination account&gt; &lt;size&gt;: generates a key pair of &lt;size&gt; MB\notp on: tries to start the encryption\notp off: stops the encryption\notp info: shows details about the used key"
+#define PARANOIA_HELP_STR "Welcome to the One-Time Pad CLI.\notp help: shows this message \notp genkey &lt;destination account&gt; &lt;size&gt;: generates a key pair of &lt;size&gt; kB\notp on: tries to start the encryption\notp off: stops the encryption\notp info: shows details about the used key"
 
 #define PARANOIA_ERROR_STR "Wrong argument(s). Type '/otp help' for help."
 
@@ -573,7 +573,7 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv, const gchar *cmd
 					purple_conversation_write(conv, NULL, "Please wait. Generating keys...", PURPLE_MESSAGE_NO_LOG, time(NULL));
 					const char* my_acc = purple_account_get_username(purple_conversation_get_account(conv));
 					
-					if(otp_generate_key_pair(my_acc, param_array[0], global_otp_path, "/dev/urandom", size*1024*1024)) {
+					if(otp_generate_key_pair(my_acc, param_array[0], global_otp_path, "/dev/urandom", size*1024)) {
 						purple_conversation_write(conv, NULL, "Two key files successfully generated.", PURPLE_MESSAGE_NO_LOG, time(NULL));
 						// debug
 						purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Generated two otp files of %d MB size.\n", (gint) size);
