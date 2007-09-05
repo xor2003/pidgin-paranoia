@@ -27,6 +27,7 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <time.h>
+#include <dirent.h>
 
 /* GNOMElib */
 #include <glib.h>
@@ -50,6 +51,8 @@
 #define HAVEFILE		/* Do you have a file named pad->filename in your working dir? Used for struct *pad generation. */
 #define HAVEKEYFILE		/* Do you have a file names pad->filename in your working dir? Used for en/decryption. */
 #define KEYOVERWRITE	/* Overwrite the used key-sequence in the keyfile */
+//#define USEDESKTOP			/* Bob's keyfile is placed onto the desktop. If not set, the file is placed in the .paranoia folder. */
+
 
 
 #define STATICKEY "dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4"
@@ -327,7 +330,7 @@ static int otp_uencrypt(char **message, struct otp* pad) {
 /*  ----------------- Public One-Time Pad Functions ------------ */
 
 /* generates a new key pair (two files) with the name alice and bob of 'size' bytes. If source is NULL, /dev/urandom is used. */
-unsigned int otp_generate_key_pair(char* alice, char* bob, char* path, char* source, unsigned int size) {
+unsigned int otp_generate_key_pair(const char* alice,const  char* bob,const char* path,const char* source, unsigned int size) {
 	if(alice == NULL || bob == NULL || path == NULL || source == NULL || size==0) {
 		return FALSE;
 	}
@@ -360,7 +363,16 @@ unsigned int otp_generate_key_pair(char* alice, char* bob, char* path, char* sou
 
 	char *idstr=g_strdup_printf ("%.8X",id);			/* Our ID string */;
 	
-		
+	
+	/* Create the directory for the entropy files if it does not exist */	
+	DIR *dp;
+	dp = opendir (path);
+	if (dp == NULL) {
+		mkdir(path, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP );	/* Create the directory */
+	}else{
+		closedir(dp);
+	}
+
 
 	/* Opening the first file */
 	char *afilename=g_strconcat(path,alice,FILE_DELI,bob,FILE_DELI,idstr,".entropy",NULL);
@@ -370,11 +382,14 @@ unsigned int otp_generate_key_pair(char* alice, char* bob, char* path, char* sou
 	
 	if ((afd = open(afilename, O_RDWR)) == -1) {
 	}else{
+		close(afd);
+		close(rfd);
 		return FALSE; 	/* File already exists. I will not overwrite any existing file!*/
 	}
 
-	if ((afd = open(afilename, O_RDWR|O_CREAT)) == -1) {
+	if ((afd = open(afilename, O_RDWR|O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP )) == -1) {
 		perror("open");
+		close(rfd);
 		return FALSE;
 	}
 		
@@ -393,9 +408,8 @@ unsigned int otp_generate_key_pair(char* alice, char* bob, char* path, char* sou
 	
 	/* Opening the secound file */
 #ifdef USEDESKTOP	
-	char *desktoppath=g_get_user_special_dir(G_USER_DIRECTORY_DESKTOP);
+	const char *desktoppath=g_get_user_special_dir(G_USER_DIRECTORY_DESKTOP);  /* Owned by Glib. No need for g_free */
 	char *bfilename=g_strconcat(desktoppath,PATH_DELI,bob,FILE_DELI,alice,FILE_DELI,idstr,".entropy",NULL);
-	g_free(desktoppath);
 #else
 	char *bfilename=g_strconcat(path,bob,FILE_DELI,alice,FILE_DELI,idstr,".entropy",NULL);
 #endif	
@@ -406,10 +420,12 @@ unsigned int otp_generate_key_pair(char* alice, char* bob, char* path, char* sou
 	
 	if ((bfd = open(bfilename, O_RDWR)) == -1) {
 	}else{
+		close(bfd);
 		return FALSE; 	/* File already exists. I will not overwrite any existing file!*/
 	}
-	if ((bfd = open(bfilename, O_RDWR|O_CREAT)) == -1) {
+	if ((bfd = open(bfilename, O_RDWR|O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP )) == -1) {
 		perror("open");
+		close(afd);
 		return FALSE;
 	}
 	
@@ -443,12 +459,10 @@ unsigned int otp_generate_key_pair(char* alice, char* bob, char* path, char* sou
 	
 	/* Close the secound file */
 	close(bfd);
-	chmod (bfilename, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 	
 	/* Clos the first file */
 	munmap(adata, afilesize);
 	close(afd);
-	chmod (afilename, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 	
 	/* Cleanup */
 	g_free(idstr);
