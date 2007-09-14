@@ -57,6 +57,7 @@ int usage() {
 --create alice bob sourcefile size\n\
 --openpad filename encrypt|decrypt\n\
 --closepad encrypt|decrypt\n\
+--erasekey\n\
 --test\n\
 --debug\n\
 --nodebug\n\
@@ -104,6 +105,18 @@ int debug() {
 		return FALSE;
 	}
 	debuglevel=1;
+	*argpos=*argpos+takes;
+	return TRUE;	
+}
+
+int erasekey() {
+	int takes=0;
+	if(*argpos+takes-1 >= *argnumber) {
+		return FALSE;
+	}
+	if (otp_erase_key(encryptpad) == FALSE) {
+		return FALSE;
+	}
 	*argpos=*argpos+takes;
 	return TRUE;	
 }
@@ -351,6 +364,12 @@ int main ( int argc , char *argv[] ) {
 		
 		if (!strcmp(argv[i],"--closepad")) {
 			if(closepad()==FALSE){
+				return 1;
+			}
+		}
+		
+		if (!strcmp(argv[i],"--erasekey")) {
+			if(erasekey()==FALSE){
 				return 1;
 			}
 		}

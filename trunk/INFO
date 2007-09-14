@@ -5,7 +5,6 @@ A key file with random content is created by Alice. Alice also creates the byte 
 Alice and Bob both use the first half of their key file to encrypt and use the second part of their key file to decrypt. The message is encrypted and decrypted by XOR-ing it with the random bytes taken from the key file. The encrypted message is encoded in Base64 and transmitted together with the starting point of the bytes used in the key file. 
 The plug-in will be written in C and will be released under the GPL (version 3).
 The plug-in aims to give 'perfect' security with a encryption system that is a simple as possible and easy to understand.
-Currently, a proof-of-concept application exists (written in Python). 
 
 In detail:
 --------------------------------
@@ -41,6 +40,7 @@ Key and session management:
 At the plugin start a key list gets initialized depeding on the available key files. The data is stord in a linked list containing an otp (libotp.h) and an options (paranoia.c) struct. Every time the user wants to send a message or receives a message the plugin searches for a matching key in the key list.
 
 Initialisation:
+--------------------------------
 When a conversation starts and a matching key is available, the plugin sends a special request message: "*** Request for conversation with the Pidgin-Paranoia plugin ($ID): I'm paranoid, please download the One-Time Pag plugin (link) to communicate encryptet." or similar. If the receiving user has the plugin and a matching key this message won't be displayed. Instead the plugin automatically sends the message "*** Encrypted with the Pidgin-Paranoia plugin: " + "paranoia" (encrypted).
 If the plugin is able to decrypt that message, it activates the encryption for this key id. All following messages are automatically encrypted and have the following structure: "*** Encrypted with the Pidgin-Paranoia plugin: " + the encrypted message.
 

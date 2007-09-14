@@ -57,6 +57,9 @@ unsigned int otp_generate_key_pair(const char* alice,const char* bob,const char*
  When only one signal is used, use protected_pos=0.*/
 unsigned int otp_encrypt_warning(struct otp* mypad, char **message, int protected_pos);
 
+/* destroys a keyfile by using up all encryption-entropy */
+unsigned int otp_erase_key(struct otp* mypad);
+
 
 
 

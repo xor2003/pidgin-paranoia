@@ -26,7 +26,7 @@ Christan Wäckerlin:
  * Added support for the ./configure --disable-otp swich that disables libotp support for development.
  * Added support for protected entropy signaling (i.e. no entropy  signal)
  * Added support for keyfile creation
- 
+ * Addes support for the destruction of keyfiles (using up all entropy)
 
 
 Known bugs:

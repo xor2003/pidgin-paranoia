@@ -20,18 +20,16 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
+/* to manipulate files */
 #include <fcntl.h>
-
-#include <sys/types.h>
-#include <sys/mman.h>
 #include <sys/stat.h>
-#include <time.h>
+#include <sys/mman.h>
+#include <unistd.h>
+/* to create directories */
 #include <dirent.h>
 
 /* GNOMElib */
 #include <glib.h>
-
 
 /* great stuff */
 #include "libotp.h"
@@ -51,10 +49,10 @@
 #define HAVEFILE		/* Do you have a file named pad->filename in your working dir? Used for struct *pad generation. */
 #define HAVEKEYFILE		/* Do you have a file names pad->filename in your working dir? Used for en/decryption. */
 #define KEYOVERWRITE	/* Overwrite the used key-sequence in the keyfile */
-//#define USEDESKTOP			/* Bob's keyfile is placed onto the desktop. If not set, the file is placed in the .paranoia folder. */
+//#define USEDESKTOP			/* Requires GNOMElib 2.14! Bob's keyfile is placed onto the desktop. If not set, the file is placed in the .paranoia folder. */
 
 
-
+/* Requried for development if HAVEFILE is not defined */
 #define STATICKEY "dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4"
 
 
@@ -63,11 +61,7 @@
 /* XOR message and key. This function is the core of the libary. */
 static int otp_xor(char **message,char **key,int len) {
 	int i;
-	char *m,*k;
-
-/* Do no XOR  */
-/* 	printf("Warning: XOR disabled!!!!!!!!!!!!!!\n"); */
-/* 	return 1; */			
+	char *m,*k;		
 	
 	m = *message;
 	k = *key;
@@ -151,9 +145,7 @@ static int otp_seek_pos(char *data,int filesize){
 static struct otp* otp_seek_start(struct otp* pad){
 /* 	char* path = get_current_dir_name(); */
 	int fd=0; char *b=""; char **data; data=&b;
-/* 	printf(" ");			Voodoo?  */
 	if (otp_open_keyfile(fd,data,pad)) {		/* Open the keyfile */
-/* 	otp_printint(*data+99990,100); */
 
 		pad->position = otp_seek_pos(*data,pad->filesize);
 		otp_calc_entropy(pad);
@@ -162,7 +154,6 @@ static struct otp* otp_seek_start(struct otp* pad){
 		return NULL;
 	}
 
-/* 	printf("\t\tTest%u\n",h); */
 	return pad;
 }
 
@@ -212,8 +203,6 @@ static int otp_get_encryptkey_from_file(char **key , struct otp* pad, int len) {
 		}
 #endif
 
-/* 		msync(data, pad->filesize, MS_ASYNC); */
-/* 		usleep(100000); */
 		otp_close_keyfile(fd,data,pad);		/* Close the keyfile */
 		if (pad->protected_position == 0) {	/* In all cases where the protected entropy is not used */
 			pad->position = pad->position + len -1;
@@ -249,7 +238,6 @@ static int otp_get_decryptkey_from_file(char **key , struct otp* pad, int len, i
 /* 		otp_printint(*key,len-1); */
 
 /* 		msync(data, pad->filesize, MS_ASYNC); */
-/* 		usleep(100000); */
 		otp_close_keyfile(fd,data,pad);		/* Close the keyfile */
 	}else{
 		return FALSE;
@@ -328,6 +316,35 @@ static int otp_uencrypt(char **message, struct otp* pad) {
 
 
 /*  ----------------- Public One-Time Pad Functions ------------ */
+
+/* destroys a keyfile by using up all encryption-entropy */
+unsigned int otp_erase_key(struct otp* pad) {
+
+	if(pad == NULL) {
+		return FALSE;
+	}
+	pad->protected_position=0;		
+
+
+	int a = (BLOCKSIZE+1) * sizeof(char);				/* get length of the used memory*/
+	int *len=&a;
+	char *b=""; char **key; key=&b;
+
+
+#ifdef HAVEKEYFILE
+	int result=TRUE;
+	while( result == TRUE ) {
+		result = otp_get_encryptkey_from_file(key,pad,*len);
+	}
+	result=TRUE;
+	*len=1+1;
+		while( result == TRUE ) {
+		result = otp_get_encryptkey_from_file(key,pad,*len);
+	}
+#endif
+
+	return TRUE;	
+}
 
 /* generates a new key pair (two files) with the name alice and bob of 'size' bytes. If source is NULL, /dev/urandom is used. */
 unsigned int otp_generate_key_pair(const char* alice,const  char* bob,const char* path,const char* source, unsigned int size) {
@@ -460,7 +477,7 @@ unsigned int otp_generate_key_pair(const char* alice,const  char* bob,const char
 	/* Close the secound file */
 	close(bfd);
 	
-	/* Clos the first file */
+	/* Close the first file */
 	munmap(adata, afilesize);
 	close(afd);
 	
@@ -474,7 +491,7 @@ unsigned int otp_generate_key_pair(const char* alice,const  char* bob,const char
 unsigned int otp_encrypt_warning(struct otp* pad, char **message, int protected_pos) {
 
 	if(pad == NULL) {
-		return 0;
+		return FALSE;
 	}
 	pad->protected_position = pad->filesize / 2 - OTP_PROTECTED_ENTROPY-protected_pos;  /* Assign a position in the protected entropy */
 	
@@ -592,7 +609,7 @@ returns TRUE if it could encrypt the message
 unsigned int otp_encrypt(struct otp* pad, char **message){
 
 	if(pad == NULL) {
-		return 0;
+		return FALSE;
 	}
 	pad->protected_position=0;
 	char *pos_str = g_strdup_printf ("%u",pad->position);			/* Our position in the pad*/
@@ -641,6 +658,5 @@ unsigned int otp_decrypt(struct otp* pad, char **message){
 
 #endif
 
-/* 	printf("decrypt:\tMessage:\t%s\n",*message); */
 	return TRUE;
 }
