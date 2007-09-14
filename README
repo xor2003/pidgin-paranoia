@@ -1,3 +1,19 @@
-TODO
+The plug-in allows to use one-time-pads (see: http://de.wikipedia.org/wiki/One-Time-Pad) to encrypt conversations in the IM-client Pidgin.
+A key file with random content is created by Alice. Alice also creates the byte wise reverse version of its key file and sends it to Bob. 
+Alice and Bob both use the first half of their key file to encrypt and use the second part of their key file to decrypt. The message is encrypted and decrypted by XOR-ing it with the random bytes taken from the key file. The encrypted message is encoded in Base64 and transmitted together with the starting point of the bytes used in the key file. 
+The plug-in will be written in C and will be released under the GPL (version 3).
 
-What does it do? is it secure? proof?
+
+The plug-in aims to give 'perfect' security with a encryption system that is a simple as possible and easy to understand.
+
+Plase not that when not correctly used, many things can go wrong.
+Keeping your keyfiles secret and using good entropy-sources will help!
+Maybe /dev/urandom is not the best choice but /dev/random is way to slow ...
+
+Read "INFO" for detailed information how the encryption and decryption exactly works.
+
+TODO: Proof
+
+
+
+
