@@ -149,8 +149,11 @@ static struct key* par_create_key(const char* filename) {
 	test_opt->has_plugin = FALSE;
 	test_opt->otp_enabled = FALSE;
 	test_opt->auto_enable = TRUE;
-	// TODO: check for remaining entropy?
-	test_opt->no_entropy = FALSE;
+	if(test_pad->entropy <= 2) { //FIXME: a bug of libotp
+		test_opt->no_entropy = TRUE;
+	} else {
+		test_opt->no_entropy = FALSE;
+	}
 
 	static struct key* key;
    	key = (struct key *) g_malloc(sizeof(struct key));
@@ -797,6 +800,13 @@ static void par_sending_im_msg(PurpleAccount *account, const char *receiver,
 
 		// add the ID to the request message
 		if(strncmp(*message, PARANOIA_REQUEST, 60) == 0) {
+			// don't send requests if I have no entropy.
+			if(used_key->opt->no_entropy) {
+				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "NO entropy available. Won't sent REQUEST.\n");
+				g_free(*message);
+				*message = NULL;
+				return;
+			}
 			char *req_msg = g_strdup_printf(*message, used_key->pad->id);
 			g_free(*message);
 			*message = req_msg;
@@ -819,8 +829,12 @@ static void par_sending_im_msg(PurpleAccount *account, const char *receiver,
 				used_key->opt->otp_enabled = FALSE;
 				used_key->opt->auto_enable = FALSE;
 				purple_conversation_write(used_key->conv, NULL, "All your entropy has been used. Encryption disabled. The last Message could not be sent.", PURPLE_MESSAGE_NO_LOG, time(NULL));
-				// TODO: display the message too
+				// TODO: display the message in the msg too
+				// delete the remaining entropy
 				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "You have not enought entropy! no_entropy = TRUE\n");
+				if(otp_erase_key(used_key->pad)) {
+					purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Remaining entropy erased!\n");
+				}
 				// delete message and send no entropy msg
 				g_free(*message);
 				*message = g_strdup(PARANOIA_NO_ENTROPY);
