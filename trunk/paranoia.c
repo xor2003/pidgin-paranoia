@@ -384,7 +384,7 @@ static gboolean par_session_check_msg(struct key* used_key, char** message_decry
 		}
 		return TRUE;
 	} */
-	// check START, STOP and EXIT
+	// check START, STOP, EXIT and NO_ENTROPY
 	if (strncmp(*message_decrypted, PARANOIA_EXIT, 20) == 0) { // FIXME: dynamic size
 		used_key->opt->otp_enabled = FALSE;
 		used_key->opt->has_plugin = FALSE;
@@ -413,6 +413,7 @@ static gboolean par_session_check_msg(struct key* used_key, char** message_decry
 		used_key->opt->otp_enabled = FALSE;
 		used_key->opt->no_entropy = TRUE;
 		used_key->opt->auto_enable = FALSE;
+		// TODO: maybe we should destroy our key too.
 		purple_conversation_write(conv, NULL, "All entropy of this key has been used. Encryption disabled (remote).", PURPLE_MESSAGE_NO_LOG, time(NULL));
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "PARANOIA_NO_ENTROPY detected! otp_enabled=FALSE\n");
 		return TRUE;
@@ -648,7 +649,7 @@ void par_conversation_deleting(PurpleConversation *conv) {
 
 
 /* --- signal handler for "receiving-im-msg" --- */
-static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
+static gboolean par_im_msg_receiving(PurpleAccount *account, char **sender,
                              char **message, PurpleConversation *conv,
                              PurpleMessageFlags *flags) {
 
@@ -778,7 +779,7 @@ static gboolean par_receiving_im_msg(PurpleAccount *account, char **sender,
 
 
 /* --- signal handler for "sending-im-msg" --- */
-static void par_sending_im_msg(PurpleAccount *account, const char *receiver,
+static void par_im_msg_sending(PurpleAccount *account, const char *receiver,
                              char **message) {
 	
 	// my account name, alice@jabber.org
@@ -887,20 +888,21 @@ static void par_sending_im_msg(PurpleAccount *account, const char *receiver,
 
 
 /* --- signal handler for "writing-im-msg", needed to change the displayed msg --- */
-static gboolean par_change_displayed_msg(PurpleAccount *account, const char *sender, char **message, 
+static gboolean par_im_msg_change_display(PurpleAccount *account, const char *sender, char **message, 
 		PurpleConversation *conv, PurpleMessageFlags flags) {
 
-	// FIXME: the sender is always NULL, a bug?
-	//purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "WHO? (FIXME): %s\n", sender);
+	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "WHO? : %s\n", sender);
 
-	// TODO: (Or) save the first conv ptr here... -> bug.
-	/*
-	struct key* used_key = par_search_key(purple_account_get_username(account), sender, NULL);
-	if( used_key != NULL) {
-		if (used_key->conv == NULL) {
-			used_key->conv = conv;
+	// save the first conv pounter (if libpurple >= 2.2.0)
+	if(sender != NULL) {
+		struct key* used_key = par_search_key(purple_account_get_username(account), sender, NULL);
+		if( used_key != NULL) {
+			if (used_key->conv == NULL) {
+				used_key->conv = conv;
+				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Conversation Pointer saved!\n");
+			}
 		}
-	} */
+	}
 
 #ifdef CENSORSHIP
 
@@ -955,11 +957,11 @@ static gboolean plugin_load(PurplePlugin *plugin) {
 
 	// connect to signals
 	purple_signal_connect(conv_handle, "receiving-im-msg", plugin,
-		PURPLE_CALLBACK(par_receiving_im_msg), NULL);
+		PURPLE_CALLBACK(par_im_msg_receiving), NULL);
 	purple_signal_connect(conv_handle, "sending-im-msg", plugin,
-		PURPLE_CALLBACK(par_sending_im_msg), NULL);
+		PURPLE_CALLBACK(par_im_msg_sending), NULL);
 	purple_signal_connect(conv_handle, "writing-im-msg", plugin,
-		PURPLE_CALLBACK(par_change_displayed_msg), NULL);
+		PURPLE_CALLBACK(par_im_msg_change_display), NULL);
 	purple_signal_connect(conv_handle, "conversation-created", plugin,
 		PURPLE_CALLBACK(par_conversation_created), NULL);
 	purple_signal_connect(conv_handle, "deleting-conversation", plugin, 
