@@ -42,6 +42,7 @@
 #define	FILE_SUFFIX ".entropy"	/* The keyfiles have to end with this string to be valid. This string has to be separated by ".". */
 #define NOENTROPY_SIGNAL "*** I'm out of entropy!"	/* The message that is send in case the sender is out of entropy */
 #define BLOCKSIZE 1024		/* The blocksize used in the keyfile creation function */
+#define ERASEBLOCKSIZE 1024	/* The blocksize used in the key eraseure function */
 
 /* All defines needed for full opt functionality! */
 
@@ -179,7 +180,7 @@ static int otp_get_encryptkey_from_file(char **key , struct otp* pad, int len) {
 	}
 
 
-	if ( (position + len >= (pad->filesize / 2 - protected_entropy) ) || position < 0) {
+	if ( (position + len -1 > (pad->filesize / 2 - protected_entropy) ) || position < 0) {
 		return FALSE;
 	}
 	
@@ -326,7 +327,7 @@ unsigned int otp_erase_key(struct otp* pad) {
 	pad->protected_position=0;		
 
 
-	int a = (BLOCKSIZE+1) * sizeof(char);				/* get length of the used memory*/
+	int a = (ERASEBLOCKSIZE+1) * sizeof(char);				/* get length of the used memory*/
 	int *len=&a;
 	char *b=""; char **key; key=&b;
 

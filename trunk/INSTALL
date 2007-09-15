@@ -1,13 +1,18 @@
----------------------------------
-Installation (on Debian/Ubuntu)
----------------------------------
+--------------------------------------------------------------------------------
+                     Installation (on Debian/Ubuntu) 
+--------------------------------------------------------------------------------
 
 1. Pidgin
 ==========
 
 Download and extract the newest pidgin source
 
-# aptitude install libgtk2.0-dev libgstreamer0.10-dev libgtkspell-dev libdbus-glib-1-dev libgnutls-dev libxss-dev libmeanwhile-dev libgadu-dev libnss3-dev tcl8.4-dev tk8.4-dev libltdl3-dev libperl-dev libstartup-notification0-dev libzephyr-dev libxml2-dev libebook1.2-dev libedata-book1.2-dev libcamel1.2-dev libxml-parser-perl libncursesw5-dev libsasl2-dev libsilc-1.1-2-dev libavahi-compat-howl-dev doxygen
+# aptitude install libgtk2.0-dev libgstreamer0.10-dev libgtkspell-dev 
+libdbus-glib-1-dev libgnutls-dev libxss-dev libmeanwhile-dev libgadu-dev 
+libnss3-dev tcl8.4-dev tk8.4-dev libltdl3-dev libperl-dev 
+libstartup-notification0-dev libzephyr-dev libxml2-dev libebook1.2-dev 
+libedata-book1.2-dev libcamel1.2-dev libxml-parser-perl libncursesw5-dev 
+libsasl2-dev libsilc-1.1-2-dev libavahi-compat-howl-dev doxygen
 
 Note: Not all libraries are necessary!
 

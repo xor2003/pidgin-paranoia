@@ -1,8 +1,9 @@
----------------------------------------------
-     Pidgin Paranoia Plug-in Change Log
----------------------------------------------
+--------------------------------------------------------------------------------
+                  Pidgin Paranoia Plugin Change Log
+--------------------------------------------------------------------------------
 
-0.1.0
+Version 0.1.0
+--------------------------------------------------------------------------------
 Simon Wenner:
  * Paranoia: Basic plugin structure, libotp API
  * A build system 'from hell'! (but it seems to work)
@@ -23,7 +24,8 @@ Christan Wäckerlin:
  * Libotp: struct *mypad is generated from keyfile
  * Libotp: Keyfile templates added
  * Libotp: Full keyfile support
- * Added support for the ./configure --disable-otp swich that disables libotp support for development.
+ * Added support for the ./configure --disable-otp swich that disables libotp 
+   support for development.
  * Added support for protected entropy signaling (i.e. no entropy  signal)
  * Added support for keyfile creation
  * Addes support for the destruction of keyfiles (using up all entropy)
@@ -32,6 +34,5 @@ Christan Wäckerlin:
 Known bugs:
  * /me does not work encrypted
  * there are some anomalies if both set /otp off and one tries to reenable
- * libotp: 2 bytes of unprotected entropy are not allowed to be used
  * Keyfile creation function is not threaded and therfore locks pidgin
  * More then one key per conversation is not supported yet.
