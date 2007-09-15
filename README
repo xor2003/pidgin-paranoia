@@ -1,19 +1,55 @@
-The plug-in allows to use one-time-pads (see: http://de.wikipedia.org/wiki/One-Time-Pad) to encrypt conversations in the IM-client Pidgin.
-A key file with random content is created by Alice. Alice also creates the byte wise reverse version of its key file and sends it to Bob. 
-Alice and Bob both use the first half of their key file to encrypt and use the second part of their key file to decrypt. The message is encrypted and decrypted by XOR-ing it with the random bytes taken from the key file. The encrypted message is encoded in Base64 and transmitted together with the starting point of the bytes used in the key file. 
-The plug-in will be written in C and will be released under the GPL (version 3).
+--------------------------------------------------------------------------------
+                     General information about the software
+--------------------------------------------------------------------------------
 
+1. Aim of the software
+--------------------------------------------------------------------------------
 
-The plug-in aims to give 'perfect' security with a encryption system that is a simple as possible and easy to understand.
+The plug-in allows to use one-time-pads 
+(see: http://de.wikipedia.org/wiki/One-Time-Pad) to encrypt conversations in 
+the IM-client Pidgin.
+The plug-in is written in C and released under the GPL (version 3).
+The plug-in aims to give 'perfect' security with a encryption system that is a 
+simple as possible and easy to understand.
 
-Plase not that when not correctly used, many things can go wrong.
+2. Installation
+--------------------------------------------------------------------------------
+
+Please read the file INSTALL.
+
+3. General advices
+--------------------------------------------------------------------------------
+
+Plase note that when not correctly used, many things can go wrong.
 Keeping your keyfiles secret and using good entropy-sources will help!
 Maybe /dev/urandom is not the best choice but /dev/random is way to slow ...
+Read "INFO" for detailed information how the encryption and decryption 
+exactly works.
 
-Read "INFO" for detailed information how the encryption and decryption exactly works.
+4. Proof for the security of one-time-pads
+--------------------------------------------------------------------------------
 
-TODO: Proof
+TODO
 
+5. Command line interface in pidgin
+--------------------------------------------------------------------------------
+
+Commands are entered by typing a message beginning with /otp.
+
+TODO
+
+6. Usage of the otptester
+--------------------------------------------------------------------------------
+The program takes any amount of arguments/commands and goes through all of them 
+from the beginning to the end.
+Start "otptester --help" for more information.
+
+TODO
+
+7. Known Bugs and planned features
+--------------------------------------------------------------------------------
+
+TODO
 
 
 

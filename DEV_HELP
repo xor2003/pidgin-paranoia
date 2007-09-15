@@ -1,14 +1,14 @@
---------------------------
-DEVELOPER HELP
---------------------------
+--------------------------------------------------------------------------------
+                               Developer Help
+--------------------------------------------------------------------------------
 
 ANSI C
-========
+--------------------------------------------------------------------------------
 C tutorial: http://www.pronix.de/pronix-4.html
 Pointers: http://www.c-plusplus.de/forum/viewtopic-var-t-is-124532
 
 LIBRARIES
-==========
+--------------------------------------------------------------------------------
 GNUlibC (glibc) - String and Array Utilities: 
 	http://www.gnu.org/software/libc/manual/html_node/String-and-Array-Utilities.html
 GNOMELib (glib) API: http://developer.gnome.org/doc/API/2.0/glib/index.html
@@ -18,11 +18,11 @@ Conversation Signals: http://developer.pidgin.im/doxygen/dev/html/conversation-s
 Pidgin-Encrypt SRC: http://pidgin-encrypt.cvs.sourceforge.net/pidgin-encrypt/encrypt/encrypt.c?view=markup
 
 AUTOTOOLS
-==========
+--------------------------------------------------------------------------------
 http://en.wikipedia.org/wiki/GNU_Automake
 http://www.developingprogrammers.com/index.php/2006/01/05/autotools-tutorial/
 Functions explained: http://sourceware.org/autobook/autobook/autobook_283.html#SEC283
 
 SUBVERSION
-===========
+--------------------------------------------------------------------------------
 http://svnbook.red-bean.com/en/1.1/index.html
