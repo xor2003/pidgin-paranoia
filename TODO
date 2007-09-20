@@ -8,12 +8,12 @@ libotp.c
 paranoia.c
  * Enhanced session management (ack)
  * Send entropy warnings (inside messages)
- * evaluate "buddy offline signal"
+ * evaluate "buddy-signed-off" signal
  * check message size limits
  * gettext support
  * send PARANOIA_CLOSE to all conversations on plugin unload
  
-
+ 
 other
  * Design a simple web page
  * Debian/Ubuntu package

@@ -36,4 +36,4 @@ Known bugs:
  * there are some anomalies if both set /otp off and one tries to reenable
  * Keyfile creation function is not threaded and therfore locks pidgin
  * More then one key per conversation is not supported yet
- * The first "Encryption enabled." messages gets sometimes lost due to timing problems
+ * Sometimes the first "Encryption enabled." message gets lost due to timing problems
