@@ -345,7 +345,6 @@ static gboolean par_session_check_req(const char* alice, const char* bob, Purple
 		
 		struct key* temp_key = par_search_key(alice, bob, id);
 		if (temp_key != NULL) {
-			//temp_key->opt->has_plugin = TRUE;
 			temp_key->conv = conv;
 			if(temp_key->opt->auto_enable && !temp_key->opt->no_entropy) {
 				temp_key->opt->ack_sent = FALSE;
@@ -353,7 +352,6 @@ static gboolean par_session_check_req(const char* alice, const char* bob, Purple
 				purple_conversation_write(conv, NULL, "Encryption enabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
 				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "REQUEST checked: now otp_enabled = TRUE.\n");
 			}
-			//purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "REQUEST detected: now has_plugin = TRUE.\n");
 		} else {
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "REQUEST failed! NO key available.\n");
 		}
@@ -722,7 +720,6 @@ static gboolean par_im_msg_receiving(PurpleAccount *account, char **sender,
 	// search in Key list
 	struct key* used_key = par_search_key(my_acc_name, *sender, recv_id);
 
-	// Key in key list?
 	if(used_key != NULL) {
 		// debug
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Found a matching Key with pad ID: %s\n", used_key->pad->id);
@@ -746,7 +743,11 @@ static gboolean par_im_msg_receiving(PurpleAccount *account, char **sender,
 		}
 
 		// TODO: detect ACK message
-		used_key->opt->has_plugin = TRUE;
+		if(!used_key->opt->has_plugin) {
+			used_key->opt->has_plugin = TRUE;
+			//debug
+			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Encrypted msg received. Now has_plugin = TRUE.\n");
+		}
 
 		// encryption not enabled?
 		if (!used_key->opt->otp_enabled) {
@@ -792,7 +793,6 @@ static void par_im_msg_sending(PurpleAccount *account, const char *receiver,
 	// search in Key list
 	struct key* used_key = par_search_key(my_acc_name, receiver, NULL);
 
-	// Key in key list?
 	if(used_key != NULL) {
 		// debug
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Found a matching Key with pad ID: %s\n", used_key->pad->id);
@@ -907,9 +907,7 @@ static gboolean par_im_msg_change_display(PurpleAccount *account, const char *wh
 
 	char* stripped_message = g_strdup(purple_markup_strip_html(*message));
 
-	//purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "!!!Disp. Message: %s\n", stripped_message);
-
-	// replace or hide session init message
+	// hide session init messages
 	if(strncmp(stripped_message, PARANOIA_REQUEST, 60) == 0) {
 		if(used_key != NULL) {
 			if(flags & PURPLE_MESSAGE_SEND) { //used_key->opt->has_plugin
