@@ -126,7 +126,7 @@ static int otp_open_keyfile(int fd, char **data,struct otp* pad){
 
 /* Closes a keyfile with memory mapping */
 static int otp_close_keyfile(int fd, char **data,struct otp* pad){
-	munmap(data, pad->filesize);
+	munmap(*data, pad->filesize);
 	close(fd);
 	return TRUE;
 }
