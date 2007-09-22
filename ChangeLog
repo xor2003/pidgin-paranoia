@@ -1,0 +1,4 @@
+22. Sep. 2007
+- all int changed to short if possible to save memory
+- new function to collect entropie from thread timing
+- some clean up
