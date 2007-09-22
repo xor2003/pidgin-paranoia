@@ -137,7 +137,7 @@ void *audio() {
 			buf[i] = (short)c % 2;
 			i++;
 		}
-		if(c != oldc) sleep(1);
+		if(c == oldc) usleep(500);
 		oldc = c;
 		if(i == 7) {
 			while((short)d < 0) read(fd1,&d,1);
