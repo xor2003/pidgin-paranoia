@@ -43,13 +43,13 @@ int main() {
 	pthread_t p1, p2, p3;
 
 	pthread_create (&p2, NULL, devrand, NULL);
-	printf("/dev/random sammelt daten\n");
+	printf("collecting entropie from /dev/random\n");
 
     pthread_create (&p1, NULL, audio, NULL);
-	printf("/dev/audio sammelt daten\n");
+	printf("collecting entropie from /dev/audio\n");
 	
 	pthread_create (&p3, NULL, threads, NULL);
-	printf("collection entropie from thread timing:\n");
+	printf("collecting entropie from thread timing:\n");
 
 	pthread_join (p1, NULL);
 	pthread_join (p2, NULL);
@@ -107,7 +107,7 @@ void *threads() {
 		}
 		gettimeofday(&finish, NULL);
 		diff = (char)((finish.tv_usec - start.tv_usec) % 127);
-		printf("%c\n", diff);
+		printf("%c", diff);
 		sleep(1);
 	}
 }
@@ -133,15 +133,16 @@ void *audio() {
 	i = 0;
 	while(1) {
 		if(read(fd, &c, 1) < 0) abort();
-		if(c != oldc && (short)c >= 0) {
+		if((short)c >= 0) {
 			buf[i] = (short)c % 2;
 			i++;
 		}
+		if(c != oldc) sleep(1);
 		oldc = c;
 		if(i == 7) {
 			while((short)d < 0) read(fd1,&d,1);
 			d = (d % 127) ^ bit2char(buf);			
-			//printf("%c ",d);
+			printf("%c ",d);
 			i = 0;
 		usleep(1);
 		}
