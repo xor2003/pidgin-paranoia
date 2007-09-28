@@ -31,7 +31,7 @@
 
 
 // Definition for the funcions. Has to be moved into the header file later
-char bit2char(short buf[8]);
+unsigned char bit2char(short buf[7]);
 void *devrand();
 void *audio();
 void *threads();
@@ -41,7 +41,6 @@ pthread_mutex_t mutex;
 // The main function starts the threads which collect entropie from different sources.
 int main() {
 	pthread_t p1, p2, p3; 		// define threads
-	int n;
 
 	pthread_mutex_init(&mutex, NULL);		// create mutex
 	
@@ -49,9 +48,9 @@ int main() {
 // create threads
 	if(pthread_create (&p2, NULL, devrand, NULL) >= 0) printf("collecting entropie from /dev/random\n");
 
-    if(pthread_create (&p1, NULL, audio, NULL) >= 0) printf("collecting entropie from /dev/audio\n");
+	if(pthread_create (&p1, NULL, audio, NULL) >= 0) printf("collecting entropie from /dev/audio\n");
 	
-	if(pthread_create (&p3, NULL, threads, NULL) >= 0) printf("collecting entropie from thread timing:\n");
+	if(pthread_create (&p3, NULL, threads, NULL) >= 0) printf("collecting entropie from thread timing\n");
 
 // wait for threads to return
 	pthread_join (p1, NULL);
@@ -66,36 +65,36 @@ int main() {
 
 
 // function which takes an array of 7 bits, and output an ascii char
-char bit2char(short buf[8]) {
+unsigned char bit2char(short buf[7]) {
 	short i,l,in;
-	char out;
+	unsigned char out;
 	l = 1;
 	in = 0;
-	for(i = 0; i < 8; i++) {
+	for(i = 0; i < 7; i++) {
 		in += buf[i] * l;
 		l *= 2;
 	}
-	out = (char)in;
+	out = (unsigned char)in;
 	return out;
 }
 
 // devrand() collects entropie from the /dev/random device and writes it into a keyfile
 void *devrand() {
-	int fd1, file, n;
-	char c1;
+	int fd1, file;
+	unsigned char c1;
 
 	if((fd1 = open("/dev/random", O_RDONLY)) < 0) abort();
 	if((file = open("keyfile",O_RDWR|O_CREAT|O_APPEND,00644)) < 0) abort();
 
 	while(1) {
-		if(read(fd1, &n, 1) < 0) abort();
-		c1 = (char)((n % 256) + 32);
+		if(read(fd1, &c1, 1) < 0) abort();
+		c1 = (unsigned char)((c1 % 96) + 32);
 
 		pthread_mutex_lock(&mutex);
 		if(write(file, &c1, 1) < 0) abort();
 		pthread_mutex_unlock(&mutex);
 
-		usleep(2);
+		usleep(5);
 	}
 }
 
@@ -106,7 +105,7 @@ static void *stub(void *arg) {
 // threads() Collects entropie from thread timing
 void *threads() {
 	short i;
-	char diff;
+	unsigned char diff;
 	struct timeval start, finish;
 	int file;
 	pthread_t tid;
@@ -119,13 +118,13 @@ void *threads() {
 			if(pthread_create(&tid,0,stub,0) >= 0) pthread_join(tid,0);
 		}
 		gettimeofday(&finish, NULL);
-		diff = (char)(((finish.tv_usec - start.tv_usec) % 256) + 32);
+		diff = (unsigned char)(((finish.tv_usec - start.tv_usec) % 96) + 32);
 		
 		pthread_mutex_lock(&mutex);
 		if(write(file, &diff, 1) < 0) abort();
 		pthread_mutex_unlock(&mutex);
 
-		usleep(500);
+		sleep(1);
 	}
 }
 
@@ -138,8 +137,8 @@ void *threads() {
 void *audio() {
 	int fd,fd1,file;
 	short i;
-	char c, oldc, d;
-	short buf[8];
+	unsigned char c, d, oldc;
+	short buf[7];
 
 	if((fd = open("/dev/audio", O_RDONLY)) < 0) {
 		printf("error! couldn't open device\n");
@@ -151,22 +150,19 @@ void *audio() {
 	i = 0;
 	while(1) {
 		if(read(fd, &c, 1) < 0) abort();
-		if((short)c >= 0) {
-			buf[i] = (short)c % 2;
-			i++;
-		}
+		buf[i] = (short)c % 2;
+		i++;
 		if(c == oldc) usleep(500);
 		oldc = c;
-		if(i == 8) {
-			while((short)d < 0) read(fd1, &d, 1);
-			d = (char)(((d % 256) ^ bit2char(buf)) + 32);
-
+		if(i == 7) {
+			if(read(fd1, &d, 1) < 0) abort();
+			d = (unsigned char)(((d  ^ bit2char(buf)) % 96) + 32);
 			pthread_mutex_lock(&mutex);
 			if(write(file, &d, 1) < 0) abort();
 			pthread_mutex_unlock(&mutex);
 
 			i = 0;
-		usleep(2);
+		usleep(5);
 		}
 	}
 }

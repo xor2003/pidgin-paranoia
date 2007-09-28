@@ -1,1 +1,9 @@
-The keygen file is under construction at the moment and therefor doesn't produce any useful output.
+Author: Pascal Sachs
+
+To build the keygen file use: ./build.sh
+
+At the moment the entropie is collected by the devices /dev/audio and /dev/random and furthermore from thread timing. Planned are also to collect entropie from mouse and keyboard events and eventually from system state.
+
+Eventhough I try the best, I as author don't guarantee that the collected entropie is good enough to outstand any attacks against information encrypted with this key.
+
+If you have any wishes or critics feel free to send me an e-mail to: psachs@student.ethz.ch
