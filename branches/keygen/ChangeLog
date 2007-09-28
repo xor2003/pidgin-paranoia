@@ -2,3 +2,8 @@
 - all int changed to short if possible to save memory
 - new function to collect entropie from thread timing
 - some clean up
+
+28. Sep. 2007
+- Added a mutex to protect the keyfile so that all entropie collecting threads can write their results in it
+- The range of possible chars have changed
+- all chars are now unsigned chars to prevent wrong data from negativ ascii numbers
