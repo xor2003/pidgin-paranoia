@@ -7,3 +7,8 @@
 - Added a mutex to protect the keyfile so that all entropie collecting threads can write their results in it
 - The range of possible chars have changed
 - all chars are now unsigned chars to prevent wrong data from negativ ascii numbers
+
+4. Okt. 2007
+- add some more description
+- better error handling
+- add close function for the devices and keyfile
