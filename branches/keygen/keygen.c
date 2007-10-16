@@ -30,6 +30,11 @@
 #include <time.h>
 #include <sys/time.h>
 
+
+#define BUFFSIZE 20
+#define CHARSIZE 96
+#define OFFSET 32
+
 /* generates a new key pair (two files) with the name alice and bob of 'size' bytes.
 unsigned int otp_generate_key_pair(const char* alice,const char* bob,const char* path,const char* source, unsigned int size);
 */
@@ -39,16 +44,18 @@ unsigned char bit2char(short buf[7]);
 void *devrand();
 void *audio();
 void *threads();
+void *numofbytes();
 static void *stub(void *arg);
 pthread_mutex_t mutex;
+int number;
 
 
 /*
 *	The main function starts the threads which collect entropie from different sources.
 */
 int main() {
-	pthread_t p1, p2, p3; 		// define threads
-
+	pthread_t p1, p2, p3, p4; 		// define threads
+	number = 0;
 	pthread_mutex_init(&mutex, NULL);		// create mutex
 	
 
@@ -59,10 +66,13 @@ int main() {
 	
 	if(pthread_create (&p3, NULL, threads, NULL) >= 0) printf("collecting entropie from thread timing\n");
 
+	pthread_create (&p4, NULL, numofbytes, NULL);
+
 // wait for threads to return
 	pthread_join (p1, NULL);
 	pthread_join (p2, NULL);
 	pthread_join (p3, NULL);
+	pthread_join (p4, NULL);
 
 // destroy mutex
 	pthread_mutex_destroy(&mutex);
@@ -89,36 +99,52 @@ unsigned char bit2char(short buf[7]) {
 } // end bit2char()
 
 
+void *numofbytes() {
+	while(1) {	
+		printf("%i Bytes im File\n", number);
+		sleep(5);
+	}
+}
+
 /*
 * devrand() collects entropie from the /dev/random device and writes it into a keyfile
 */
 void *devrand() {
 	int fd1, file;
 	unsigned char c1;
+	unsigned char buffer[BUFFSIZE];
+	int size;
 
 	if((fd1 = open("/dev/random", O_RDONLY)) < 0) {
 		printf("could not open /dev/random \n");
-		return;
+		return 0;
 	}
 	if((file = open("keyfile",O_RDWR|O_CREAT|O_APPEND,00644)) < 0) {
 		printf("could not open keyfile \n");
-		return;
+		return 0;
 	}
-
+	
+	size = 0;
 	while(1) {
 		if(read(fd1, &c1, 1) < 0) {
 			printf("read error");
 		}
-		c1 = (unsigned char)((c1 % 96) + 32);
-
-		pthread_mutex_lock(&mutex);
-		if(write(file, &c1, 1) < 0) {
-			printf("write error");
-			return;
-		{
-		pthread_mutex_unlock(&mutex);
-
-		usleep(5);
+		
+		buffer[size] = (unsigned char)((c1 % CHARSIZE) + OFFSET);
+		size++;
+		
+		if(size == BUFFSIZE) {
+			pthread_mutex_lock(&mutex);
+			if(write(file, &buffer, BUFFSIZE) < 0) {
+				printf("write error");
+				return 0;
+			}
+		//	printf("Random: %s\n", buffer);
+			number += size;
+			pthread_mutex_unlock(&mutex);
+			size = 0;
+			usleep(5);
+		}
 	}
 	
 	close(fd1);
@@ -148,22 +174,24 @@ void *threads() {
 
 	if((file = open("keyfile",O_RDWR|O_CREAT|O_APPEND,00644)) < 0) {
 		printf("could not open keyfile \n");
-		return;
+		return 0;
 	}
 
 	while(1) {
 		gettimeofday(&start, NULL);
 		for(i = 0; i < 100; i++) {
-			if(pthread_create(&tid,0,stub,0) >= 0) pthread_join(tid,0);
+			if(pthread_create(&tid, 0, stub, 0) >= 0) pthread_join(tid, 0);
 		}
 		gettimeofday(&finish, NULL);
-		diff = (unsigned char)(((finish.tv_usec - start.tv_usec) % 96) + 32);
+		diff = (unsigned char)(((finish.tv_usec - start.tv_usec) % CHARSIZE) + OFFSET);
 		
 		pthread_mutex_lock(&mutex);
 		if(write(file, &diff, 1) < 0) {
 			printf("write error");
-			return;
+			return 0;
 		}
+		//printf("Threads: %c\n", diff);
+		number++;
 		pthread_mutex_unlock(&mutex);
 
 		sleep(1);
@@ -180,27 +208,31 @@ void *threads() {
 	and write this to the keyfile
 */
 void *audio() {
-	int fd,fd1,file;
+	int fd, fd1, file;
 	short i;
 	unsigned char c, d, oldc;
-	short buf[7];
+	short buf[8];
+	unsigned char buffer[BUFFSIZE];
+	int size;
 
 	if((fd = open("/dev/audio", O_RDONLY)) < 0) {
 		printf("could not open /dev/audio \n");
-		return;
+		return 0;
 	}
 	if((fd1 = open("/dev/urandom", O_RDONLY)) < 0) {
 		printf("could not opne /dev/urandom \n");
-		return;
+		return 0;
 	}
 	if((file = open("keyfile",O_RDWR|O_CREAT|O_APPEND,00644)) < 0) {
 		printf("could not open keyfile \n");
-		return;
+		return 0;
 	}
 
 	i = 0;
+	size = 0;
+
 	while(1) {
-		if(read(fd, &c, 1) < 0) abort();
+		if(read(fd, &c, 1) < 0) return 0;
 		buf[i] = (short)c % 2;
 		i++;
 		if(c == oldc) usleep(500);
@@ -208,22 +240,27 @@ void *audio() {
 		if(i == 7) {
 			if(read(fd1, &d, 1) < 0) {
 				printf("read error");
-				return;
+				return 0;
 			}
-			d = (unsigned char)(((d  ^ bit2char(buf)) % 96) + 32);
-			pthread_mutex_lock(&mutex);
-			if(write(file, &d, 1) < 0) {
-				printf("write error");
-				return;
+			buffer[size] = (unsigned char)(((d  ^ bit2char(buf)) % CHARSIZE) + OFFSET);
+			size++;
+			if(size == BUFFSIZE) { 
+					pthread_mutex_lock(&mutex);
+					if(write(file, &buffer, BUFFSIZE) < 0) {
+						printf("write error");
+						return 0;
+					}
+				//	printf("Audio: %s \n", buffer);
+					number += size;
+					pthread_mutex_unlock(&mutex);
+					size = 0;
 			}
-			pthread_mutex_unlock(&mutex);
-
 			i = 0;
-		usleep(5);
+			usleep(5);
 		}
 	}
-	
 	close(fd);
 	close(fd1);
 	close(file);
 } // end audio()
+
