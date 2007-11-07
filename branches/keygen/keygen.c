@@ -54,7 +54,7 @@ int number;
 */
 int main() {
 	pthread_t p1, p2, p3;	 	 		// define threads
-	number = 10000;
+	number = 1000000;
 	pthread_mutex_init(&mutex, NULL);		// create mutex
 
 
