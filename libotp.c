@@ -101,9 +101,9 @@ static void otp_calc_entropy(struct otp* pad){
 }
 
 /* Opens a keyfile with memory mapping */
-static int otp_open_keyfile(int fd, char **data,struct otp* pad){
+static int otp_open_keyfile(int *fd, char **data,struct otp* pad){
 	struct stat fstat;
-	if ((fd = open(pad->filename, O_RDWR)) == -1) {
+	if ((*fd = open(pad->filename, O_RDWR)) == -1) {
 		perror("open");
 		pad=NULL;
 		return FALSE;
@@ -116,18 +116,20 @@ static int otp_open_keyfile(int fd, char **data,struct otp* pad){
 	}
 	pad->filesize=fstat.st_size;
 
-	if ((*data = mmap((caddr_t)0, pad->filesize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)) == (caddr_t)(-1)) {
+	if ((*data = mmap((caddr_t)0, pad->filesize, PROT_READ | PROT_WRITE, MAP_SHARED, *fd, 0)) == (caddr_t)(-1)) {
 		perror("mmap");
 		pad=NULL;
 		return FALSE;
 	}
+	//printf("\nopen:\t%u %u\n\n",*fd,*data);
 	return TRUE;
 }
 
 /* Closes a keyfile with memory mapping */
-static int otp_close_keyfile(int fd, char **data,struct otp* pad){
+static int otp_close_keyfile(int *fd, char **data,struct otp* pad){
+	//printf("\nclose:\t%u %u\n\n",*fd,*data);
 	munmap(*data, pad->filesize);
-	close(fd);
+	close(*fd);
 	return TRUE;
 }
 
@@ -145,8 +147,10 @@ static int otp_seek_pos(char *data,int filesize){
 /* Seeks the the starting position,filesize and entropy from the keyfile */
 static struct otp* otp_seek_start(struct otp* pad){
 /* 	char* path = get_current_dir_name(); */
-	int fd=0; char *b=""; char **data; data=&b;
+	int *fd; char *b=""; char **data; data=&b; int wfd=0; fd=&wfd;
 	if (otp_open_keyfile(fd,data,pad)) {		/* Open the keyfile */
+	
+		//printf("\nworking:\t%u %u\n\n",*fd,*data);
 
 		pad->position = otp_seek_pos(*data,pad->filesize);
 		otp_calc_entropy(pad);
@@ -154,7 +158,7 @@ static struct otp* otp_seek_start(struct otp* pad){
 	}else{
 		return NULL;
 	}
-
+	printf("test\n");
 	return pad;
 }
 
@@ -169,7 +173,7 @@ static char* otp_check_id(char* id_str){
 
 /* Gets the key to encrypt from the keyfile */
 static int otp_get_encryptkey_from_file(char **key , struct otp* pad, int len) {
-	int fd=0; char *b=""; char **data; data=&b;
+	int *fd; char *b=""; char **data; data=&b; int wfd=0; fd=&wfd;
 	int i=0;
 	int protected_entropy=OTP_PROTECTED_ENTROPY;
 	int position=pad->position;
@@ -219,7 +223,7 @@ static int otp_get_encryptkey_from_file(char **key , struct otp* pad, int len) {
 
 /* Gets the key to decrypt from the keyfile */
 static int otp_get_decryptkey_from_file(char **key , struct otp* pad, int len, int decryptpos) {
-	int fd=0; char *b=""; char **data; data=&b;
+	int *fd; char *b=""; char **data; data=&b; int wfd=0; fd=&wfd;
 	int i=0;
 /* 	printf("\ndecryptpos\t\t\t:%d\n\n",decryptpos); */
 	if (pad->filesize < (pad->filesize-decryptpos - (len -1)) || (pad->filesize-decryptpos) < 0) {
@@ -479,7 +483,7 @@ unsigned int otp_generate_key_pair(const char* alice,const  char* bob,const char
 	close(bfd);
 	
 	/* Close the first file */
-	munmap(adata, afilesize);
+	munmap(*adata, afilesize);
 	close(afd);
 	
 	/* Cleanup */
