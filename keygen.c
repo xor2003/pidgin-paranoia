@@ -46,7 +46,7 @@ gpointer audio(gpointer data);
 gpointer stub(gpointer data);
 gpointer threads(gpointer data);
 gpointer mutex = NULL;
-int number;
+
 
 
 /*
@@ -54,16 +54,17 @@ int number;
 */
 int main() {
 	GThread *p1, *p2, *p3;	 	 		// define threads
-	number = 10000;
+	int number;
 
+	number = 10000;
 	g_thread_init(NULL);
 	mutex = g_mutex_new();		// create mutex
 
 
 // create threads
-	if((p2 = g_thread_create(devrand, NULL, TRUE, NULL)) != NULL) printf("collecting entropy from /dev/random\n");
-	if((p1 = g_thread_create(audio, NULL, TRUE, NULL)) != NULL) printf("collecting entropy from /dev/audio\n");
-	if((p3 = g_thread_create(threads, NULL, TRUE, NULL)) != NULL) printf("collecting entropy from thread timing\n");
+	if((p2 = g_thread_create(devrand, &number, TRUE, NULL)) != NULL) printf("collecting entropy from /dev/random\n");
+	if((p1 = g_thread_create(audio, &number, TRUE, NULL)) != NULL) printf("collecting entropy from /dev/audio\n");
+	if((p3 = g_thread_create(threads, &number, TRUE, NULL)) != NULL) printf("collecting entropy from thread timing\n");
 
 // wait for threads to return
 	g_thread_join (p1);
@@ -124,7 +125,7 @@ gpointer devrand(gpointer data) {
 
 		if(size == BUFFSIZE) {
 			g_mutex_lock(mutex);
-			if(number < size) {
+			if(*((int *)(data)) < size) {
 				g_mutex_unlock(mutex);
 				break;
 			}
@@ -132,7 +133,7 @@ gpointer devrand(gpointer data) {
 				printf("write error");
 				return 0;
 			}
-			number -= size;
+			*((int *)(data)) -= size;
 			g_mutex_unlock(mutex);
 			size = 0;
 			usleep(5);
@@ -179,7 +180,7 @@ gpointer threads(gpointer data) {
 		diff = (unsigned char)(((finish.tv_usec - start.tv_usec) % CHARSIZE) + OFFSET);
 
 		g_mutex_lock(mutex);
-		if(number == 0) {
+		if(*((int *)(data)) == 0) {
 			g_mutex_unlock(mutex);
 			break;
 		}
@@ -187,7 +188,7 @@ gpointer threads(gpointer data) {
 			printf("write error");
 			return 0;
 		}
-		number--;
+		(*((int *)(data)))--;
 		g_mutex_unlock(mutex);
 
 		sleep(1);
@@ -244,7 +245,7 @@ gpointer audio(gpointer data) {
 			size++;
 			if(size == BUFFSIZE) {
 					g_mutex_lock(mutex);
-					if(number < size) {
+					if(*((int *)(data)) < size) {
 						g_mutex_unlock(mutex);
 						break;
 					}
@@ -252,7 +253,7 @@ gpointer audio(gpointer data) {
 						printf("write error");
 						return 0;
 					}
-					number -= size;
+					*((int *)(data)) -= size;
 					g_mutex_unlock(mutex);
 					size = 0;
 			}
