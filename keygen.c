@@ -18,7 +18,7 @@
 
 
 // pthread.h has to be included first
-#include <pthread.h>
+#include <glib.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/ioctl.h>
@@ -41,11 +41,11 @@ unsigned int otp_generate_key_pair(const char* alice,const char* bob,const char*
 
 // Definition for the funcions and global variables. => Has to be moved into the header file later
 unsigned char bit2char(short buf[8]);
-void *devrand();
-void *audio();
-void *threads();
-static void *stub(void *arg);
-pthread_mutex_t mutex;
+gpointer devrand(gpointer data);
+gpointer audio(gpointer data);
+gpointer stub(gpointer data);
+gpointer threads(gpointer data);
+gpointer mutex = NULL;
 int number;
 
 
@@ -53,32 +53,32 @@ int number;
 *	The main function starts the threads which collect entropie from different sources.
 */
 int main() {
-	pthread_t p1, p2, p3;	 	 		// define threads
-	number = 1000000;
-	pthread_mutex_init(&mutex, NULL);		// create mutex
+	GThread *p1, *p2, *p3;	 	 		// define threads
+	number = 10000;
+
+	g_thread_init(NULL);
+	mutex = g_mutex_new();		// create mutex
 
 
 // create threads
-	if(pthread_create (&p2, NULL, devrand, NULL) >= 0) printf("collecting entropy from /dev/random\n");
-
-	if(pthread_create (&p1, NULL, audio, NULL) >= 0) printf("collecting entropy from /dev/audio\n");
-
-	if(pthread_create (&p3, NULL, threads, NULL) >= 0) printf("collecting entropy from thread timing\n");
+	if((p2 = g_thread_create(devrand, NULL, TRUE, NULL)) != NULL) printf("collecting entropy from /dev/random\n");
+	if((p1 = g_thread_create(audio, NULL, TRUE, NULL)) != NULL) printf("collecting entropy from /dev/audio\n");
+	if((p3 = g_thread_create(threads, NULL, TRUE, NULL)) != NULL) printf("collecting entropy from thread timing\n");
 
 // wait for threads to return
-	pthread_join (p1, NULL);
-	pthread_join (p2, NULL);
-	pthread_join (p3, NULL);
+	g_thread_join (p1);
+	g_thread_join (p2);
+	g_thread_join (p3);
 
 // destroy mutex
-	pthread_mutex_destroy(&mutex);
+	g_mutex_free(mutex);
 
 	return 0;
 } // end main();
 
 
 /*
-* function which takes an array of 7 bits, and output an ascii char. The buf array should only contain
+* function which takes an array of 8 bits, and output an ascii char. The buf array should only contain
 * 0 or 1, else the return value is not usefule
 */
 unsigned char bit2char(short buf[8]) {
@@ -98,7 +98,7 @@ unsigned char bit2char(short buf[8]) {
 /*
 * devrand() collects entropie from the /dev/random device and writes it into a keyfile
 */
-void *devrand() {
+gpointer devrand(gpointer data) {
 	int fd1, file;
 	unsigned char c1;
 	unsigned char buffer[BUFFSIZE];
@@ -123,9 +123,9 @@ void *devrand() {
 		size++;
 
 		if(size == BUFFSIZE) {
-			pthread_mutex_lock(&mutex);
+			g_mutex_lock(mutex);
 			if(number < size) {
-				pthread_mutex_unlock(&mutex);
+				g_mutex_unlock(mutex);
 				break;
 			}
 			if(write(file, &buffer, BUFFSIZE) < 0) {
@@ -133,7 +133,7 @@ void *devrand() {
 				return 0;
 			}
 			number -= size;
-			pthread_mutex_unlock(&mutex);
+			g_mutex_unlock(mutex);
 			size = 0;
 			usleep(5);
 		}
@@ -148,7 +148,7 @@ void *devrand() {
 /*
 *	a helper function for the threads function
 */
-static void *stub(void *arg) {
+gpointer stub(gpointer data) {
 	return 0;
 } // end stub ()
 
@@ -158,12 +158,12 @@ static void *stub(void *arg) {
 *	to open and close the stub() thread. This function takes one sample every second
 * 	and writes the entropie to the keyfile
 */
-void *threads() {
+gpointer threads(gpointer data) {
 	short i;
 	unsigned char diff;
 	struct timeval start, finish;
 	int file;
-	pthread_t tid;
+	GThread *tid;
 
 	if((file = open("keyfile",O_RDWR|O_CREAT|O_APPEND,00644)) < 0) {
 		printf("could not open keyfile \n");
@@ -173,14 +173,14 @@ void *threads() {
 	while(1) {
 		gettimeofday(&start, NULL);
 		for(i = 0; i < 100; i++) {
-			if(pthread_create(&tid, 0, stub, 0) >= 0) pthread_join(tid, 0);
+			if((tid = g_thread_create(stub, NULL, TRUE, NULL)) != NULL) g_thread_join(tid);
 		}
 		gettimeofday(&finish, NULL);
 		diff = (unsigned char)(((finish.tv_usec - start.tv_usec) % CHARSIZE) + OFFSET);
 
-		pthread_mutex_lock(&mutex);
+		g_mutex_lock(mutex);
 		if(number == 0) {
-			pthread_mutex_unlock(&mutex);
+			g_mutex_unlock(mutex);
 			break;
 		}
 		if(write(file, &diff, 1) < 0) {
@@ -188,7 +188,7 @@ void *threads() {
 			return 0;
 		}
 		number--;
-		pthread_mutex_unlock(&mutex);
+		g_mutex_unlock(mutex);
 
 		sleep(1);
 	}
@@ -204,7 +204,7 @@ void *threads() {
 	This function generates one bit of entropie out of 7 samples, generates an ascii char
 	and write this to the keyfile
 */
-void *audio() {
+gpointer audio(gpointer data) {
 	int fd, fd1, file;
 	short i;
 	unsigned char c, d, oldc;
@@ -243,9 +243,9 @@ void *audio() {
 			buffer[size] = (unsigned char)(((d  ^ c) % CHARSIZE) + OFFSET);
 			size++;
 			if(size == BUFFSIZE) {
-					pthread_mutex_lock(&mutex);
+					g_mutex_lock(mutex);
 					if(number < size) {
-						pthread_mutex_unlock(&mutex);
+						g_mutex_unlock(mutex);
 						break;
 					}
 					if(write(file, &buffer, BUFFSIZE) < 0) {
@@ -253,7 +253,7 @@ void *audio() {
 						return 0;
 					}
 					number -= size;
-					pthread_mutex_unlock(&mutex);
+					g_mutex_unlock(mutex);
 					size = 0;
 			}
 			i = 0;
