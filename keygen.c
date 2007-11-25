@@ -50,6 +50,7 @@ gpointer audio(gpointer data);
 gpointer stub(gpointer data);
 gpointer threads(gpointer data);
 gpointer sysstate(gpointer data);
+gpointer prg(gpointer data);
 gpointer mutex = NULL;
 
 
@@ -58,6 +59,9 @@ gpointer mutex = NULL;
 */
 int main() {
 	GThread *p1, *p2, *p3, *p4;	 	 		// define threads
+#ifdef FAST
+	GThread *p5;
+#endif
 	int number;
 
 	number = 100000;
@@ -69,12 +73,18 @@ int main() {
 	if((p1 = g_thread_create(audio, &number, TRUE, NULL)) != NULL) g_print("collecting entropy from /dev/audio\n");
 	if((p3 = g_thread_create(threads, &number, TRUE, NULL)) != NULL) g_print("collecting entropy from thread timing\n");
 	if((p4 = g_thread_create(sysstate, &number, TRUE, NULL)) != NULL) g_print("collecting entropy from system state\n");
+#ifdef FAST
+	if((p5 = g_thread_create(prg, &number, TRUE, NULL)) != NULL) g_print("collecting entropy from PRG\n");
+#endif
 
 // wait for threads to return
 	g_thread_join (p1);
 	g_thread_join (p2);
 	g_thread_join (p3);
 	g_thread_join (p4);
+#ifdef FAST
+	g_thread_join (p5);
+#endif
 
 // destroy mutex
 	g_mutex_free(mutex);
@@ -122,7 +132,7 @@ gpointer devrand(gpointer data) {
 	size = 0;
 	while(1) {
 		if(read(fd1, &c1, 1) < 0) {
-			g_print("read error");
+			g_print("read error\n");
 		}
 
 		buffer[size] = (unsigned char)((c1 % CHARSIZE) + OFFSET);
@@ -135,14 +145,14 @@ gpointer devrand(gpointer data) {
 				break;
 			}
 			if(write(file, &buffer, BUFFSIZE) < 0) {
-				g_printerr("write error");
+				g_printerr("write error\n");
 				return 0;
 			}
 			*((int *)(data)) -= size;
 			g_mutex_unlock(mutex);
 			size = 0;
-			usleep(5);
 		}
+		usleep(5);
 	}
 
 	close(fd1);
@@ -190,7 +200,7 @@ gpointer threads(gpointer data) {
 			break;
 		}
 		if(write(file, &diff, 1) < 0) {
-			g_printerr("write error");
+			g_printerr("write error\n");
 			return 0;
 		}
 		(*((int *)(data)))--;
@@ -239,10 +249,13 @@ gpointer audio(gpointer data) {
 		buf[i] = ((unsigned short)c) % 2;
 		i++;
 		if(i == 8) {
+			g_mutex_lock(mutex);
 			if(read(fd1, &d, 1) < 0) {
-				g_printerr("read error");
+				g_printerr("read error\n");
+				g_mutex_unlock(mutex);
 				return 0;
 			}
+			g_mutex_unlock(mutex);
 			c = bit2char(buf);
 			if(c == oldc) usleep(500);
 			oldc = c;
@@ -255,7 +268,7 @@ gpointer audio(gpointer data) {
 						break;
 					}
 					if(write(file, &buffer, BUFFSIZE) < 0) {
-						g_printerr("write error");
+						g_printerr("write error\n");
 						return 0;
 					}
 					*((int *)(data)) -= size;
@@ -272,6 +285,13 @@ gpointer audio(gpointer data) {
 	return 0;
 } // end audio()
 
+
+/*
+*	sysstate() collects entropy by adding up system time user time and minor pagefaults and generates one byte of entropy
+*	if the current state is different from the last state. Because I use microseconds as measurement, the time depends on
+*	the CPU strenght and only the time of the current program is measured the output is not predictable or manipulatable
+*	from outside.
+*/
 gpointer sysstate(gpointer data) {
 	int minflt, fp, who;
 	double systime, usertime;
@@ -280,7 +300,7 @@ gpointer sysstate(gpointer data) {
 	struct rusage usage;
 	who = RUSAGE_SELF;
 
-	fp = open("keyfile",O_RDWR|O_CREAT|O_APPEND,00644);
+	fp = open("keyfile", O_RDWR|O_CREAT|O_APPEND, 00644);
 
 	while (1) {
 		getrusage(who, &usage);
@@ -289,7 +309,7 @@ gpointer sysstate(gpointer data) {
 		systime = usage.ru_stime.tv_sec*1000000+usage.ru_stime.tv_usec;
 		usertime = usage.ru_utime.tv_sec*1000000+usage.ru_utime.tv_usec;
 		result = minflt + (unsigned int)systime + (unsigned int)usertime;
-		result %= 256;
+		result = (result % CHARSIZE) + OFFSET;
 
 		if(result  != old_result) {
 			c = (char)result;
@@ -307,5 +327,52 @@ gpointer sysstate(gpointer data) {
 		old_result = result;
 	}
 	close(fp);
+	return 0;
+}
+
+gpointer prg(gpointer data) {
+	int fp_file, fp_prg;
+	unsigned short c;
+
+	if((fp_file = open("keyfile", O_RDWR|O_CREAT|O_APPEND, 00644)) < 0) {
+		g_printerr("could not open keyfile\n");
+		return 0;
+	}
+
+	if((fp_prg = open("/dev/urandom", O_RDONLY)) < 0) {
+		g_printerr("could not open /dev/urandom\n");
+		return 0;
+	}
+
+	while(1) {
+		g_mutex_lock(mutex);
+		if(read(fp_prg, &c, 1) != 1) {
+			g_printerr("read error\n");
+			g_mutex_unlock(mutex);
+			return 0;
+		}
+		g_mutex_unlock(mutex);
+
+		c = (c % CHARSIZE) + OFFSET;
+
+		g_mutex_lock(mutex);
+		if(*((int *)(data)) == 0) {
+			g_mutex_unlock(mutex);
+			break;
+		}
+		if(write(fp_file, &c, 1) != 1) {
+			g_printerr("write error\n");
+			g_mutex_unlock(mutex);
+			return 0;
+		}
+		(*((int *)(data)))--;
+		g_mutex_unlock(mutex);
+
+
+		usleep(5);
+	}
+
+	close(fp_file);
+	close(fp_prg);
 	return 0;
 }
