@@ -19,16 +19,20 @@
 
 // pthread.h has to be included first
 #include <glib.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/resource.h>
+#include <sys/time.h>
+
+/*
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/ioctl.h>
 #include <termio.h>
-#include <fcntl.h>
-#include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <time.h>
-#include <sys/time.h>
+*/
 
 
 #define BUFFSIZE 20
@@ -45,31 +49,32 @@ gpointer devrand(gpointer data);
 gpointer audio(gpointer data);
 gpointer stub(gpointer data);
 gpointer threads(gpointer data);
+gpointer sysstate(gpointer data);
 gpointer mutex = NULL;
-
 
 
 /*
 *	The main function starts the threads which collect entropie from different sources.
 */
 int main() {
-	GThread *p1, *p2, *p3;	 	 		// define threads
+	GThread *p1, *p2, *p3, *p4;	 	 		// define threads
 	int number;
 
-	number = 10000;
+	number = 100000;
 	g_thread_init(NULL);
 	mutex = g_mutex_new();		// create mutex
 
-
 // create threads
-	if((p2 = g_thread_create(devrand, &number, TRUE, NULL)) != NULL) printf("collecting entropy from /dev/random\n");
-	if((p1 = g_thread_create(audio, &number, TRUE, NULL)) != NULL) printf("collecting entropy from /dev/audio\n");
-	if((p3 = g_thread_create(threads, &number, TRUE, NULL)) != NULL) printf("collecting entropy from thread timing\n");
+	if((p2 = g_thread_create(devrand, &number, TRUE, NULL)) != NULL) g_print("collecting entropy from /dev/random\n");
+	if((p1 = g_thread_create(audio, &number, TRUE, NULL)) != NULL) g_print("collecting entropy from /dev/audio\n");
+	if((p3 = g_thread_create(threads, &number, TRUE, NULL)) != NULL) g_print("collecting entropy from thread timing\n");
+	if((p4 = g_thread_create(sysstate, &number, TRUE, NULL)) != NULL) g_print("collecting entropy from system state\n");
 
 // wait for threads to return
 	g_thread_join (p1);
 	g_thread_join (p2);
 	g_thread_join (p3);
+	g_thread_join (p4);
 
 // destroy mutex
 	g_mutex_free(mutex);
@@ -106,18 +111,18 @@ gpointer devrand(gpointer data) {
 	int size;
 
 	if((fd1 = open("/dev/random", O_RDONLY)) < 0) {
-		printf("could not open /dev/random \n");
+		g_printerr("could not open /dev/random \n");
 		return 0;
 	}
 	if((file = open("keyfile",O_RDWR|O_CREAT|O_APPEND,00644)) < 0) {
-		printf("could not open keyfile \n");
+		g_printerr("could not open keyfile \n");
 		return 0;
 	}
 
 	size = 0;
 	while(1) {
 		if(read(fd1, &c1, 1) < 0) {
-			printf("read error");
+			g_print("read error");
 		}
 
 		buffer[size] = (unsigned char)((c1 % CHARSIZE) + OFFSET);
@@ -130,7 +135,7 @@ gpointer devrand(gpointer data) {
 				break;
 			}
 			if(write(file, &buffer, BUFFSIZE) < 0) {
-				printf("write error");
+				g_printerr("write error");
 				return 0;
 			}
 			*((int *)(data)) -= size;
@@ -167,7 +172,7 @@ gpointer threads(gpointer data) {
 	GThread *tid;
 
 	if((file = open("keyfile",O_RDWR|O_CREAT|O_APPEND,00644)) < 0) {
-		printf("could not open keyfile \n");
+		g_printerr("could not open keyfile \n");
 		return 0;
 	}
 
@@ -185,7 +190,7 @@ gpointer threads(gpointer data) {
 			break;
 		}
 		if(write(file, &diff, 1) < 0) {
-			printf("write error");
+			g_printerr("write error");
 			return 0;
 		}
 		(*((int *)(data)))--;
@@ -214,15 +219,15 @@ gpointer audio(gpointer data) {
 	int size;
 
 	if((fd = open("/dev/audio", O_RDONLY)) < 0) {
-		printf("could not open /dev/audio \n");
+		g_printerr("could not open /dev/audio \n");
 		return 0;
 	}
 	if((fd1 = open("/dev/urandom", O_RDONLY)) < 0) {
-		printf("could not opne /dev/urandom \n");
+		g_printerr("could not opne /dev/urandom \n");
 		return 0;
 	}
 	if((file = open("keyfile",O_RDWR|O_CREAT|O_APPEND,00644)) < 0) {
-		printf("could not open keyfile \n");
+		g_printerr("could not open keyfile \n");
 		return 0;
 	}
 
@@ -235,7 +240,7 @@ gpointer audio(gpointer data) {
 		i++;
 		if(i == 8) {
 			if(read(fd1, &d, 1) < 0) {
-				printf("read error");
+				g_printerr("read error");
 				return 0;
 			}
 			c = bit2char(buf);
@@ -250,7 +255,7 @@ gpointer audio(gpointer data) {
 						break;
 					}
 					if(write(file, &buffer, BUFFSIZE) < 0) {
-						printf("write error");
+						g_printerr("write error");
 						return 0;
 					}
 					*((int *)(data)) -= size;
@@ -266,3 +271,41 @@ gpointer audio(gpointer data) {
 	close(file);
 	return 0;
 } // end audio()
+
+gpointer sysstate(gpointer data) {
+	int minflt, fp, who;
+	double systime, usertime;
+	unsigned int result = 0, old_result = 0;
+	char c;
+	struct rusage usage;
+	who = RUSAGE_SELF;
+
+	fp = open("keyfile",O_RDWR|O_CREAT|O_APPEND,00644);
+
+	while (1) {
+		getrusage(who, &usage);
+		usleep(500);
+		minflt = usage.ru_minflt;
+		systime = usage.ru_stime.tv_sec*1000000+usage.ru_stime.tv_usec;
+		usertime = usage.ru_utime.tv_sec*1000000+usage.ru_utime.tv_usec;
+		result = minflt + (unsigned int)systime + (unsigned int)usertime;
+		result %= 256;
+
+		if(result  != old_result) {
+			c = (char)result;
+			g_mutex_lock(mutex);
+
+			if(*((int *)(data)) == 0) {
+				g_mutex_unlock(mutex);
+				break;
+			}
+
+			write(fp, &c, 1);
+			(*((int *)(data)))--;
+			g_mutex_unlock(mutex);
+		}
+		old_result = result;
+	}
+	close(fp);
+	return 0;
+}
