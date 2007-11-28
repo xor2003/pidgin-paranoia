@@ -483,7 +483,7 @@ unsigned int otp_generate_key_pair(const char* alice,const  char* bob,const char
 	close(bfd);
 	
 	/* Close the first file */
-	munmap(*adata, afilesize);
+	munmap(adata, afilesize);
 	close(afd);
 	
 	/* Cleanup */
