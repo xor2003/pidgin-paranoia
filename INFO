@@ -5,8 +5,8 @@
 0. Abstract:
 --------------------------------------------------------------------------------
 The plug-in allows to use one-time-pads 
-(see: http://de.wikipedia.org/wiki/One-Time-Pad) to encrypt conversations in 
-the IM-client Pidgin.
+(see: http://de.wikipedia.org/wiki/One-Time-Pad) to provide information-
+theoretically secure encrypted conversations in the IM-client Pidgin.
 A key file with random content is created by Alice. Alice also creates the byte 
 wise reverse version of its key file and sends it to Bob. 
 Alice and Bob both use the first half of their key file to encrypt and use the 
@@ -24,7 +24,24 @@ simple as possible and easy to understand.
 This section describes libotp and is independent of the application libotp is 
 used in.
 
-1.1 The key files:
+1.1 The security of One-Time-Pads
+--------------------------------------------------------------------------------
+
+A cryptosystem is information-theoretically secure if the ciphertext (and the 
+algorithm) does not give the adversary enough information to find the 
+plaintext. Since a one-time-pad uses a key that has the same length as the 
+plaintext, every ciphertext with a certain length can decrypt to any plaintext,
+if decrypted with the appropriate key. If truly random keys are used and not 
+repeated, the interception of ciphertext does not give the adversary information
+about the plaintext (except information about the length of the 
+plaintext in some implementations). 
+Other cryptosystems like symmetric and asymmetric encryption are computationally
+secure but not information-theoretically secure since the adversary has the 
+information in theory needed to recover the plaintext but is limited in practice
+by the required computation time. With faster computers, better algorithms or 
+maybe quantum computers those cryptosystems could be broken.
+
+1.2 The key files:
 --------------------------------------------------------------------------------
 Alice creates a file consisting of perfectly random numbers (very hard to 
 implement, (-;) of a size of i.e 1MB. Alice generates a random 8 characters
@@ -45,7 +62,7 @@ anymore and can delete it.
 Both Alice and Bob can use the first half of their key file for encryption. 
 The second part of the key file is used to decrypt the message.
 
-1.2 Encryption:
+1.3 Encryption:
 --------------------------------------------------------------------------------
 Alice finds the first byte in her key file that is not \0. Alice takes one byte 
 from the key file for every byte of her message and creates her encrypted 
@@ -61,13 +78,13 @@ A string formed like "3EF9|34EF4588|M+Rla2w=" is transmitted.
  * "34EF4588" is the ID used to check if both have compatible key files.
  * "M+Rla2w=" is the Base64 encoded encrypted message.
 
-1.3 Decryption:
+1.4 Decryption:
 --------------------------------------------------------------------------------
 Bob decodes the Base64 encoded message and decrypts it with that bytes read 
 from the key file in reverse order at the position (counting from the end of 
 the key file) described in the transmitted string.
 
-1.4 Key and session management:
+1.5 Key and session management:
 --------------------------------------------------------------------------------
 At the plugin start a key list gets initialized depeding on the available key 
 files. The data is stord in a linked list containing an otp (libotp.h) and an 
