@@ -62,7 +62,7 @@ int usage() {
 --debug\n\
 --nodebug\n\
 \n\
-%s --openpad \"bob@jabber.org alice@jabber.org 22222222.entropy\" encrypt --openpad \"alice@jabber.org bob@jabber.org 22222222.entropy\" decrypt --setmessage \"test\" --encrypt --decrypt --closepad encrypt --closepad decrypt\n\
+%s --openpad \"bob@jabber.org alice@jabber.org 2222222F.entropy\" encrypt --openpad \"alice@jabber.org bob@jabber.org 2222222F.entropy\" decrypt --setmessage \"test\" --encrypt --decrypt --closepad encrypt --closepad decrypt\n\
 ",programname);
 	return TRUE;
 }
