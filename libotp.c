@@ -44,21 +44,24 @@
 #define BLOCKSIZE 1024		/* The blocksize used in the keyfile creation function */
 #define ERASEBLOCKSIZE 1024	/* The blocksize used in the key eraseure function */
 #define REPEATTOL 1E-12		/* If a repeated secquence with less probability then this occurs, throw the key away */ 
+#define RNDLENMAX 30		/* Maximal length of the added random-length tail onto the encrypted message */
 
-/* All defines needed for full opt functionality! Redgarded as stable.*/
+/* Requried for development if HAVEFILE is not defined */
+#define STATICKEY "dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4"
+
+/* All defines needed for full opt functionality! Regarded as stable. The encryption is worthless without those! */
 
 #define UCRYPT			/* Encryption and decryption only enabled if defined */
 #define HAVEFILE		/* Do you have a file named pad->filename in your working dir? Used for struct *pad generation. */
 #define HAVEKEYFILE		/* Do you have a file names pad->filename in your working dir? Used for en/decryption. */
 #define KEYOVERWRITE	/* Overwrite the used key-sequence in the keyfile */
+
+/* Optional. Regarded as stable */
 //#define USEDESKTOP			/* Requires GNOMElib 2.14! Bob's keyfile is placed onto the desktop. If not set, the file is placed in the .paranoia folder. */
 
-
-/* Requried for development if HAVEFILE is not defined */
-#define STATICKEY "dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4"
-
-/* In development. Regraded as unstable */
-#define CHECKKEY		/* Histogram checking of the key */
+/* In development. Regraded as unstable. Those functions are nice but not critical. */
+#define CHECKKEY		/* Histogram/repeat checking of the key */
+#define RNDMSGLEN		/* Add a random-length string onto the message */
 
 /*  ----------------- Lib One-Time Pad Functions (Internal)------------------ */
 
@@ -77,7 +80,7 @@ static int otp_xor(char **message,char **key,int len) {
 	}
 /* 	otp_printint(m,len);	 */
 	*message=m;
-	free(*key);
+	g_free(*key);
 	return TRUE;
 }
 
@@ -86,7 +89,7 @@ static int otp_printint(char *m,int len) {
 	int i;
 	printf("\t\tIntegers:\t");
 	for (i = 0;i < len;i++) {
-		printf("%d ",m[i]);
+		printf("%i ",m[i]);
 	}
 	printf("\n");
 	return TRUE;
@@ -160,7 +163,6 @@ static struct otp* otp_seek_start(struct otp* pad){
 	}else{
 		return NULL;
 	}
-	printf("test\n");
 	return pad;
 }
 
@@ -178,18 +180,20 @@ static char* otp_check_id(char* id_str){
  * repeatprob=(1/256)^(repeatlength-1)*(keylength-repeatlength) (please check this formula)
  * */
 static int otp_check_key(char **key,int len) {
-//	int histo[256]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+	int histo[256]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 	int i,rep=1;
-	double repeatprob=1.0;
-//	int histomax;
-//	char *c="1234567890000000";
+	double repeatprob=1.0,average=0.0,sigma=0.0;
+	int histomax=0; int histomin=len;
+//	char *c="123456789989889000000000000000000000000000000000000000000000000000000000000000000000";
 //	len=strlen(c);
 	char *c;
 	c=*key;
 	char lastc='\0';
 	
+	//otp_printint(*key,len);
+	
 	for(i=0;i<len;i++) {
-//		histo[(unsigned int)c[i]]++;
+		histo[(unsigned char)c[i]]++;
 		if (c[i]==lastc) {
 			rep++;
 			repeatprob*=(1/256.0); /* I don't like math.h */
@@ -197,16 +201,26 @@ static int otp_check_key(char **key,int len) {
 			lastc=c[i];
 		}
 	}
-	repeatprob*=(len-rep);
-//	histomax=0;
-//	for (i=0;i<256;i++) {
-//		if (histomax<histo[i]) {histomax=histo[i];}
-//		printf("%d ",histo[i]);
-//	}
-//	printf("\n%d\t\t%d\t\t%d\n",len,histomax,rep);
-	printf("\n%e\n\n",repeatprob);
 	
-	if (repeatprob<REPEATTOL) {
+	for (i=0;i<256;i++) {
+		average+=histo[i]*i;
+		if (histomax<histo[i]) {histomax=histo[i];}
+		if (histomin>histo[i]) {histomin=histo[i];}
+//		printf("%d ",histo[i]);
+	}
+	
+	average/=len;
+	sigma=average*255/256;  /* sqrt needed */
+	
+//	for (i=1;i*i<sigma;i++) {}
+//	sigma=i;
+//	printf("%i",i);
+	if((len-rep)<0) repeatprob*=(len-rep);
+	
+//	printf("\nlen:%i  ,histomax:%i  ,histomin:%i  ,average:%e,  sigma:%e\n",len,histomax,histomin,average,sigma);
+//	printf("Probability for a repeat of len %i: %e\n",rep,repeatprob);
+	
+	if (repeatprob<REPEATTOL) { /* Fail if the probability for a random key to be that structured is bigger than the tolerance. */
 		return FALSE;
 	}
 	return TRUE;
@@ -230,7 +244,7 @@ static int otp_get_encryptkey_from_file(char **key , struct otp* pad, int len) {
 	}
 	
 	if (otp_open_keyfile(fd,data,pad)) {		/* Open the keyfile */
-		char *vkey = (char *) malloc( (len) * sizeof(char) );
+		char *vkey = (char *) g_malloc( (len) * sizeof(char) );
 		memcpy( vkey, *data+position ,len-1);  		/* the pad could be anything... use memcpy */
 		*key=vkey;
 /* 		otp_printint(*key,len-1); */
@@ -261,7 +275,7 @@ static int otp_get_encryptkey_from_file(char **key , struct otp* pad, int len) {
 	
 #ifdef CHECKKEY
 /* What should i do if the key is rejected? ATM it just fails.*/
-	if (otp_check_key(key,len)==FALSE) {
+	if (otp_check_key(key,len-1)==FALSE) {
 		return FALSE;
 	}
 #endif
@@ -278,7 +292,7 @@ static int otp_get_decryptkey_from_file(char **key , struct otp* pad, int len, i
 		return FALSE;
 	}
 	if (otp_open_keyfile(fd,data,pad)) {		/* Open the keyfile */
-		char *vkey = (char *) malloc( (len) * sizeof(char) );
+		char *vkey = (char *) g_malloc( (len) * sizeof(char) );
 /* 		printf("\ntest\t\t\t:%d\n\n",pad->filesize-decryptpos - (len -1)); */
 
 		char *datpos = *data + pad->filesize - decryptpos - (len - 1);
@@ -332,7 +346,7 @@ static int otp_udecrypt(char **message, struct otp* pad, int decryptpos) {
 	}
 #else
 	char k[]=STATICKEY;
-	char *vkey = (char *) malloc( (*len) * sizeof(char) );
+	char *vkey = (char *) g_malloc( (*len) * sizeof(char) );
 	memcpy(vkey,k,*len-1); 					/* the pad could be anything... use memcpy */
 	*key=vkey; 
 #endif
@@ -346,22 +360,49 @@ static int otp_udecrypt(char **message, struct otp* pad, int decryptpos) {
 static int otp_uencrypt(char **message, struct otp* pad) {
 	int a = (strlen(*message)+1) * sizeof(char);				/* get length of the used memory*/
 	int *len=&a;
-	char *b=""; char **key; key=&b;
-
+	char *d=""; char **rand; rand=&d;
+	char *c=""; char **key; key=&c;
+	char *msg;
+	int rnd;
 
 #ifdef HAVEKEYFILE
+
+#ifdef RNDMSGLEN
+
+
+	if ( otp_get_encryptkey_from_file(rand,pad,2) == FALSE ) { /* get one byte from keyfile for length */
+		return FALSE;
+	}
+	rnd=(unsigned char)*rand[0]*RNDLENMAX/255;
+//	printf("# of chars added randomly: %i\n",rnd);
+	g_free(*rand);
+	msg = g_malloc0(rnd+*len);	/* Create a new,longer message */
+	memcpy(msg,*message,*len-1); 
+	g_free(*message);
+	*message=msg;	
+	
+	*len+=rnd;
+#endif
+	
 	if ( otp_get_encryptkey_from_file(key,pad,*len) == FALSE ) {
 		return FALSE;
 	}
+	
+	
+	
 #else
 
 	char k[]=STATICKEY; 
-	char *vkey = (char *) malloc( (*len) * sizeof(char) );
+	char *vkey = (char *) g_malloc( (*len) * sizeof(char) );
 	memcpy(vkey,k,*len-1); 					/* the pad could be anything... use memcpy */
 	*key=vkey;
 #endif
 
+
+//	otp_printint(*key,*len);
+//	otp_printint(*message,*len);
 	otp_xor( message , key, *len);				/* xor */
+//	otp_printint(*message,*len);
 	otp_b64enc( message , len );				/* encode base64 */
 	
 	return TRUE;
@@ -517,7 +558,7 @@ unsigned int otp_generate_key_pair(const char* alice,const  char* bob,const char
 	int j=0;
 	char temp[BLOCKSIZE];
 	//otp_printint(*adata,afilesize);
-	printf("Filesize:%u\n",afilesize);
+//	printf("Filesize:%u\n",afilesize);
 	for(i=afilesize-BLOCKSIZE;i>=0;i=i-BLOCKSIZE) {
 			for(j=0;j<BLOCKSIZE;j++) {
 				temp[BLOCKSIZE-1-j]=*(*adata+i+j);
@@ -546,15 +587,22 @@ unsigned int otp_encrypt_warning(struct otp* pad, char **message, int protected_
 	if(pad == NULL) {
 		return FALSE;
 	}
+	
+	int oldpos=pad->position;
 	pad->protected_position = pad->filesize / 2 - OTP_PROTECTED_ENTROPY-protected_pos;  /* Assign a position in the protected entropy */
 	
-	char *pos_str = g_strdup_printf ("%u",pad->protected_position);			/* Our position in the pad*/
+#ifdef RNDMSGLEN
+	oldpos+=1;
+#endif	
+
 #ifdef UCRYPT
 	if (otp_uencrypt(message,pad) == FALSE) {			/* Encrypt and base64 */
 		pad->protected_position=0;
 		return FALSE;
 	}
-#endif				
+#endif	
+
+	char *pos_str = g_strdup_printf ("%u",oldpos);			/* Our position in the pad*/			
 
 	char *new_msg = g_strconcat(pos_str,MSG_DELI,pad->id,MSG_DELI,*message,NULL);	/*Something like "3EF9|34EF4588|M+Rla2w=" */
 	g_free(*message);
@@ -584,7 +632,7 @@ char* otp_get_id_from_message(char **message){
    or if the file is missing */
 struct otp* otp_get_from_file(const char* path, const char* input_filename){
 	static struct otp* pad;
-   	pad = (struct otp *) malloc(sizeof(struct otp));
+   	pad = (struct otp *) g_malloc(sizeof(struct otp));
    	pad->protected_position=0;
 
 	if (input_filename == NULL ) {	/* empty filename */
@@ -665,13 +713,19 @@ unsigned int otp_encrypt(struct otp* pad, char **message){
 		return FALSE;
 	}
 	pad->protected_position=0;
-	char *pos_str = g_strdup_printf ("%u",pad->position);			/* Our position in the pad*/
+	int oldpos=pad->position;
+	
+#ifdef RNDMSGLEN
+	oldpos+=1;
+#endif	
 
 #ifdef UCRYPT
 	if (otp_uencrypt(message,pad) == FALSE) {			/* Encrypt and base64 */
 		return FALSE;
 	}
-#endif				
+#endif	
+
+	char *pos_str = g_strdup_printf ("%u",oldpos);			/* Our position in the pad*/			
 
 	char *new_msg = g_strconcat(pos_str,MSG_DELI,pad->id,MSG_DELI,*message,NULL);	/*Something like "3EF9|34EF4588|M+Rla2w=" */
 	g_free(*message);

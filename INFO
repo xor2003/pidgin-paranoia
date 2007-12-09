@@ -34,7 +34,7 @@ plaintext, every ciphertext with a certain length can decrypt to any plaintext,
 if decrypted with the appropriate key. If truly random keys are used and not 
 repeated, the interception of ciphertext does not give the adversary information
 about the plaintext (except information about the length of the 
-plaintext in some implementations). 
+plaintext in some implementations).
 Other cryptosystems like symmetric and asymmetric encryption are computationally
 secure but not information-theoretically secure since the adversary has the 
 information in theory needed to recover the plaintext but is limited in practice
@@ -72,11 +72,14 @@ the pad is only used once and the encryption is therefore secure! The encrypted
 message is converted into Base64 (i.e. "M+Rla2w=") to ensure compatibility with 
 different transport layers.
 
-A string formed like "3EF9|34EF4588|M+Rla2w=" is transmitted.
- * "3EF9" is the position (as a hexadecimal number) where Alice started reading 
+A string formed like "3234|34EF4588|M+Rla2w=" is transmitted.
+ * "3233" is the position (base 10) where Alice started reading 
    in her key file.
  * "34EF4588" is the ID used to check if both have compatible key files.
  * "M+Rla2w=" is the Base64 encoded encrypted message.
+
+To prevent the adversary from knowing the exact length of the message, a random
+length tail of \0-bytes is added and encrypted. 
 
 1.4 Decryption:
 --------------------------------------------------------------------------------
