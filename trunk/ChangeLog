@@ -28,7 +28,9 @@ Christan Wäckerlin:
    support for development.
  * Added support for protected entropy signaling (i.e. no entropy  signal)
  * Added support for keyfile creation
- * Addes support for the destruction of keyfiles (using up all entropy)
+ * Added support for the destruction of keyfiles (using up all entropy)
+ * Added support for key check using repeatprobability.
+ * Added suuport for addition of a random tail onto the encrypted message to prevent 'eve' from knowing the exact length of the message
 
 
 Known bugs:

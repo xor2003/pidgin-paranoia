@@ -22,3 +22,5 @@ other
 Wishlist
  * /otp scan, to read in new keys
  * replace fake <otp>
+ * libotp: Detailed error-messages/error-numbers instead of return FALSE
+ * Commandline program that can use libotp for general usage
