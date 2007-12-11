@@ -12,7 +12,7 @@ paranoia.c
  * check message size limits
  * gettext support
  * send PARANOIA_CLOSE to all conversations on plugin unload
- 
+ * optimize key list (sort it intelligent)
  
 other
  * Design a simple web page
