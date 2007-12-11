@@ -109,6 +109,15 @@ static gboolean par_censor_internal_msg(char** message) {
 	return FALSE;
 }
 
+/* Strip the Jabber ressource (/home /mobile ect.) */
+static char* par_strip_jabber_ressource(const char* acc) {
+	
+	gchar** str_array = g_strsplit(acc, "/", 2);
+	char* acc_copy = g_strdup(str_array[0]);
+	g_strfreev(str_array);
+	return acc_copy;
+}
+
 // ----------------- Paranoia Key Management ------------------
 
 /* key options struct */
@@ -242,25 +251,10 @@ static void par_free_key_list() {
 /* searches a key in the keylist, ID is optional, if no ID: searches first src/dest match */
 static struct key* par_search_key(const char* src, const char* dest, const char* id) {
 
-	// FIXME: cleanup
-
-	// TODO: only for jabber and msn?
-	// strip the jabber resource from src (/home /mobile ect.)
-	const char d[] = "/";
-
-	gchar** str_array = g_strsplit(src, d, 2);
-	char* src_copy = g_strdup(str_array[0]);
+	char* src_copy = par_strip_jabber_ressource(src);
 	//printf("paranoia !!!!!!!!!!:\tResource remover: my_acc\t%s\n", src_copy);
-	g_strfreev(str_array);
-
-	// strip the jabber resource from dest (/home /mobile ect.)
-	str_array = g_strsplit(dest, d, 2);
-	char* dest_copy = g_strdup(str_array[0]);
+	char* dest_copy = par_strip_jabber_ressource(dest);
 	//printf("paranoia !!!!!!!!!!:\tResource remover: other_acc\t%s\n", dest_copy);
-	g_strfreev(str_array);
-
-	// ---- end stripping -----
-
 
 	struct key* tmp_ptr = keylist;
 
@@ -532,10 +526,7 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv, const gchar *cmd
 		}
 		else if(strncmp("genkey ", *args, 7) == 0){
 			// otp genkey
-
-			//skip "genkey "
-			*args += 7;
-			gchar** param_array = g_strsplit(*args, " ", 2);
+			gchar** param_array = g_strsplit(*args + 7, " ", 2); //skip "genkey "
 			//purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "dest: %s\n", param_array[0]);
 			//purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "size: %s\n", param_array[1]);
 			// check
@@ -573,8 +564,7 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv, const gchar *cmd
 					// FIXME: additional garbage is just ignored
 					// FIXME: size limit?
 					purple_conversation_write(conv, NULL, "Please wait. Generating keys...", PURPLE_MESSAGE_NO_LOG, time(NULL));
-					const char* my_acc = purple_account_get_username(purple_conversation_get_account(conv));
-					
+					const char* my_acc = par_strip_jabber_ressource(purple_account_get_username(purple_conversation_get_account(conv)));
 					if(otp_generate_key_pair(my_acc, param_array[0], global_otp_path, "/dev/urandom", size*1024)) {
 						purple_conversation_write(conv, NULL, "Two key files successfully generated.", PURPLE_MESSAGE_NO_LOG, time(NULL));
 						// debug
