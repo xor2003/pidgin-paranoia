@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 /* to manipulate files */
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -43,7 +44,8 @@
 #define NOENTROPY_SIGNAL "*** I'm out of entropy!"	/* The message that is send in case the sender is out of entropy */
 #define BLOCKSIZE 1024		/* The blocksize used in the keyfile creation function */
 #define ERASEBLOCKSIZE 1024	/* The blocksize used in the key eraseure function */
-#define REPEATTOL 1E-12		/* If a repeated secquence with less probability then this occurs, throw the key away */ 
+#define REPEATTOL 1E-12		/* If a repeated sequence with less probability then this occurs, throw the key away */ 
+#define NUMBERSIGMA 6		/* (not implemented) If the sum over the key is more than this number of sigmas away from the average, then reject key (probability:1.9*10^-9) */
 #define RNDLENMAX 30		/* Maximal length of the added random-length tail onto the encrypted message */
 
 /* Requried for development if HAVEFILE is not defined */
@@ -177,50 +179,57 @@ static char* otp_check_id(char* id_str){
 
 /* Checks the key by statistical means 
  * 
- * repeatprob=(1/256)^(repeatlength-1)*(keylength-repeatlength) (please check this formula)
+ * repeatprob=(1/256)^(repeatlength-1)*(keylength-repeatlength+1) (please check this formula)
+ * 
+ * expected number in lower half n_lower (not yet implemented)
+ * Standard deviation sigma=sqrt(len/2/2)
+ * Rejected if sum more then n sigmas away from exp_sum
+ * n=4 : 6.44*10^-5
+ * n=5 : 5.73*10^-7
+ * n=6 : 1.97*10^-9
  * */
 static int otp_check_key(char **key,int len) {
-	int histo[256]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+//	int histo[256]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 	int i,rep=1;
-	double repeatprob=1.0,average=0.0,sigma=0.0;
-	int histomax=0; int histomin=len;
-//	char *c="123456789989889000000000000000000000000000000000000000000000000000000000000000000000";
+	double repeatprob;
+//	double sigma=0.0;
+//	int lower=0;
+//	int histomax=0; int histomin=len;
+//	char *c="098988787098709870987098709870887987098709870987000";
 //	len=strlen(c);
 	char *c;
 	c=*key;
-	char lastc='\0';
+	int lastc=257; /* This is not a char */
 	
 	//otp_printint(*key,len);
 	
 	for(i=0;i<len;i++) {
-		histo[(unsigned char)c[i]]++;
+//		histo[(unsigned char)c[i]]++;
+//		if (c[i]<127) lower++;
 		if (c[i]==lastc) {
 			rep++;
-			repeatprob*=(1/256.0); /* I don't like math.h */
 		}else{
 			lastc=c[i];
 		}
 	}
+	repeatprob=pow(1/256.0,rep-1.0)*(len-rep+1);
 	
-	for (i=0;i<256;i++) {
-		average+=histo[i]*i;
-		if (histomax<histo[i]) {histomax=histo[i];}
-		if (histomin>histo[i]) {histomin=histo[i];}
+//	for (i=0;i<256;i++) {
+//		average+=histo[i]*i;
+//		if (histomax<histo[i]) {histomax=histo[i];}
+//		if (histomin>histo[i]) {histomin=histo[i];}
 //		printf("%d ",histo[i]);
-	}
+//	}
 	
-	average/=len;
-	sigma=average*255/256;  /* sqrt needed */
+//	sigma=sqrt(len/4.0);
 	
-//	for (i=1;i*i<sigma;i++) {}
-//	sigma=i;
-//	printf("%i",i);
-	if((len-rep)<0) repeatprob*=(len-rep);
-	
-//	printf("\nlen:%i  ,histomax:%i  ,histomin:%i  ,average:%e,  sigma:%e\n",len,histomax,histomin,average,sigma);
+//	printf("\nlen:%i  ,lower:%i,  n*sigma:%f, lower border:%f,  higher border:%f\n",len,lower,NUMBERSIGMA*sigma,len/2.0-NUMBERSIGMA*sigma,len/2.0+NUMBERSIGMA*sigma);
 //	printf("Probability for a repeat of len %i: %e\n",rep,repeatprob);
 	
-	if (repeatprob<REPEATTOL) { /* Fail if the probability for a random key to be that structured is bigger than the tolerance. */
+	
+	
+	if (repeatprob<REPEATTOL) { /* Fail if the probability for a random key to have a repeat is smaller than the tolerance. */
+		printf("Probability for a repeat of len %i: %e\n",rep,repeatprob);
 		return FALSE;
 	}
 	return TRUE;
@@ -250,7 +259,25 @@ static int otp_get_encryptkey_from_file(char **key , struct otp* pad, int len) {
 /* 		otp_printint(*key,len-1); */
 	
 		char *datpos=*data+position;
-	
+
+
+#ifdef CHECKKEY
+/* What should i do if the key is rejected? ATM it just fails and destroys the keyblock.*/
+	if (otp_check_key(key,len-1)==FALSE) {
+		
+#ifdef KEYOVERWRITE	
+		if (pad->protected_position != 0) {	/* using protected entropy, do not destroy the protected entropy */
+		}else{						
+			for(i = 0 ; i < ( len - 1) ; i++){		/* Make the used key unusable in the keyfile */
+/* 				printf(" %d \n",datpos[i]); */
+				datpos[i] = PAD_EMPTYCHAR;
+/* 				printf(" %d \n",datpos[i]); */
+			}
+		}
+#endif
+		return FALSE;
+	}
+#endif
 
 #ifdef KEYOVERWRITE	
 		if (pad->protected_position != 0) {	/* using protected entropy, do not destroy the protected entropy */
@@ -273,12 +300,6 @@ static int otp_get_encryptkey_from_file(char **key , struct otp* pad, int len) {
 		return FALSE;
 	}
 	
-#ifdef CHECKKEY
-/* What should i do if the key is rejected? ATM it just fails.*/
-	if (otp_check_key(key,len-1)==FALSE) {
-		return FALSE;
-	}
-#endif
 	return TRUE;
 
 }
@@ -445,28 +466,36 @@ unsigned int otp_generate_key_pair(const char* alice,const  char* bob,const char
 	if(alice == NULL || bob == NULL || path == NULL || source == NULL || size==0) {
 		return FALSE;
 	}
+	
+	/* Check for things like '/'. Alice and Bob will become filenames */
+	if ((g_strrstr(alice,PATH_DELI)!=NULL) || (g_strrstr(bob,PATH_DELI)!=NULL)) {
+		return FALSE;	
+	}
+	
 	if ( size/BLOCKSIZE == (float) size/BLOCKSIZE ) { /* The function can only generate Keyfiles with a filesize of n*BLOCKSIZE */
 		size=size/BLOCKSIZE;
 	}else{
 		size=size/BLOCKSIZE+1;
 	}	
-	
+
 	int rfd=0;
 	if ((rfd = open(source, O_RDONLY)) == -1) {
 		perror("open");
 		return FALSE;
 	}
+	
 	struct stat rfstat;
 	if (stat(source, &rfstat) == -1) {
 		perror("stat");
 		return FALSE;
 	}
-	
+
 	unsigned int rfilesize = rfstat.st_size;
 	if ( !( ((rfstat.st_mode|S_IFCHR) == rfstat.st_mode) || (rfilesize >= size*BLOCKSIZE) ) ) {		/* If the source is to small and not a character dev */
 		//printf("The source '%s' is too small!\n",source);
 		return FALSE;
 	}
+	
 
 	unsigned int id;
 	read (rfd,&id,sizeof(id));		/* Our ID */
@@ -474,10 +503,12 @@ unsigned int otp_generate_key_pair(const char* alice,const  char* bob,const char
 
 	char *idstr=g_strdup_printf ("%.8X",id);			/* Our ID string */;
 	
-	
+
 	/* Create the directory for the entropy files if it does not exist */	
+
 	DIR *dp;
 	dp = opendir (path);
+
 	if (dp == NULL) {
 		mkdir(path, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP );	/* Create the directory */
 	}else{
@@ -497,13 +528,12 @@ unsigned int otp_generate_key_pair(const char* alice,const  char* bob,const char
 		close(rfd);
 		return FALSE; 	/* File already exists. I will not overwrite any existing file!*/
 	}
-
 	if ((afd = open(afilename, O_RDWR|O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP )) == -1) {
 		perror("open");
 		close(rfd);
 		return FALSE;
-	}
-		
+	}	
+	
 	char rand[BLOCKSIZE];
 	int i=0;
 	
@@ -541,6 +571,7 @@ unsigned int otp_generate_key_pair(const char* alice,const  char* bob,const char
 	}
 	
 	
+	
 	/* Opening a memory map for the first file */
 	struct stat afstat;
 	if (stat(afilename, &afstat) == -1) {
@@ -568,7 +599,7 @@ unsigned int otp_generate_key_pair(const char* alice,const  char* bob,const char
 	}
 	
 	
-	/* Close the secound file */
+	/* Close the second file */
 	close(bfd);
 	
 	/* Close the first file */
