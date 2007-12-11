@@ -49,7 +49,7 @@ void otp_destroy(struct otp* mypad);
 char* otp_get_id_from_message(char **message);
 
 /* generates a new key pair (two files) with the name alice and bob of 'size' bytes.*/
-unsigned int otp_generate_key_pair(const char* alice,const char* bob,const char* path,const char* source, unsigned int size);
+unsigned int otp_generate_key_pair(const char* alice, const char* bob, const char* path, const char* source, unsigned int size);
 
 /* encrypts a message with the protected entropy. protected_pos is the position in bytes to use. 
  The entropy is not consumed by this function. 
