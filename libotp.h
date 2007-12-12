@@ -48,13 +48,13 @@ void otp_destroy(struct otp* mypad);
    Leaves the message constant. Returns NULL if it fails. */
 char* otp_get_id_from_message(char **message);
 
-/* generates a new key pair (two files) with the name alice and bob of 'size' bytes.*/
+/* generates a new key pair (two files) with the name alice and bob of 'size' bytes. */
 unsigned int otp_generate_key_pair(const char* alice, const char* bob, const char* path, const char* source, unsigned int size);
 
 /* encrypts a message with the protected entropy. protected_pos is the position in bytes to use. 
  The entropy is not consumed by this function. 
  To used the function securely, the signal-messages should not overlap and every signal has to stay constant! 
- When only one signal is used, use protected_pos=0.*/
+ When only one signal is used, use protected_pos=0. */
 unsigned int otp_encrypt_warning(struct otp* mypad, char **message, int protected_pos);
 
 /* destroys a keyfile by using up all encryption-entropy */
