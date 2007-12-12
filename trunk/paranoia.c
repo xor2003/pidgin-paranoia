@@ -47,6 +47,7 @@
 // ----------------- General Paranoia Stuff ------------------
 #define PARANOIA_HEADER "*** Encrypted with the Pidgin-Paranoia plugin: "
 #define PARANOIA_REQUEST "*** Request for conversation with the Pidgin-Paranoia plugin (%s): I'm paranoid, please download the One-Time Pag plugin (link) to communicate encrypted."
+#define PARANOIA_REQUEST_LEN 60
 #define PARANOIA_STATUS "&lt;otp&gt; "
 
 #define PARANOIA_ACK "%!()!%paranoia ack" // not used atm
@@ -65,10 +66,8 @@ char* global_otp_path;
 void par_add_header(char** message) {
 
 	char* new_msg = g_strconcat(PARANOIA_HEADER, *message, NULL);
-
 	g_free(*message);
 	*message = new_msg;
-	//printf("paranoia:\t\tHeader+Message:\t%s\n", *message);
 	return;
 }
 
@@ -82,7 +81,6 @@ static gboolean par_remove_header(char** message) {
 
 			g_free(*message);
 			*message = new_msg;
-			//printf("paranoia:\t\tMessage only:\t%s\n", *message);
 			return TRUE;
 		}	
 	}
@@ -126,7 +124,7 @@ struct options {
 	gboolean has_plugin; // the result of the request
 	gboolean otp_enabled; // on/off
 	gboolean auto_enable; // needed to be able to force disable
-	gboolean no_entropy; // if the entropy of one user is used completely: TRUE
+	gboolean no_entropy; // all entropy of one user was used completely
 };
 
 /* paranoia key struct (a linked list) */
@@ -216,7 +214,6 @@ static gboolean par_init_key_list() {
 				tmp_key->next = prev_key_ptr;
 				prev_key_ptr = tmp_key;
 			}
-
 		}
 		g_free(tmp_path);
 		tmp_filename = g_dir_read_name(directoryhandle);
@@ -273,7 +270,7 @@ static struct key* par_search_key(const char* src, const char* dest, const char*
 		}
 		tmp_ptr = tmp_ptr->next;
 	}
-
+	
 	g_free(src_copy);
 	g_free(dest_copy);
 	return NULL;
@@ -322,7 +319,8 @@ void par_session_ack(PurpleConversation *conv) {
 void par_session_close(PurpleConversation *conv) {
 
 	// send PARANOIA_EXIT
-	purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), PARANOIA_EXIT, 
+	purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), 
+		PARANOIA_EXIT, 
 		PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_RAW);
 
 	return;
@@ -331,9 +329,9 @@ void par_session_close(PurpleConversation *conv) {
 /* detects request messages and sets the key settings. Returns TRUE if found */
 static gboolean par_session_check_req(const char* alice, const char* bob, PurpleConversation *conv, char** message_no_header) {
 
-	if(strncmp(*message_no_header, PARANOIA_REQUEST, 60) == 0) {
+	if(strncmp(*message_no_header, PARANOIA_REQUEST, PARANOIA_REQUEST_LEN) == 0) {
 		// extract ID
-		char* tmp_ptr = *message_no_header + 62;
+		char* tmp_ptr = *message_no_header + PARANOIA_REQUEST_LEN + 2;
 		char* id = g_strndup(tmp_ptr, OTP_ID_LENGTH);
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "REQUEST ID EXTRACTED: %s\n", id);
 		
@@ -343,7 +341,9 @@ static gboolean par_session_check_req(const char* alice, const char* bob, Purple
 			if(temp_key->opt->auto_enable && !temp_key->opt->no_entropy) {
 				temp_key->opt->ack_sent = FALSE;
 				temp_key->opt->otp_enabled = TRUE;
-				purple_conversation_write(conv, NULL, "Encryption enabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+				purple_conversation_write(conv, NULL, 
+					"Encryption enabled.", 
+					PURPLE_MESSAGE_NO_LOG, time(NULL));
 				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "REQUEST checked: now otp_enabled = TRUE.\n");
 			}
 		} else {
@@ -366,47 +366,59 @@ static gboolean par_session_check_msg(struct key* used_key, char** message_decry
 		return FALSE;
 	}
 	/*
-	if(strncmp(*message_decrypted, PARANOIA_ACK, 18) == 0) { // FIXME: dynamic size
+	if(strncmp(*message_decrypted, PARANOIA_ACK, strlen(PARANOIA_ACK)) == 0) {
 		// TODO: move ACK inside the first sent message
 		used_key->opt->has_plugin = TRUE;
 		if(used_key->opt->auto_enable) {
 			used_key->opt->otp_enabled = TRUE;
-			purple_conversation_write(conv, NULL, "Encryption enabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+			purple_conversation_write(conv, NULL, 
+				"Encryption enabled.", 
+				PURPLE_MESSAGE_NO_LOG, time(NULL));
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "PARANOIA_ACK detected! otp_enabled=TRUE \n");
 		}
 		return TRUE;
 	} */
 	// check START, STOP, EXIT and NO_ENTROPY
-	if (strncmp(*message_decrypted, PARANOIA_EXIT, 20) == 0) { // FIXME: dynamic size
+	if (strncmp(*message_decrypted, PARANOIA_EXIT, strlen(PARANOIA_EXIT)) == 0) {
 		used_key->opt->otp_enabled = FALSE;
 		used_key->opt->has_plugin = FALSE;
-		purple_conversation_write(conv, NULL, "Encryption disabled (remote).", PURPLE_MESSAGE_NO_LOG, time(NULL));
+		purple_conversation_write(conv, NULL, 
+			"Encryption disabled (remote).", 
+			PURPLE_MESSAGE_NO_LOG, time(NULL));
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "PARANOIA_EXIT detected! otp_enabled=FALSE\n");
 		return TRUE;
 	}
-	if (strncmp(*message_decrypted, PARANOIA_START, 21) == 0) { // FIXME: dynamic size
+	if (strncmp(*message_decrypted, PARANOIA_START, strlen(PARANOIA_START)) == 0) {
 		if(used_key->opt->auto_enable) {
 			used_key->opt->has_plugin = TRUE;
 			used_key->opt->otp_enabled = TRUE;
-			purple_conversation_write(conv, NULL, "Encryption enabled (remote).", PURPLE_MESSAGE_NO_LOG, time(NULL));
+			purple_conversation_write(conv, NULL, 
+				"Encryption enabled (remote).", 
+				PURPLE_MESSAGE_NO_LOG, time(NULL));
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "PARANOIA_START detected! otp_enabled=TRUE\n");
 		} else {
-			purple_conversation_write(conv, NULL, "This buddy would like to chat encrypted.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+			purple_conversation_write(conv, NULL, 
+				"This buddy would like to chat encrypted.", 
+				PURPLE_MESSAGE_NO_LOG, time(NULL));
 		}
 		return TRUE;
 	}
-	if (strncmp(*message_decrypted, PARANOIA_STOP, 20) == 0) { // FIXME: dynamic size
+	if (strncmp(*message_decrypted, PARANOIA_STOP, strlen(PARANOIA_STOP)) == 0) {
 		used_key->opt->otp_enabled = FALSE;
-		purple_conversation_write(conv, NULL, "Encryption disabled (remote).", PURPLE_MESSAGE_NO_LOG, time(NULL));
+		purple_conversation_write(conv, NULL, 
+			"Encryption disabled (remote).", 
+			PURPLE_MESSAGE_NO_LOG, time(NULL));
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "PARANOIA_STOP detected! otp_enabled=FALSE\n");
 		return TRUE;
 	}
-	if (strncmp(*message_decrypted, PARANOIA_NO_ENTROPY, 21) == 0) { // FIXME: dynamic size
+	if (strncmp(*message_decrypted, PARANOIA_NO_ENTROPY, strlen(PARANOIA_NO_ENTROPY)) == 0) {
 		used_key->opt->otp_enabled = FALSE;
 		used_key->opt->no_entropy = TRUE;
 		used_key->opt->auto_enable = FALSE;
-		// TODO: maybe we should destroy our key too.
-		purple_conversation_write(conv, NULL, "Your converstation partner is out of entropy. Encryption disabled (remote).", PURPLE_MESSAGE_NO_LOG, time(NULL));
+		// TODO: maybe we should destroy our key too. (?)
+		purple_conversation_write(conv, NULL, 
+			"Your converstation partner is out of entropy. Encryption disabled (remote).", 
+			PURPLE_MESSAGE_NO_LOG, time(NULL));
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "PARANOIA_NO_ENTROPY detected! otp_enabled=FALSE\n");
 		return TRUE;
 	}
@@ -442,26 +454,35 @@ static gboolean par_cli_try_enable_enc(PurpleConversation *conv) {
 				if(!used_key->opt->otp_enabled) {
 					used_key->opt->otp_enabled = TRUE;
 					used_key->opt->ack_sent = FALSE;
-					purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), PARANOIA_START, 
+					purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), 
+						PARANOIA_START, 
 						PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
-					purple_conversation_write(conv, NULL, "Encryption enabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+					purple_conversation_write(conv, NULL, 
+						"Encryption enabled.", 
+						PURPLE_MESSAGE_NO_LOG, time(NULL));
 				} else {
-					purple_conversation_write(conv, NULL, "Encryption already enabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+					purple_conversation_write(conv, NULL, 
+						"Encryption already enabled.", 
+						PURPLE_MESSAGE_NO_LOG, time(NULL));
 				}
 			} else {
-				purple_conversation_write(conv, NULL, "Trying to enable encryption.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+				purple_conversation_write(conv, NULL, 
+					"Trying to enable encryption.", 
+					PURPLE_MESSAGE_NO_LOG, time(NULL));
 				par_session_request(conv);
 			}
 			used_key->opt->auto_enable = TRUE;
 			return TRUE;
 		}
-		purple_conversation_write(conv, NULL, "Couldn't enable the encryption. No entropy available.",
-				PURPLE_MESSAGE_NO_LOG, time(NULL));
+		purple_conversation_write(conv, NULL, 
+			"Couldn't enable the encryption. No entropy available.",
+			PURPLE_MESSAGE_NO_LOG, time(NULL));
 		return FALSE;
 	}
 	
-	purple_conversation_write(conv, NULL, "Couldn't enable the encryption. No key available.",
-			PURPLE_MESSAGE_NO_LOG, time(NULL));
+	purple_conversation_write(conv, NULL, 
+		"Couldn't enable the encryption. No key available.",
+		PURPLE_MESSAGE_NO_LOG, time(NULL));
 	return FALSE;
 }
 
@@ -471,32 +492,41 @@ static gboolean par_cli_disable_enc(PurpleConversation *conv) {
 	struct key* used_key = par_search_key_by_conv(conv);
 	if(used_key != NULL) {
 		if (used_key->opt->otp_enabled) {
-			purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), PARANOIA_STOP, 
+			purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), 
+				PARANOIA_STOP, 
 				PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
 			used_key->opt->otp_enabled = FALSE;
 			used_key->opt->auto_enable = FALSE;
-			purple_conversation_write(conv, NULL, "Encryption disabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+			purple_conversation_write(conv, NULL, 
+				"Encryption disabled.", 
+				PURPLE_MESSAGE_NO_LOG, time(NULL));
 		} else {
-			purple_conversation_write(conv, NULL, "Encryption already disabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+			purple_conversation_write(conv, NULL, 
+				"Encryption already disabled.", 
+				PURPLE_MESSAGE_NO_LOG, time(NULL));
 		}
 		return TRUE;
 	}
 	
-	purple_conversation_write(conv, NULL, "Couldn't disable the encryption. No key available.",
+	purple_conversation_write(conv, NULL, 
+		"Couldn't disable the encryption. No key available.",
 		PURPLE_MESSAGE_NO_LOG, time(NULL));
 	return FALSE;
 }
 
-/* shows all informatioon about a key of a conversation */
+/* shows all information about a key of a conversation */
 static void par_cli_key_details(PurpleConversation *conv) {
 
 	struct key* used_key = par_search_key_by_conv(conv);
-	char* disp_string = (char *) g_malloc((200) * sizeof(char)); // TODO: SIZE???
+	char* disp_string = (char *) g_malloc((200) * sizeof(char)); // TODO: EXACT SIZE???
 	if(used_key != NULL) {
 		sprintf( disp_string, 
-		"Key Infos:\nID: %s\nSize: %i\nPosition: %i\nEntropy: %i\nAck sent: %i\nHas plugin: %i\nOTP enabled: %i\nAuto enable: %i\nNo entropy: %i\nConv. pointer: %i",
-		used_key->pad->id, used_key->pad->filesize, used_key->pad->position, used_key->pad->entropy, used_key->opt->ack_sent, used_key->opt->has_plugin, 
-		used_key->opt->otp_enabled, used_key->opt->auto_enable, used_key->opt->no_entropy, (int) used_key->conv );
+		"Key Infos:\nID: %s\nSize: %i\nPosition: %i\nEntropy: %i\nAck sent: %i\nHas plugin: %i\nOTP enabled: %i\nAuto enable: %i\nNo entropy: %i",
+		used_key->pad->id, used_key->pad->filesize, 
+		used_key->pad->position, used_key->pad->entropy, 
+		used_key->opt->ack_sent, used_key->opt->has_plugin, 
+		used_key->opt->otp_enabled, used_key->opt->auto_enable, 
+		used_key->opt->no_entropy);
 
 	} else {
 		strcpy(disp_string, "There is no key available for this conversation.");
@@ -521,11 +551,11 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv, const gchar *cmd
 	}
 	else {
 		if(strcmp("help", *args) == 0){
-			// otp help
-			purple_conversation_write(conv, NULL, PARANOIA_HELP_STR, PURPLE_MESSAGE_NO_LOG, time(NULL));
+			purple_conversation_write(conv, NULL, 
+				PARANOIA_HELP_STR, 
+				PURPLE_MESSAGE_NO_LOG, time(NULL));
 		}
 		else if(strncmp("genkey ", *args, 7) == 0){
-			// otp genkey
 			gchar** param_array = g_strsplit(*args + 7, " ", 2); //skip "genkey "
 			//purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "dest: %s\n", param_array[0]);
 			//purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "size: %s\n", param_array[1]);
@@ -561,32 +591,35 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv, const gchar *cmd
 					return PURPLE_CMD_RET_FAILED;
 				} else {
 					// found a positive int -> DO IT!
-					// FIXME: additional garbage is just ignored
+					// FIXME: additional garbage is just ignored(?)
 					// FIXME: size limit?
-					purple_conversation_write(conv, NULL, "Please wait. Generating keys...", PURPLE_MESSAGE_NO_LOG, time(NULL));
+					purple_conversation_write(conv, NULL, 
+						"Please wait. Generating keys...", 
+						PURPLE_MESSAGE_NO_LOG, time(NULL));
 					const char* my_acc = par_strip_jabber_ressource(purple_account_get_username(purple_conversation_get_account(conv)));
 					if(otp_generate_key_pair(my_acc, param_array[0], global_otp_path, "/dev/urandom", size*1024)) {
-						purple_conversation_write(conv, NULL, "Two key files successfully generated.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+						purple_conversation_write(conv, NULL, 
+							"Two key files successfully generated.", 
+							PURPLE_MESSAGE_NO_LOG, time(NULL));
 						// debug
 						purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Generated two otp files of %d MB size.\n", (gint) size);
 					} else {
-						purple_conversation_write(conv, NULL, "Key files could not be generated.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+						purple_conversation_write(conv, NULL, 
+							"Key files could not be generated.", 
+							PURPLE_MESSAGE_NO_LOG, time(NULL));
 					}
 				}
 			}
 			g_strfreev(param_array);
-
+			
 		}
 		else if(strcmp("on", *args) == 0){
-			// otp on
 			par_cli_try_enable_enc(conv);
 		}
 		else if(strcmp("off", *args) == 0){
-			// otp off
 			par_cli_disable_enc(conv);
 		}
 		else if(strcmp("info", *args) == 0){
-			// otp key info
 			par_cli_key_details(conv);
 		}
 		// TODO: add more commands
@@ -689,7 +722,9 @@ static gboolean par_im_msg_receiving(PurpleAccount *account, char **sender,
 			// disable encryption if unencrypted message received but not waiting for ack
 			if (used_key->opt->otp_enabled && used_key->opt->ack_sent) {
 				used_key->opt->otp_enabled = FALSE;
-				purple_conversation_write(conv, NULL, "Encryption disabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+				purple_conversation_write(conv, NULL, 
+					"Encryption disabled.", 
+					PURPLE_MESSAGE_NO_LOG, time(NULL));
 			}
 		}
 
@@ -745,10 +780,12 @@ static gboolean par_im_msg_receiving(PurpleAccount *account, char **sender,
 			if(used_key->opt->auto_enable) {
 				used_key->opt->has_plugin = TRUE;
 				used_key->opt->otp_enabled = TRUE;
-				purple_conversation_write(conv, NULL, "Encryption enabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+				purple_conversation_write(conv, NULL, 
+					"Encryption enabled.", 
+					PURPLE_MESSAGE_NO_LOG, time(NULL));
 				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "This conversation was already initialized! otp_enabled is now TRUE\n");
 				// detect REQUEST; needed for a auto-init
-				if(strncmp(*message, PARANOIA_REQUEST, 60) == 0) {
+				if(strncmp(*message, PARANOIA_REQUEST, PARANOIA_REQUEST_LEN) == 0) {
 					purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "He sends us an encrypted REQUEST message. otp_enabled is now TRUE\n");
 					return TRUE;
 				}
@@ -766,13 +803,10 @@ static gboolean par_im_msg_receiving(PurpleAccount *account, char **sender,
 }
 
 
-
-
 /* --- signal handler for "sending-im-msg" --- */
-static void par_im_msg_sending(PurpleAccount *account, const char *receiver,
-                             char **message) {
+static void par_im_msg_sending(PurpleAccount *account, const char *receiver, 
+		char **message) {
 	
-	// my account name, alice@jabber.org
 	const char* my_acc_name = purple_account_get_username(account);
 
 	// debug
@@ -788,8 +822,8 @@ static void par_im_msg_sending(PurpleAccount *account, const char *receiver,
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Found a matching Key with pad ID: %s\n", used_key->pad->id);
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "otp_enabled == %i\n", used_key->opt->otp_enabled);
 
-		// add the ID to the request message
-		if(strncmp(*message, PARANOIA_REQUEST, 60) == 0) {
+		// add the ID to the request message (FIXME: optimize!)
+		if(strncmp(*message, PARANOIA_REQUEST, PARANOIA_REQUEST_LEN) == 0) {
 			// don't send requests if I have no entropy.
 			if(used_key->opt->no_entropy) {
 				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "NO entropy available. Won't sent REQUEST.\n");
@@ -816,7 +850,9 @@ static void par_im_msg_sending(PurpleAccount *account, const char *receiver,
 				used_key->opt->no_entropy = TRUE;
 				used_key->opt->otp_enabled = FALSE;
 				used_key->opt->auto_enable = FALSE;
-				purple_conversation_write(used_key->conv, NULL, "All your entropy has been used. Encryption disabled. The last Message could not be sent.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+				purple_conversation_write(used_key->conv, NULL, 
+					"All your entropy has been used. Encryption disabled. The last Message could not be sent.", 
+					PURPLE_MESSAGE_NO_LOG, time(NULL));
 				// TODO: display the message in the msg too
 				// delete the remaining entropy
 				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "You have not enought entropy! no_entropy = TRUE\n");
@@ -834,7 +870,8 @@ static void par_im_msg_sending(PurpleAccount *account, const char *receiver,
 			} else {
 				// TODO: send an entropy warning (inside the real msg)
 				char *warning_msg = g_strdup_printf ("Your entropy is low! %i bytes left.", used_key->pad->entropy);
-				purple_conversation_write(used_key->conv, NULL, warning_msg, PURPLE_MESSAGE_NO_LOG, time(NULL));
+				purple_conversation_write(used_key->conv, NULL, 
+					warning_msg, PURPLE_MESSAGE_NO_LOG, time(NULL));
 				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, warning_msg);
 				g_free(warning_msg);
 			}
@@ -858,7 +895,7 @@ static void par_im_msg_sending(PurpleAccount *account, const char *receiver,
 
 	} else {
 		// don't send requests to users with no key.
-		if(strncmp(*message, PARANOIA_REQUEST, 60) == 0) {
+		if(strncmp(*message, PARANOIA_REQUEST, PARANOIA_REQUEST_LEN) == 0) {
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Found NO matching Key. Won't sent REQUEST.\n");
 			g_free(*message);
 			*message = NULL;
@@ -871,14 +908,10 @@ static void par_im_msg_sending(PurpleAccount *account, const char *receiver,
 	return;
 }
 
-
-
-
-
-
 /* --- signal handler for "writing-im-msg", needed to change the displayed msg --- */
-static gboolean par_im_msg_change_display(PurpleAccount *account, const char *who, char **message, 
-		PurpleConversation *conv, PurpleMessageFlags flags) {
+static gboolean par_im_msg_change_display(PurpleAccount *account, 
+		const char *who, char **message, PurpleConversation *conv, 
+		PurpleMessageFlags flags) {
 
 	struct key* used_key = NULL;
 
@@ -898,14 +931,14 @@ static gboolean par_im_msg_change_display(PurpleAccount *account, const char *wh
 	char* stripped_message = g_strdup(purple_markup_strip_html(*message));
 
 	// hide session init messages
-	if(strncmp(stripped_message, PARANOIA_REQUEST, 60) == 0) {
+	if(strncmp(stripped_message, PARANOIA_REQUEST, PARANOIA_REQUEST_LEN) == 0) {
 		if(used_key != NULL) {
 			if(flags & PURPLE_MESSAGE_SEND) { //used_key->opt->has_plugin
 				g_free(stripped_message);
 				return TRUE;
 			} else {
 				// cosmetics
-				char* tmp_msg = g_strndup(stripped_message, 60);
+				char* tmp_msg = g_strndup(stripped_message, PARANOIA_REQUEST_LEN);
 				g_free(*message);
 				g_free(stripped_message);
 				*message = tmp_msg;
@@ -930,7 +963,6 @@ static gboolean par_im_msg_change_display(PurpleAccount *account, const char *wh
 	
 		if(used_key != NULL) {
 			if (used_key->opt->otp_enabled && used_key->opt->ack_sent) {
-				// Add the status string
 				par_add_status_str(message);
 			}
 		}
@@ -948,7 +980,8 @@ static gboolean plugin_load(PurplePlugin *plugin) {
 	// debug
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID,
 		"Compiled with Purple '%d.%d.%d', running with Purple '%s'.\n",
-		PURPLE_MAJOR_VERSION, PURPLE_MINOR_VERSION, PURPLE_MICRO_VERSION, purple_core_get_version());
+		PURPLE_MAJOR_VERSION, PURPLE_MINOR_VERSION, 
+		PURPLE_MICRO_VERSION, purple_core_get_version());
 
 	// set the global key folder
 	const gchar* home = g_get_home_dir();
@@ -956,7 +989,7 @@ static gboolean plugin_load(PurplePlugin *plugin) {
 
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Key Path: %s\n", global_otp_path);
 
-	// get the conversaiton handle
+	// get the conversation handle
 	void *conv_handle;
 	conv_handle = purple_conversations_get_handle();
 
@@ -978,7 +1011,8 @@ static gboolean plugin_load(PurplePlugin *plugin) {
 	// register commands
 	// "/otp" + a string of args
 	par_cmd_id = purple_cmd_register ("otp", "s", PURPLE_CMD_P_DEFAULT,
-		PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_ALLOW_WRONG_ARGS, NULL, PURPLE_CMD_FUNC(par_cli_check_cmd), 
+		PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_ALLOW_WRONG_ARGS, NULL, 
+		PURPLE_CMD_FUNC(par_cli_check_cmd), 
 		"otp &lt;command&gt: type /otp to get help", NULL);
 
 	// debug
@@ -1017,37 +1051,31 @@ static void init_plugin(PurplePlugin *plugin) {
 /* ----------------- Plugin definition & init ------------------ */
 
 static PurplePluginInfo info = {
-    PURPLE_PLUGIN_MAGIC,    /* Plugin magic, this must be PURPLE_PLUGIN_MAGIC. */
+    PURPLE_PLUGIN_MAGIC,    /* This must be PURPLE_PLUGIN_MAGIC. */
     PURPLE_MAJOR_VERSION,   /* This is also defined in libpurple. */
     PURPLE_MINOR_VERSION,   /* See previous */
     PURPLE_PLUGIN_STANDARD, /* PurplePluginType */
     NULL,                   /* UI requirement. */
     0,                      /* Plugin flags. */
     NULL,                   	/* GList of plugin dependencies. */
-    PURPLE_PRIORITY_DEFAULT,	/* This is the priority libpurple with give your
-                                   plugin.  There are three possible values
-                                   for this field, PURPLE_PRIORITY_DEFAULT,
-                                   PURPLE_PRIORITY_HIGHEST, and
-                                   PURPLE_PRIORITY_LOWEST
-                                 */
-
-    PARANOIA_ID,     		/* plugin id */
-    "One-Time Pad Encryption",   /* plugin name */
-    PARANOIA_VERSION,            /* version */
+    PURPLE_PRIORITY_DEFAULT,	/* PURPLE_PRIORITY_DEFAULT,
+                                   PURPLE_PRIORITY_HIGHEST or
+                                   PURPLE_PRIORITY_LOWEST */
+    PARANOIA_ID,     			/* plugin id */
+    "One-Time Pad Encryption",  /* plugin name */
+    PARANOIA_VERSION,           /* version */
 
     "Paranoia One-Time Pad Encryption Plugin",   
 							/* This is the summary of your plugin.  It
                                    should be a short little blurb.  The UI
                                    determines where, if at all, to display
-                                   this.
-                                 */
+                                   this. */
     "The Paranoia plugin allows you to encrypt your messages with one-time pads.",   
 							/* This is the description of your plugin. It
                                    can be as long and as descriptive as you
                                    like.  And like the summary, it's up to the
                                    UI where, if at all, to display this (and
-                                   how much to display).
-                                 */
+                                   how much to display). */
     PARANOIA_AUTHORS,		/* name and e-mail address */
     PARANOIA_WEBSITE,		/* website */
 
