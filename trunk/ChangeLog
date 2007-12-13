@@ -34,7 +34,6 @@ Christan Wäckerlin:
 
 
 Known bugs:
- * /me does not work encrypted
  * there are some anomalies if both set /otp off and one user tries to reenable
  * Keyfile creation function is not threaded and therfore locks pidgin
  * More then one key per conversation is not supported yet
