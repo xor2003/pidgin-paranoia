@@ -13,6 +13,7 @@ paranoia.c
  * gettext support
  * send PARANOIA_CLOSE to all conversations on plugin unload
  * optimize key list (sort it intelligent)
+ * remove fake <otp>
  
 other
  * Design a simple web page
@@ -21,6 +22,5 @@ other
 
 Wishlist
  * /otp scan, to read in new keys
- * replace fake <otp>
  * libotp: Detailed error-messages/error-numbers instead of return FALSE
  * Commandline program that can use libotp for general usage

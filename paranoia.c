@@ -90,10 +90,16 @@ static gboolean par_remove_header(char** message) {
 /* adds a string at the beginning of the message (if encrypted) */
 static gboolean par_add_status_str(char** message) {
 
-	char* new_msg = g_strconcat(PARANOIA_STATUS, *message, NULL);
-
-	g_free(*message);
-	*message = new_msg;
+	if (strncmp(*message, "/me ", 4) == 0) {
+		char* new_msg = g_strconcat(g_strconcat("/me ", PARANOIA_STATUS, NULL), *message+4, NULL);
+		g_free(*message);
+		*message = new_msg;
+	}
+	else {
+		char* new_msg = g_strconcat(PARANOIA_STATUS, *message, NULL);
+		g_free(*message);
+		*message = new_msg;
+	}
 	return TRUE;
 }
 
@@ -956,7 +962,8 @@ static gboolean par_im_msg_change_display(PurpleAccount *account,
 #endif
 
 #ifdef SHOW_STATUS
-
+	// TODO: Remove fake <otp> messages
+	
 	// System messages and warnings should not be labelled
 	if(!(flags & PURPLE_MESSAGE_NO_LOG || flags & PURPLE_MESSAGE_SYSTEM)) {
 		struct key* used_key = par_search_key_by_conv(conv);
