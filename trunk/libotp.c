@@ -334,7 +334,7 @@ static int otp_get_decryptkey_from_file(char **key , struct otp* pad, int len, i
 }
 
 /* Encodes message into the base64 form */
-static int otp_b64enc(char **message,unsigned int *len) {
+static int otp_b64enc(char **message,gsize *len) {
 
 	char* msg = g_base64_encode( (guchar*) *message,*len);	/* Gnomelib Base64 encode */
 	*len = (strlen(msg)+1) * sizeof(char);			/* The size has changed */
@@ -345,7 +345,7 @@ static int otp_b64enc(char **message,unsigned int *len) {
 }
 
 /* Decodes message from the base64 form */
-static int otp_b64dec(char **message, unsigned int *len) {
+static int otp_b64dec(char **message, gsize *len) {
 
 	guchar* msg = g_base64_decode( *message, len);	/* Gnomelib Base64 decode */
 
@@ -356,8 +356,8 @@ static int otp_b64dec(char **message, unsigned int *len) {
 
 /* Decrypt the message  */
 static int otp_udecrypt(char **message, struct otp* pad, int decryptpos) {
-	unsigned int a = (strlen(*message)+1)* sizeof(char); 				/* get length of the used memory*/
-	unsigned int *len=&a;
+	gsize a = (strlen(*message)+1)* sizeof(char); 				/* get length of the used memory*/
+	gsize *len=&a;
 	char *b="x"; char **key; key=&b;
 	otp_b64dec( message, len );				/* decode base64 */
 
@@ -379,8 +379,8 @@ static int otp_udecrypt(char **message, struct otp* pad, int decryptpos) {
 
 /* Encrypt the message  */
 static int otp_uencrypt(char **message, struct otp* pad) {
-	unsigned int a = (strlen(*message)+1) * sizeof(char);				/* get length of the used memory*/
-	unsigned int *len=&a;
+	gsize a = (strlen(*message)+1) * sizeof(char);				/* get length of the used memory*/
+	gsize *len=&a;
 	char *d=""; char **rand; rand=&d;
 	char *c=""; char **key; key=&c;
 	char *msg;
@@ -441,8 +441,8 @@ unsigned int otp_erase_key(struct otp* pad) {
 	pad->protected_position=0;		
 
 
-	unsigned int a = (ERASEBLOCKSIZE+1) * sizeof(char);				/* get length of the used memory*/
-	unsigned int *len=&a;
+	gsize a = (ERASEBLOCKSIZE+1) * sizeof(char);				/* get length of the used memory*/
+	gsize *len=&a;
 	char *b=""; char **key; key=&b;
 
 
