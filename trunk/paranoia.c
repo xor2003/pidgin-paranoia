@@ -190,7 +190,7 @@ static int par_count_keys() {
 /* loads all keys from the global otp folder into the key list */
 static gboolean par_init_key_list() {
 	
-	struct key* prev_key_ptr = NULL;
+	struct key* prev_key = NULL;
 	struct key* tmp_key = NULL;
 	GError* error = NULL;
 	GDir* directoryhandle = g_dir_open(global_otp_path, 0, &error);
@@ -217,8 +217,9 @@ static gboolean par_init_key_list() {
 				} else {
 					purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 						"Key \"%s\" added.\n", tmp_filename);
-					tmp_key->next = prev_key_ptr;
-					prev_key_ptr = tmp_key;
+					tmp_key->next = prev_key;
+					keylist = tmp_key;
+					prev_key = tmp_key;
 				}
 			}
 			g_free(tmp_path);
@@ -226,7 +227,6 @@ static gboolean par_init_key_list() {
 		}
 	}
 	g_dir_close(directoryhandle);
-	keylist = tmp_key;
 
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 		"Key list of %i keys generated.\n", par_count_keys());
@@ -723,6 +723,9 @@ static gboolean par_im_msg_receiving(PurpleAccount *account, char **sender,
 
 		return FALSE;
 	}
+	
+	// debug
+	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Un-Headered message: %s\n", *stripped_message);
 
 	// apply jabber and header changes
 	g_free(*message);
@@ -748,6 +751,7 @@ static gboolean par_im_msg_receiving(PurpleAccount *account, char **sender,
 		// ENABLE LIBOTP
 		if(!otp_decrypt(used_key->pad, message)) {
 			purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, "Could not decrypt the message! That's a serious error!.\n");
+			// TODO: notify the user
 		}
 #endif
 
