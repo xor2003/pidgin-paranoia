@@ -1,20 +1,20 @@
 /*
-    Pidgin-Paranoia Plug-in - Encrypts your messages with a one-time pad.
-    Copyright (C) 2007  Simon Wenner, Christian Wäckerlin
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ * Pidgin-Paranoia Plug-in - Encrypts your messages with a one-time pad.
+ * Copyright (C) 2007  Simon Wenner, Christian Wäckerlin
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 // GNOMElib
 #include <glib.h>
@@ -73,12 +73,10 @@ void par_add_header(char** message) {
 
 /* checks the header and removes it if found */
 static gboolean par_remove_header(char** message) {
-	if(strlen(*message) > strlen(PARANOIA_HEADER)) {
-		if(strncmp(*message, PARANOIA_HEADER, strlen(PARANOIA_HEADER)) == 0) {
-			char* new_msg = (char *) g_malloc((strlen(*message) - strlen(PARANOIA_HEADER) + 1) * sizeof(char));
+	if (strlen(*message) > strlen(PARANOIA_HEADER)) {
+		if (strncmp(*message, PARANOIA_HEADER, strlen(PARANOIA_HEADER)) == 0) {
 			char* ptr = *message + strlen(PARANOIA_HEADER);
-			strcpy(new_msg, ptr);
-
+			char* new_msg = g_strdup(ptr);
 			g_free(*message);
 			*message = new_msg;
 			return TRUE;
@@ -147,7 +145,7 @@ struct key* keylist = NULL;
 /* creates a key struct */
 static struct key* par_create_key(const char* filename) {
 
-	// get otp object
+	/* get otp object */
 	static struct otp* test_pad;
    	test_pad = otp_get_from_file(global_otp_path, filename);
 
@@ -155,7 +153,7 @@ static struct key* par_create_key(const char* filename) {
 		return NULL;
 	}
 
-	//default option struct
+	/* default option struct */
 	static struct options* test_opt;
    	test_opt = (struct options *) g_malloc(sizeof(struct options));
    	test_opt->ack_sent = TRUE;
@@ -186,7 +184,7 @@ static int par_count_keys() {
 		sum++;
 		tmp_ptr = tmp_ptr->next;
 	}
-
+	
 	return sum;
 }
 
@@ -255,20 +253,18 @@ static void par_free_key_list() {
 static struct key* par_search_key(const char* src, const char* dest, const char* id) {
 
 	char* src_copy = par_strip_jabber_ressource(src);
-	//printf("paranoia !!!!!!!!!!:\tResource remover: my_acc\t%s\n", src_copy);
 	char* dest_copy = par_strip_jabber_ressource(dest);
-	//printf("paranoia !!!!!!!!!!:\tResource remover: other_acc\t%s\n", dest_copy);
 
 	struct key* tmp_ptr = keylist;
 
 	while(!(tmp_ptr == NULL)) {
 		if ((strcmp(tmp_ptr->pad->src, src_copy) == 0) && (strcmp(tmp_ptr->pad->dest, dest_copy) == 0)) {
-			//  check ID too?
+
 			if (id == NULL) {
 				// takes the first matching key, any id
 				return tmp_ptr;
 			} else {
-				//takes the exact key
+				// takes the exact key
 				if (strcmp(tmp_ptr->pad->id, id) == 0) {
 					return tmp_ptr;
 				}
@@ -443,10 +439,9 @@ PurpleCmdId par_cmd_id;
 
 /* sets the default paranoia cli error */
 static void par_cli_set_default_error(gchar **error) {
-	char *tmp_error = (char *) g_malloc((strlen(PARANOIA_ERROR_STR) + 1) * sizeof(char));
-	strcpy(tmp_error, PARANOIA_ERROR_STR);
+	char *new_error = g_strdup(PARANOIA_ERROR_STR);
 	g_free(*error);
-	*error = tmp_error;
+	*error = new_error;
 	return;
 }
 
@@ -455,7 +450,7 @@ static gboolean par_cli_try_enable_enc(PurpleConversation *conv) {
 
 	struct key* used_key = par_search_key_by_conv(conv);
 	if(used_key != NULL) {
-		if (!used_key->opt->no_entropy) {	
+		if (!used_key->opt->no_entropy) {
 			if (used_key->opt->has_plugin == TRUE) {
 				if(!used_key->opt->otp_enabled) {
 					used_key->opt->otp_enabled = TRUE;
@@ -551,7 +546,6 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv, const gchar *cmd
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "the otp command was recived! sweet!\n");
 
 	if(args[0] == NULL){
-		// no arguments
 		par_cli_set_default_error(error);
 		return PURPLE_CMD_RET_FAILED;
 	}
@@ -573,7 +567,6 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv, const gchar *cmd
 			}
 			
 			int size;
-         	// Parse it
 			errno = 0;
          	size = strtol(param_array[1], 0, 0);
          	// overflow detection
@@ -619,13 +612,13 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv, const gchar *cmd
 			g_strfreev(param_array);
 			
 		}
-		else if(strcmp("on", *args) == 0){
+		else if(strcmp("on", *args) == 0) {
 			par_cli_try_enable_enc(conv);
 		}
-		else if(strcmp("off", *args) == 0){
+		else if(strcmp("off", *args) == 0) {
 			par_cli_disable_enc(conv);
 		}
-		else if(strcmp("info", *args) == 0){
+		else if(strcmp("info", *args) == 0) {
 			par_cli_key_details(conv);
 		}
 		// TODO: add more commands
@@ -654,10 +647,10 @@ void par_conversation_created(PurpleConversation *conv) {
 void par_conversation_deleting(PurpleConversation *conv) {
 
 	struct key* used_key = par_search_key_by_conv(conv);
-	if(used_key != NULL) {
+	if (used_key != NULL) {
 		
 		// send an EXIT message
-		if(used_key->opt->otp_enabled) {
+		if (used_key->opt->otp_enabled) {
 			par_session_close(conv);
 		}
 		// reset the pad
@@ -706,17 +699,14 @@ static gboolean par_im_msg_receiving(PurpleAccount *account, char **sender,
 	// debug
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Stripped Msg: %s\n", *stripped_message);
 
-	// check for PARANOIA_REQUEST
-	if(par_session_check_req(my_acc_name, *sender, conv, stripped_message)) {
-		
-		g_free(*stripped_message);
-		return FALSE;
-	}
-
 	// --- checks for the Paranoia Header and removes it if found
-	if(!par_remove_header(stripped_message)) {
+	if (!par_remove_header(stripped_message)) {
 
-		//FIXME: add or remove header has a bug! message is not identical. REQ check should be here.
+		// check for PARANOIA_REQUEST
+		if (par_session_check_req(my_acc_name, *sender, conv, stripped_message)) {
+			g_free(*stripped_message);
+			return FALSE;
+		}
 		
 		struct key* used_key = par_search_key(my_acc_name, *sender, NULL);
 		if(used_key != NULL) {
@@ -974,7 +964,7 @@ static gboolean par_im_msg_change_display(PurpleAccount *account,
 			}
 		}
 	}
-		
+	
 #endif
 
 	//TRUE if the message should be canceled, or FALSE otherwise.
