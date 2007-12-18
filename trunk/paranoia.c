@@ -582,7 +582,7 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 			
 			int size = strtol(param_array[1], NULL, 0);
          	/* overflow detection */
-			if (size == LONG_MAX || size == LONG_MIN) {
+			if (size >= INT_MAX || size <= INT_MIN) {
 				purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
 					"The size value caused an integer overflow!\n");
 				g_strfreev(param_array);
