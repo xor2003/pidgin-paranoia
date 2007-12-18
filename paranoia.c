@@ -45,7 +45,9 @@
 
 // ----------------- General Paranoia Stuff ------------------
 #define PARANOIA_HEADER "*** Encrypted with the Pidgin-Paranoia plugin: "
-#define PARANOIA_REQUEST "*** Request for conversation with the Pidgin-Paranoia plugin (%s): I'm paranoid, please download the One-Time Pag plugin (link) to communicate encrypted."
+#define PARANOIA_REQUEST "*** Request for conversation with the Pidgin-\
+Paranoia plugin (%s): I'm paranoid, please download the One-Time Pad \
+plugin (%s) to communicate encrypted."
 #define PARANOIA_REQUEST_LEN 60
 #define PARANOIA_STATUS "&lt;otp&gt; "
 
@@ -328,7 +330,8 @@ void par_session_close(PurpleConversation *conv) {
 }
 
 /* detects request messages and sets the key settings. Returns TRUE if found */
-static gboolean par_session_check_req(const char* alice, const char* bob, PurpleConversation *conv, char** message_no_header) {
+static gboolean par_session_check_req(const char* alice, const char* bob, 
+		PurpleConversation *conv, char** message_no_header) {
 
 	if(strncmp(*message_no_header, PARANOIA_REQUEST, PARANOIA_REQUEST_LEN) == 0) {
 		// extract ID
@@ -359,7 +362,8 @@ static gboolean par_session_check_req(const char* alice, const char* bob, Purple
 }
 
 /* detects ack and exit messages and sets the key settings. Returns TRUE if one of them is found */
-static gboolean par_session_check_msg(struct key* used_key, char** message_decrypted, PurpleConversation *conv) {
+static gboolean par_session_check_msg(struct key* used_key, 
+		char** message_decrypted, PurpleConversation *conv) {
 
 	/* check prefix */
 	if (!(strncmp(*message_decrypted, PARANOIA_EXIT, PARANOIA_PREFIX_LEN) == 0)) {
@@ -431,7 +435,11 @@ static gboolean par_session_check_msg(struct key* used_key, char** message_decry
 
 PurpleCmdId par_cmd_id;
 
-#define PARANOIA_HELP_STR "Welcome to the One-Time Pad CLI.\notp help: shows this message \notp genkey &lt;destination account&gt; &lt;size&gt;: generates a key pair of &lt;size&gt; kB\notp on: tries to start the encryption\notp off: stops the encryption\notp info: shows details about the used key"
+#define PARANOIA_HELP_STR "Welcome to the One-Time Pad CLI.\n\
+otp help: shows this message \notp genkey &lt;destination \
+account&gt; &lt;size&gt;: generates a key pair of &lt;size&gt; \
+kB\notp on: tries to start the encryption\notp off: stops the \
+encryption\notp info: shows details about the used key"
 #define PARANOIA_ERROR_STR "Wrong argument(s). Type '/otp help' for help."
 #define PARANOIA_KEYSIZE_ERROR "Your key size is too large. (Max. ??? kB)"
 
@@ -525,7 +533,7 @@ static void par_cli_key_details(PurpleConversation *conv) {
 		used_key->pad->position, used_key->pad->entropy, 
 		used_key->opt->ack_sent, used_key->opt->has_plugin, 
 		used_key->opt->otp_enabled, used_key->opt->auto_enable, 
-		used_key->opt->no_entropy);
+		used_key->opt->no_entropy); // show protocol?
 
 	} else {
 		disp_string = g_strdup("There is no key available for this conversation.");
@@ -593,7 +601,6 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 				} else {
 					// found a positive int -> DO IT!
 					// FIXME: additional garbage is just ignored(?)
-					// FIXME: size limit?
 					purple_conversation_write(conv, NULL, 
 						"Please wait. Generating keys...", 
 						PURPLE_MESSAGE_NO_LOG, time(NULL));
@@ -824,7 +831,7 @@ static void par_im_msg_sending(PurpleAccount *account,
 				*message = NULL;
 				return;
 			}
-			char *req_msg = g_strdup_printf(*message, used_key->pad->id);
+			char *req_msg = g_strdup_printf(*message, used_key->pad->id, PARANOIA_WEBSITE);
 			g_free(*message);
 			*message = req_msg;
 		}
@@ -1020,7 +1027,7 @@ static gboolean plugin_load(PurplePlugin *plugin) {
 /* --- gets called when disabling the plugin --- */
 gboolean plugin_unload(PurplePlugin *plugin) {
 
-	// FIXME: send PARANOIA_CLOSE to all conversations
+	// TODO: send PARANOIA_EXIT to all conversations
 
 	// disconnect all signals
 	purple_signals_disconnect_by_handle(plugin);

@@ -1,26 +1,42 @@
---------------------------------------------------------------------------------
-                                   TODO list
---------------------------------------------------------------------------------
+-----------------------------------------------------------------------
+                              TODO list
+-----------------------------------------------------------------------
 
-libotp.c
- * Bugfixing
+Version 0.1
+============
+	libotp.c
+	 * bugfixing
 
-paranoia.c
- * Enhanced session management (ack)
- * Send entropy warnings (inside messages)
- * evaluate "buddy-signed-off" signal
- * check message size limits
- * gettext support
- * send PARANOIA_CLOSE to all conversations on plugin unload
- * optimize key list (sort it intelligent)
- * remove fake <otp>
+	paranoia.c
+	 * check message size limits
+	 * send PARANOIA_EXIT to all conversations on plugin unload
+	 * remove fake <otp>
  
-other
+ Version 0.2
+ ============
+ 	libotp.c
+ 	 * detailed error-numbers instead of return FALSE
+ 	
+ 	paranoia.c
+ 	 * enhanced session management (ack)
+ 	 * evaluate "buddy-signed-off" signal
+ 	 * support multiple key files per conversation
+	 * optimize key list (sort it intelligent)
+	 * send entropy warnings (inside messages)
+	 * /otp scan, to read in new keys
+	 
+	 other
+	 * Commandline program that can use libotp for general usage
+ 	
+ Version 1.0
+ ============
+ 	paranoia.c
+ 	 * gettext support (translations)
+ 	 * no conversation windows that pop-up independently
+ 	
+Misc
  * Design a simple web page
  * Debian/Ubuntu package
  * Test all the less common protocols (Gadu-Gadu, QQ, SIMPLE...)
 
-Wishlist
- * /otp scan, to read in new keys
- * libotp: Detailed error-messages/error-numbers instead of return FALSE
- * Commandline program that can use libotp for general usage
+
