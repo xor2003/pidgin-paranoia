@@ -32,7 +32,7 @@ $ make
 
 Done. Activate it in the pidgin plug-in menu.
 
-To see the debug messages of the plugin run pidgin like that:
+To see the debug messages of the plugin, run pidgin like that:
 
 $ pidgin -d | grep paranoia
 
@@ -40,5 +40,4 @@ $ pidgin -d | grep paranoia
 uninstall: (who wants to do that anyway? ;) )
 $ cd pidgin-paranoia
 # make uninstall
-
 

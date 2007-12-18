@@ -30,7 +30,8 @@ Christan Wäckerlin:
  * Added support for keyfile creation
  * Added support for the destruction of keyfiles (using up all entropy)
  * Added support for key check using repeatprobability.
- * Added suuport for addition of a random tail onto the encrypted message to prevent 'eve' from knowing the exact length of the message
+ * Added support for addition of a random tail onto the encrypted message 
+   to prevent 'eve' from knowing the exact length of the message
 
 
 Known bugs:

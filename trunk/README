@@ -36,7 +36,12 @@ TODO
 
 Commands are entered by typing a message beginning with /otp.
 
-TODO
+/otp help - shows a list of all available commands
+/otp genkey <destination account> <size> - generates a key pair of <size> kB
+/otp on - tries to start the encryption
+/otp off - stops the encryption
+/otp info - shows details about the used key
+
 
 6. Usage of the otptester
 --------------------------------------------------------------------------------
@@ -46,10 +51,11 @@ Start "otptester --help" for more information.
 
 TODO
 
-7. Known Bugs and planned features
+7. Known bugs, limitations and planned features
 --------------------------------------------------------------------------------
+ * we do not support the creation of loop-keys
 
-TODO
+Please read the file TODO
 
 
 
