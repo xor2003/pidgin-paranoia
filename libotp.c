@@ -16,11 +16,13 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+/*  -------------------------- Includes ---------------------------- */
+
 /* GNUlibc includes */
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <math.h>
+#include <math.h> 
 /* to manipulate files */
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -32,42 +34,71 @@
 /* GNOMElib */
 #include <glib.h>
 
-/* great stuff */
+/* The public functions of this library */
 #include "libotp.h"
 
-/* Some defintions */
+/*  ------------------- Constants (don't change) ------------------- 
+ * Changing this makes your one-time-pad incompatible */
+
 #define FILE_DELI " "		/* Delimiter in the filename */
 #define MSG_DELI "|"		/* Delimiter in the encrypted message */
-#define PATH_DELI "/"		/* For some reason some strange operatingsystems use "\" */
 #define PAD_EMPTYCHAR '\0'	/* Char that is used to mark the pad as used. */
-#define	FILE_SUFFIX ".entropy"	/* The keyfiles have to end with this string to be valid. This string has to be separated by ".". */
-#define NOENTROPY_SIGNAL "*** I'm out of entropy!"	/* The message that is send in case the sender is out of entropy */
-#define BLOCKSIZE 1024		/* The blocksize used in the keyfile creation function */
-#define ERASEBLOCKSIZE 1024	/* The blocksize used in the key eraseure function */
-#define REPEATTOL 1E-12		/* If a repeated sequence with less probability then this occurs, throw the key away */ 
-#define NUMBERSIGMA 6		/* (not implemented) If the sum over the key is more than this number of sigmas away from the average, then reject key (probability:1.9*10^-9) */
-#define RNDLENMAX 30		/* Maximal length of the added random-length tail onto the encrypted message */
+#define	FILE_SUFFIX ".entropy"	/* The keyfiles have to end with 
+* this string to be valid. This string has to be separated by ".". */
+#define NOENTROPY_SIGNAL "*** I'm out of entropy!"	/* The message that
+* is send in case the sender is out of entropy */
+
+/*  ------------------- Constants (you can change them) ------------ */
+
+#define PATH_DELI "/"		/* For some reason some strange 
+* operatingsystems use "\" */
+#define BLOCKSIZE 1024		/* The blocksize used in the keyfile 
+* creation function */
+#define ERASEBLOCKSIZE 1024	/* The blocksize used in the key 
+* eraseure function */
+#define REPEATTOL 1E-12		/* If a repeated sequence with less 
+* probability then this occurs, throw the key away */ 
+#define NUMBERSIGMA 6		/* (not implemented) If the sum over 
+* the key is more than this number of sigmas away from the average,
+* then reject key (probability:1.9*10^-9) */
+#define RNDLENMAX 30		/* Maximal length of the added 
+* random-length tail onto the encrypted message */
 
 /* Requried for development if HAVEFILE is not defined */
-#define STATICKEY "dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4"
+// TODO v.0.1: remove it.
+// #define STATICKEY "dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4"
 
-/* All defines needed for full opt functionality! Regarded as stable. The encryption is worthless without those! */
+
+/*  ------------------- Defines (essential) ------------------------
+* All defines needed for full opt functionality! Regarded 
+* as stable. The encryption is worthless without those! */
 
 #define UCRYPT			/* Encryption and decryption only enabled if defined */
-#define HAVEFILE		/* Do you have a file named pad->filename in your working dir? Used for struct *pad generation. */
-#define HAVEKEYFILE		/* Do you have a file names pad->filename in your working dir? Used for en/decryption. */
+#define HAVEFILE		/* Do you have a file named pad->filename in your 
+* working dir? Used for struct *pad generation. */
+#define HAVEKEYFILE		/* Do you have a file names pad->filename in 
+* your working dir? Used for en/decryption. */
 #define KEYOVERWRITE	/* Overwrite the used key-sequence in the keyfile */
 
-/* Optional. Regarded as stable */
-//#define USEDESKTOP			/* Requires GNOMElib 2.14! Bob's keyfile is placed onto the desktop. If not set, the file is placed in the .paranoia folder. */
+/*  ------------------- Defines (optional) ------------------------
+ * These defines give new, additional features. */
 
-/* In development. Regraded as unstable. Those functions are nice but not critical. */
+//#define USEDESKTOP 
+/* Requires GNOMElib 2.14! Bob's 
+* keyfile is placed onto the desktop. If not set, the 
+* file is placed in the .paranoia folder. */
+
+/*  ------------------- Defines (development) ------------------------
+* In development. Regraded as unstable. Those functions are nice 
+* but not critical. */
+
 #define CHECKKEY		/* Histogram/repeat checking of the key */
 #define RNDMSGLEN		/* Add a random-length string onto the message */
 
+/*  ----------------- Private Functions of the Library------------ */
 
 static int otp_xor(char **message,char **key,int len)
-/* XOR message and key. This function is the core of the libary. */
+/* XOR message and key. This function is the core of the library. */
 {
 	int i;
 	for (i = 0;i < (len-1);i++) {
@@ -152,7 +183,7 @@ static struct otp* otp_seek_start(struct otp* pad)
 		pad->position = otp_seek_pos(*data,pad->filesize);
 		otp_calc_entropy(pad);
 		otp_close_keyfile(fd,data,pad);
-	}else{
+	} else {
 		return NULL;
 	}
 	return pad;
@@ -227,7 +258,8 @@ static int otp_key_is_random(char **key,int len) // TODO for v.0.1: Histogram te
 static int otp_get_encryptkey_from_file(char **key , struct otp* pad, int len)
 /* Gets the key to encrypt from the keyfile */
 {
-	int wfd = 0; int *fd = &wfd;; char *b = ""; char **data = &b;
+	int wfd = 0; int *fd = &wfd;
+	char *b = ""; char **data = &b;
 	int i = 0;
 	int protected_entropy = OTP_PROTECTED_ENTROPY;
 	int position = pad->position;
@@ -279,54 +311,45 @@ static int otp_get_encryptkey_from_file(char **key , struct otp* pad, int len)
 	return TRUE;  // TODO v.0.2: Imperativ: Should be 0
 }
 
+static int otp_get_decryptkey_from_file(char **key , struct otp* pad, int len, int decryptpos)
 /* Gets the key to decrypt from the keyfile */
-static int otp_get_decryptkey_from_file(char **key , struct otp* pad, int len, int decryptpos) {
-	int *fd; char *b=""; char **data; data=&b; int wfd=0; fd=&wfd;
-	int i=0;
-/* 	printf("\ndecryptpos\t\t\t:%d\n\n",decryptpos); */
-	if (pad->filesize < (pad->filesize-decryptpos - (len -1)) || (pad->filesize-decryptpos) < 0) {
-		return FALSE;
-	}
-	if (otp_open_keyfile(fd,data,pad)) {		/* Open the keyfile */
-		char *vkey = (char *) g_malloc( (len) * sizeof(char) );
-/* 		printf("\ntest\t\t\t:%d\n\n",pad->filesize-decryptpos - (len -1)); */
+{
+	int wfd=0; int *fd = &wfd; 
+	char *b=""; char **data = &b;
+	int i = 0;
+	if (pad->filesize < (pad->filesize-decryptpos - (len -1)) 
+					|| (pad->filesize-decryptpos) < 0) return FALSE;
+	if (otp_open_keyfile(fd,data,pad) == FALSE) return FALSE;
 
-		char *datpos = *data + pad->filesize - decryptpos - (len - 1);
-		
-		for (i=0; i <= (len -1); i++) {			/* read reverse*/
-			vkey[i]=datpos[len - 2 - i];	
-		}
-
-		*key=vkey;
-/* 		otp_printint(*key,len-1); */
-
-/* 		msync(data, pad->filesize, MS_ASYNC); */
-		otp_close_keyfile(fd,data,pad);		/* Close the keyfile */
-	}else{
-		return FALSE;
-	}
-	return TRUE;
+	char *vkey = (char *) g_malloc( (len)*sizeof(char) );
+	char *datpos = *data + pad->filesize - decryptpos - (len - 1);
+	
+	/* read reverse*/
+	for (i=0; i <= (len -1); i++) vkey[i]=datpos[len - 2 - i];
+	*key=vkey;
+	otp_close_keyfile(fd,data,pad);
+	return TRUE; // TODO v.0.2: Imperativ: Should be 0
 }
 
+static int otp_b64enc(char **message,gsize *len)
 /* Encodes message into the base64 form */
-static int otp_b64enc(char **message,gsize *len) {
-
-	char* msg = g_base64_encode( (guchar*) *message,*len);	/* Gnomelib Base64 encode */
-	*len = (strlen(msg)+1) * sizeof(char);			/* The size has changed */
+{
+	char* msg = g_base64_encode( (guchar*) *message,*len);
+	/* The size has changed */
+	*len = (strlen(msg)+1) * sizeof(char);
 
 	g_free(*message);
 	*message = msg;
-	return TRUE;
+	return TRUE; // TODO v.0.2: Imperativ: Should be 0
 }
 
+static int otp_b64dec(char **message, gsize *len) 
 /* Decodes message from the base64 form */
-static int otp_b64dec(char **message, gsize *len) {
-
-	guchar* msg = g_base64_decode( *message, len);	/* Gnomelib Base64 decode */
-
+{
+	guchar* msg = g_base64_decode( *message, len);
 	g_free(*message);
-	*message = (char*) msg;
-	return TRUE;
+	*message = (char*) msg; //TODO v.0.1: difference char / unsigned char?
+	return TRUE; // TODO v.0.2: Imperativ: Should be 0
 }
 
 /* Decrypt the message  */
@@ -349,7 +372,7 @@ static int otp_udecrypt(char **message, struct otp* pad, int decryptpos) {
 
 
 	otp_xor( message, key, *len);				/* xor */
-	return TRUE;
+	return TRUE; // TODO v.0.2: Imperativ: Should be 0
 }
 
 /* Encrypt the message  */
@@ -405,7 +428,8 @@ static int otp_uencrypt(char **message, struct otp* pad) {
 }
 
 
-/*  ----------------- Public One-Time Pad Functions ------------ */
+/*  ----------------- Public Functions of the Library------------ 
+ * Exported in libtop.h */
 
 /* destroys a keyfile by using up all encryption-entropy */
 unsigned int otp_erase_key(struct otp* pad) {
