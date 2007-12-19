@@ -331,7 +331,7 @@ static int otp_get_decryptkey_from_file(char **key , struct otp* pad, int len, i
 	return TRUE; // TODO v.0.2: Imperativ: Should be 0
 }
 
-static int otp_b64enc(char **message,gsize *len)
+static int otp_base64_encode(char **message,gsize *len)
 /* Encodes message into the base64 form */
 {
 	char* msg = g_base64_encode( (guchar*) *message,*len);
@@ -343,7 +343,7 @@ static int otp_b64enc(char **message,gsize *len)
 	return TRUE; // TODO v.0.2: Imperativ: Should be 0
 }
 
-static int otp_b64dec(char **message, gsize *len) 
+static int otp_base64_decode(char **message, gsize *len) 
 /* Decodes message from the base64 form */
 {
 	guchar* msg = g_base64_decode( *message, len);
@@ -352,79 +352,65 @@ static int otp_b64dec(char **message, gsize *len)
 	return TRUE; // TODO v.0.2: Imperativ: Should be 0
 }
 
+
+static int otp_udecrypt(char **message, struct otp* pad, int decryptpos)
 /* Decrypt the message  */
-static int otp_udecrypt(char **message, struct otp* pad, int decryptpos) {
-	gsize a = (strlen(*message)+1)* sizeof(char); 				/* get length of the used memory*/
-	gsize *len=&a;
-	char *b="x"; char **key; key=&b;
-	otp_b64dec( message, len );				/* decode base64 */
+{
+	gsize a = (strlen(*message)+1)* sizeof(char);
+	gsize *len = &a;
+	char *b = ""; char **key = &b;
+	otp_base64_decode(message, len);
 
 #ifdef HAVEKEYFILE
-	if ( otp_get_decryptkey_from_file(key,pad,*len,decryptpos) == FALSE ) {
-		return FALSE;
-	}
+	if ( otp_get_decryptkey_from_file(key,pad,*len,decryptpos)
+						 == FALSE ) return FALSE;
 #else
 	char k[]=STATICKEY;
-	char *vkey = (char *) g_malloc( (*len) * sizeof(char) );
-	memcpy(vkey,k,*len-1); 					/* the pad could be anything... use memcpy */
+	char *vkey = (char *) g_malloc( (*len)*sizeof(char) );
+	/* the pad could be anything... useing memcpy */
+	memcpy(vkey,k,*len-1);
 	*key=vkey; 
 #endif
-
-
-	otp_xor( message, key, *len);				/* xor */
+	otp_xor( message, key, *len);
 	return TRUE; // TODO v.0.2: Imperativ: Should be 0
 }
 
+
+static int otp_uencrypt(char **message, struct otp* pad)
 /* Encrypt the message  */
-static int otp_uencrypt(char **message, struct otp* pad) {
-	gsize a = (strlen(*message)+1) * sizeof(char);				/* get length of the used memory*/
-	gsize *len=&a;
-	char *d=""; char **rand; rand=&d;
-	char *c=""; char **key; key=&c;
+{
+	gsize a = (strlen(*message)+1) * sizeof(char);
+	gsize *len = &a;
+	char *d=""; char **rand = &d;
+	char *c=""; char **key = &c;
 	char *msg;
 	int rnd;
 
 #ifdef HAVEKEYFILE
-
 #ifdef RNDMSGLEN
-
-
-	if ( otp_get_encryptkey_from_file(rand,pad,2) == FALSE ) { /* get one byte from keyfile for length */
-		return FALSE;
-	}
+	/* get one byte from keyfile for random length */
+	if ( otp_get_encryptkey_from_file(rand,pad,1+1)
+						 == FALSE ) return FALSE;
 	rnd=(unsigned char)*rand[0]*RNDLENMAX/255;
-//	printf("# of chars added randomly: %i\n",rnd);
 	g_free(*rand);
 	msg = g_malloc0(rnd+*len);	/* Create a new,longer message */
 	memcpy(msg,*message,*len-1); 
 	g_free(*message);
-	*message=msg;	
-	
-	*len+=rnd;
+	*message = msg;	
+	*len += rnd;
 #endif
-	
-	if ( otp_get_encryptkey_from_file(key,pad,*len) == FALSE ) {
-		return FALSE;
-	}
-	
-	
-	
+	if ( otp_get_encryptkey_from_file(key,pad,*len) 
+							== FALSE ) return FALSE;
 #else
-
 	char k[]=STATICKEY; 
 	char *vkey = (char *) g_malloc( (*len) * sizeof(char) );
-	memcpy(vkey,k,*len-1); 					/* the pad could be anything... use memcpy */
-	*key=vkey;
+	/* the pad could be anything... useing memcpy */
+	memcpy(vkey,k,*len-1);
+	*key = vkey;
 #endif
-
-
-//	otp_printint(*key,*len);
-//	otp_printint(*message,*len);
-	otp_xor( message , key, *len);				/* xor */
-//	otp_printint(*message,*len);
-	otp_b64enc( message , len );				/* encode base64 */
-	
-	return TRUE;
+	otp_xor(message, key, *len);
+	otp_base64_encode(message, len);
+	return TRUE; // TODO v.0.2: Imperativ: Should be 0
 }
 
 
