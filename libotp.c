@@ -22,7 +22,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <math.h> 
+#include <math.h>
 /* to manipulate files */
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -62,22 +62,13 @@
 * the key is more than this number of sigmas away from the average,
 * then reject key (probability:1.9*10^-9) */
 #define RNDLENMAX 30		/* Maximal length of the added 
-* random-length tail onto the encrypted message */
-
-/* Requried for development if HAVEFILE is not defined */
-// TODO v.0.1: remove it.
-// #define STATICKEY "dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4dkjfldsafxvdsa f dsf \0dsafds ew rewrd f dsf ds fe r ewr ew rew rewr ewq rew r ewrewrewrew r ewr e rew r wer ewr ewr werewfdsföldsaföldskjf \0\0\0  dsfrwef wre 4 32 4 324 32143244j43lk32j4k3214jf f ew rew rew r  3 4 324 324  324 324 32 4"
-
+				 * random-length tail onto the encrypted message */
 
 /*  ------------------- Defines (essential) ------------------------
 * All defines needed for full opt functionality! Regarded 
 * as stable. The encryption is worthless without those! */
 
 #define UCRYPT			/* Encryption and decryption only enabled if defined */
-#define HAVEFILE		/* Do you have a file named pad->filename in your 
-* working dir? Used for struct *pad generation. */
-#define HAVEKEYFILE		/* Do you have a file names pad->filename in 
-* your working dir? Used for en/decryption. */
 #define KEYOVERWRITE	/* Overwrite the used key-sequence in the keyfile */
 
 /*  ------------------- Defines (optional) ------------------------
@@ -177,8 +168,10 @@ static int otp_seek_pos(char *data,int filesize)
 static struct otp* otp_seek_start(struct otp* pad)
 /* Seeks the the starting position,filesize and entropy from the keyfile */
 {
-	int wfd = 0; int *fd = &wfd; 
-	char *b = ""; char **data = &b;
+	int space1 = 0;
+	int *fd = &space1;
+	char *space2 = ""; 
+	char **data = &space2;
 	if (otp_open_keyfile(fd,data,pad)) {
 		pad->position = otp_seek_pos(*data,pad->filesize);
 		otp_calc_entropy(pad);
@@ -194,7 +187,7 @@ static int otp_id_is_valid(char* id_str)
 {
 	if ( strlen(id_str) == OTP_ID_LENGTH * sizeof(char)) {
 		return TRUE;
-	}else{
+	} else {
 		return FALSE;
 	}
 }
@@ -211,7 +204,7 @@ static int otp_key_is_random(char **key,int len) // TODO for v.0.1: Histogram te
  * n=6 : 1.97*10^-9
  * */
 {
-//	int histo[256]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+//	int histo[256]={0};
 	int i,rep = 1;
 	double repeatprob;
 //	double sigma=0.0;
@@ -219,18 +212,17 @@ static int otp_key_is_random(char **key,int len) // TODO for v.0.1: Histogram te
 //	int histomax=0; int histomin=len;
 //	char *c="098988787098709870987098709870887987098709870987000";
 //	len=strlen(c);
-	char *c;
-	c = *key;
-	int lastc=257; /* This is not a char */
+	char *c = *key;
+	int lastc = 257; /* This is not a char */
 	
 	//otp_printint(*key,len);
 	
-	for(i = 0;i < len;i++) {
+	for(i = 0;i < len; i++) {
 //		histo[(unsigned char)c[i]]++;
 //		if (c[i]<127) lower++;
 		if (c[i] == lastc) {
 			rep++;
-		}else{
+		} else {
 			lastc = c[i];
 		}
 	}
@@ -243,7 +235,7 @@ static int otp_key_is_random(char **key,int len) // TODO for v.0.1: Histogram te
 //		printf("%d ",histo[i]);
 //	}
 	
-//	sigma=sqrt(len/4.0);
+//	sigma = sqrt(len/4.0);
 	
 //	printf("\nlen:%i  ,lower:%i,  n*sigma:%f, lower border:%f,  higher border:%f\n",len,lower,NUMBERSIGMA*sigma,len/2.0-NUMBERSIGMA*sigma,len/2.0+NUMBERSIGMA*sigma);
 //	printf("Probability for a repeat of len %i: %e\n",rep,repeatprob);
@@ -258,8 +250,10 @@ static int otp_key_is_random(char **key,int len) // TODO for v.0.1: Histogram te
 static int otp_get_encryptkey_from_file(char **key , struct otp* pad, int len)
 /* Gets the key to encrypt from the keyfile */
 {
-	int wfd = 0; int *fd = &wfd;
-	char *b = ""; char **data = &b;
+	int space1 = 0;
+	int *fd = &space1;
+	char *space2 = "";
+	char **data = &space2;
 	int i = 0;
 	int protected_entropy = OTP_PROTECTED_ENTROPY;
 	int position = pad->position;
@@ -307,27 +301,29 @@ static int otp_get_encryptkey_from_file(char **key , struct otp* pad, int len)
 	if (pad->protected_position == 0) 
 						pad->position = pad->position + len -1;
 		/* In all cases where the protected entropy is not used */
-	otp_calc_entropy(pad);
+	otp_calc_entropy (pad);
 	return TRUE;  // TODO v.0.2: Imperativ: Should be 0
 }
 
 static int otp_get_decryptkey_from_file(char **key , struct otp* pad, int len, int decryptpos)
 /* Gets the key to decrypt from the keyfile */
 {
-	int wfd=0; int *fd = &wfd; 
-	char *b=""; char **data = &b;
+	int space1 = 0;
+	int *fd = &space1; 
+	char *space2 = "";
+	char **data = &space2;
 	int i = 0;
 	if (pad->filesize < (pad->filesize-decryptpos - (len -1)) 
 					|| (pad->filesize-decryptpos) < 0) return FALSE;
 	if (otp_open_keyfile(fd,data,pad) == FALSE) return FALSE;
 
-	char *vkey = (char *) g_malloc( (len)*sizeof(char) );
+	char *vkey = (char *) g_malloc( len*sizeof(char) );
 	char *datpos = *data + pad->filesize - decryptpos - (len - 1);
 	
 	/* read reverse*/
-	for (i=0; i <= (len -1); i++) vkey[i]=datpos[len - 2 - i];
-	*key=vkey;
-	otp_close_keyfile(fd,data,pad);
+	for (i = 0; i <= (len -1); i++) vkey[i]=datpos[len - 2 - i];
+	*key = vkey;
+	otp_close_keyfile(fd, data, pad);
 	return TRUE; // TODO v.0.2: Imperativ: Should be 0
 }
 
@@ -338,7 +334,7 @@ static int otp_base64_encode(char **message,gsize len)
 	/* The size has changed */
 	len = (strlen(msg)+1) * sizeof(char);
 
-	g_free(*message);
+	g_free (*message);
 	*message = msg;
 	return TRUE; // TODO v.0.2: Imperativ: Should be 0
 }
@@ -357,33 +353,28 @@ static int otp_udecrypt(char **message, struct otp* pad, int decryptpos)
 /* Decrypt the message  */
 {
 	gsize len = (strlen(*message)+1)* sizeof(char);
-	char *b = ""; char **key = &b;
+	char *space1 = "";
+	char **key = &space1;
 	otp_base64_decode(message, &len);
 
-#ifdef HAVEKEYFILE
-	if ( otp_get_decryptkey_from_file(key,pad,len,decryptpos)
-						 == FALSE ) return FALSE;
-#else
-	char k[]=STATICKEY;
-	char *vkey = (char *) g_malloc( len*sizeof(char) );
-	/* the pad could be anything... useing memcpy */
-	memcpy(vkey,k,len-1);
-	*key=vkey; 
-#endif
-	otp_xor( message, key, len);
-	return TRUE; // TODO v.0.2: Imperativ: Should be 0
+	if (otp_get_decryptkey_from_file (key, pad, len, decryptpos) == FALSE)
+		return FALSE;
+
+	otp_xor (message, key, len);
+	return TRUE;			// TODO v.0.2: Imperativ: Should be 0
 }
 
 static int otp_uencrypt(char **message, struct otp* pad)
 /* Encrypt the message  */
 {
 	gsize len = (strlen(*message)+1) * sizeof(char);
-	char *d=""; char **rand = &d;
-	char *c=""; char **key = &c;
+	char *space1="";
+	char **rand = &space1;
+	char *space2="";
+	char **key = &space2;
 	char *msg;
 	int rnd;
 
-#ifdef HAVEKEYFILE
 #ifdef RNDMSGLEN
 	/* get one byte from keyfile for random length */
 	if ( otp_get_encryptkey_from_file(rand,pad,1+1)
@@ -398,13 +389,6 @@ static int otp_uencrypt(char **message, struct otp* pad)
 #endif
 	if ( otp_get_encryptkey_from_file(key,pad,len) 
 							== FALSE ) return FALSE;
-#else
-	char k[]=STATICKEY; 
-	char *vkey = (char *) g_malloc( len*sizeof(char) );
-	/* the pad could be anything... useing memcpy */
-	memcpy(vkey,k,len-1);
-	*key = vkey;
-#endif
 	otp_xor(message, key, len);
 	otp_base64_encode(message, len);
 	return TRUE; // TODO v.0.2: Imperativ: Should be 0
@@ -418,22 +402,21 @@ static int otp_uencrypt(char **message, struct otp* pad)
 unsigned int otp_erase_key(struct otp* pad)
 /* destroys a keyfile by using up all encryption-entropy */
 {
-	if(pad == NULL) return FALSE;
+	if (pad == NULL) return FALSE;
 	pad->protected_position=0;
-	gsize len = (ERASEBLOCKSIZE+1) * sizeof(char);				/* get length of the used memory*/
-	char *b=""; char **key = &b;
-#ifdef HAVEKEYFILE
+	gsize len = (ERASEBLOCKSIZE+1) * sizeof (char);				/* get length of the used memory*/
+	char *space1 = "";
+	char **key = &space1;
 	/* Using up all entropy */
-	int result=TRUE;
+	int result = TRUE;
+	while (result == TRUE) {
+		result = otp_get_encryptkey_from_file(key,pad,len);
+	}
+	result = TRUE;
+	len = 1+1;
 	while( result == TRUE ) {
 		result = otp_get_encryptkey_from_file(key,pad,len);
 	}
-	result=TRUE;
-	len=1+1;
-	while( result == TRUE ) {
-		result = otp_get_encryptkey_from_file(key,pad,len);
-	}
-#endif
 	return TRUE; // TODO v.0.2: Imperativ: Should be 0
 }
 
@@ -446,7 +429,7 @@ unsigned int otp_generate_key_pair(const char* alice,
 
 {
 	if(alice == NULL || bob == NULL || path == NULL 
-				|| source == NULL || size==0) return FALSE;
+				|| source == NULL || size == 0) return FALSE;
 
 	/* Check for things like '/'. Alice and Bob will become filenames */
 	if ((g_strrstr(alice,PATH_DELI)!=NULL) 
@@ -478,7 +461,7 @@ unsigned int otp_generate_key_pair(const char* alice,
 	/* Our ID */
 	read(rfd,&id,sizeof(id));
 	/* Our ID string */;
-	char *idstr=g_strdup_printf ("%.8X",id);
+	char *idstr = g_strdup_printf ("%.8X",id);
 
 	DIR *dp;
 	dp = opendir (path);
@@ -491,7 +474,9 @@ unsigned int otp_generate_key_pair(const char* alice,
 	/* Opening the first file */
 	char *afilename=g_strconcat(path,alice,FILE_DELI,bob,FILE_DELI,idstr,".entropy",NULL);
 	
-	int afd=0; char *ab=""; char **adata; adata=&ab;
+	int afd=0; 
+	char *space1 = "";
+	char **adata = &space1;
 	
 	if ((afd = open(afilename, O_RDWR)) == -1) {
 	}else{
@@ -528,7 +513,7 @@ unsigned int otp_generate_key_pair(const char* alice,
 						idstr,".entropy",NULL);
 #endif	
 
-	int bfd=0; 
+	int bfd = 0; 
 	if ((bfd = open(bfilename, O_RDWR)) == -1) {
 	}else{
 		/* File already exists. I will not overwrite any existing file!*/
@@ -576,12 +561,12 @@ unsigned int otp_encrypt_warning(struct otp* pad, char **message, int protected_
 /* encrypts a message with the protected entropy. 
  * protected_pos is the position in bytes to use. */
 {
-	if(pad == NULL) return FALSE;
+	if (pad == NULL) return FALSE;
 	int oldpos=pad->position;
 	pad->protected_position = pad->filesize/2-OTP_PROTECTED_ENTROPY-protected_pos;
 	
 #ifdef RNDMSGLEN
-	oldpos+=1;
+	oldpos += 1;
 #endif	
 
 #ifdef UCRYPT
@@ -590,7 +575,7 @@ unsigned int otp_encrypt_warning(struct otp* pad, char **message, int protected_
 		return FALSE;
 	}
 #endif
-	/* Our position in the pad*/
+	/* Our position in the pad */
 	char *pos_str = g_strdup_printf ("%u",oldpos);
 	/*Something like "3EF9|34EF4588|M+Rla2w=" */
 	char *new_msg = g_strconcat(pos_str,MSG_DELI,
@@ -613,7 +598,7 @@ char* otp_get_id_from_message(char **message)
 	char *id_str = g_strdup(m_array[1]);
 	if (otp_id_is_valid(id_str)==TRUE) {
 		return id_str;
-	}else{
+	} else {
 		return NULL;
 	} 
 }
@@ -655,16 +640,7 @@ struct otp* otp_get_from_file(const char* path, const char* input_filename)
 
 	if ( otp_id_is_valid(pad->id) == FALSE ) return NULL;
 
-#ifdef HAVEFILE
 	pad = otp_seek_start(pad);
-#else
-/* 	 Dummy-values for development */
-	if (pad != NULL) {
-		pad->position = 10000;
-		pad->filesize = 100000;
-		otp_calc_entropy(pad);
-	}
-#endif
 	return pad;
 }
 void otp_destroy(struct otp* pad)
@@ -687,7 +663,7 @@ returns TRUE if it could encrypt the message */
 	pad->protected_position=0;
 	int oldpos=pad->position;
 #ifdef RNDMSGLEN
-	oldpos+=1;
+	oldpos += 1;
 #endif	
 #ifdef UCRYPT
 	if (otp_uencrypt(message,pad) == FALSE) return FALSE;
