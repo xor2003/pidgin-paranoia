@@ -331,22 +331,23 @@ static int otp_get_decryptkey_from_file(char **key , struct otp* pad, int len, i
 	return TRUE; // TODO v.0.2: Imperativ: Should be 0
 }
 
-static int otp_base64_encode(char **message,gsize *len)
+static int otp_base64_encode(char **message,gsize len)
 /* Encodes message into the base64 form */
 {
-	char* msg = g_base64_encode( (guchar*) *message,*len);
+	char* msg = g_base64_encode( (guchar*) *message,len);
 	/* The size has changed */
-	*len = (strlen(msg)+1) * sizeof(char);
+	len = (strlen(msg)+1) * sizeof(char);
 
 	g_free(*message);
 	*message = msg;
 	return TRUE; // TODO v.0.2: Imperativ: Should be 0
 }
 
-static int otp_base64_decode(char **message, gsize *len) 
-/* Decodes message from the base64 form */
+static int otp_base64_decode(char **message, gsize *plen) 
+/* Decodes message from the base64 form 
+ * The function needs the length as pointer because the length will change*/
 {
-	guchar* msg = g_base64_decode( *message, len);
+	guchar* msg = g_base64_decode( *message,plen);
 	g_free(*message);
 	*message = (char*) msg; //TODO v.0.1: difference char / unsigned char?
 	return TRUE; // TODO v.0.2: Imperativ: Should be 0
@@ -356,22 +357,21 @@ static int otp_base64_decode(char **message, gsize *len)
 static int otp_udecrypt(char **message, struct otp* pad, int decryptpos)
 /* Decrypt the message  */
 {
-	gsize a = (strlen(*message)+1)* sizeof(char);
-	gsize *len = &a;
+	gsize len = (strlen(*message)+1)* sizeof(char);
 	char *b = ""; char **key = &b;
-	otp_base64_decode(message, len);
+	otp_base64_decode(message, &len);
 
 #ifdef HAVEKEYFILE
-	if ( otp_get_decryptkey_from_file(key,pad,*len,decryptpos)
+	if ( otp_get_decryptkey_from_file(key,pad,len,decryptpos)
 						 == FALSE ) return FALSE;
 #else
 	char k[]=STATICKEY;
-	char *vkey = (char *) g_malloc( (*len)*sizeof(char) );
+	char *vkey = (char *) g_malloc( len*sizeof(char) );
 	/* the pad could be anything... useing memcpy */
-	memcpy(vkey,k,*len-1);
+	memcpy(vkey,k,len-1);
 	*key=vkey; 
 #endif
-	otp_xor( message, key, *len);
+	otp_xor( message, key, len);
 	return TRUE; // TODO v.0.2: Imperativ: Should be 0
 }
 
@@ -379,8 +379,7 @@ static int otp_udecrypt(char **message, struct otp* pad, int decryptpos)
 static int otp_uencrypt(char **message, struct otp* pad)
 /* Encrypt the message  */
 {
-	gsize a = (strlen(*message)+1) * sizeof(char);
-	gsize *len = &a;
+	gsize len = (strlen(*message)+1) * sizeof(char);
 	char *d=""; char **rand = &d;
 	char *c=""; char **key = &c;
 	char *msg;
@@ -393,22 +392,22 @@ static int otp_uencrypt(char **message, struct otp* pad)
 						 == FALSE ) return FALSE;
 	rnd=(unsigned char)*rand[0]*RNDLENMAX/255;
 	g_free(*rand);
-	msg = g_malloc0(rnd+*len);	/* Create a new,longer message */
-	memcpy(msg,*message,*len-1); 
+	msg = g_malloc0(rnd+len);	/* Create a new,longer message */
+	memcpy(msg,*message,len-1); 
 	g_free(*message);
 	*message = msg;	
-	*len += rnd;
+	len += rnd;
 #endif
-	if ( otp_get_encryptkey_from_file(key,pad,*len) 
+	if ( otp_get_encryptkey_from_file(key,pad,len) 
 							== FALSE ) return FALSE;
 #else
 	char k[]=STATICKEY; 
-	char *vkey = (char *) g_malloc( (*len) * sizeof(char) );
+	char *vkey = (char *) g_malloc( len*sizeof(char) );
 	/* the pad could be anything... useing memcpy */
-	memcpy(vkey,k,*len-1);
+	memcpy(vkey,k,len-1);
 	*key = vkey;
 #endif
-	otp_xor(message, key, *len);
+	otp_xor(message, key, len);
 	otp_base64_encode(message, len);
 	return TRUE; // TODO v.0.2: Imperativ: Should be 0
 }
@@ -426,20 +425,19 @@ unsigned int otp_erase_key(struct otp* pad) {
 	pad->protected_position=0;		
 
 
-	gsize a = (ERASEBLOCKSIZE+1) * sizeof(char);				/* get length of the used memory*/
-	gsize *len=&a;
+	gsize len = (ERASEBLOCKSIZE+1) * sizeof(char);				/* get length of the used memory*/
 	char *b=""; char **key; key=&b;
 
 
 #ifdef HAVEKEYFILE
 	int result=TRUE;
 	while( result == TRUE ) {
-		result = otp_get_encryptkey_from_file(key,pad,*len);
+		result = otp_get_encryptkey_from_file(key,pad,len);
 	}
 	result=TRUE;
-	*len=1+1;
+	len=1+1;
 		while( result == TRUE ) {
-		result = otp_get_encryptkey_from_file(key,pad,*len);
+		result = otp_get_encryptkey_from_file(key,pad,len);
 	}
 #endif
 
