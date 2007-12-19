@@ -65,42 +65,33 @@
 #define CHECKKEY		/* Histogram/repeat checking of the key */
 #define RNDMSGLEN		/* Add a random-length string onto the message */
 
-/*  ----------------- Lib One-Time Pad Functions (Internal)------------------ */
 
+static int otp_xor(char **message,char **key,int len)
 /* XOR message and key. This function is the core of the libary. */
-static int otp_xor(char **message,char **key,int len) {
+{
 	int i;
-	char *m,*k;		
-	
-	m = *message;
-	k = *key;
-/* 	otp_printint(m,len); */
-/* 	otp_printint(p,len); */
 	for (i = 0;i < (len-1);i++) {
-/* 		printf("%c\t%d\t%c\t%d\t%d\n",m[i],m[i],p[i],p[i],m[i]^p[i]); */
-		m[i]=m[i]^k[i];
+		(*message)[i] = (*message)[i]^(*key)[i];
 	}
-/* 	otp_printint(m,len);	 */
-	*message=m;
 	g_free(*key);
-	return TRUE;
+	return TRUE; // TODO v.0.2: Imperativ: Should be 0
 }
 
+static void otp_printint(char *m,int len)
 /* Helper function for debugging */
-static int otp_printint(char *m,int len) {
+{
 	int i;
 	printf("\t\tIntegers:\t");
 	for (i = 0;i < len;i++) {
 		printf("%i ",m[i]);
 	}
 	printf("\n");
-	return TRUE;
 }
 
+static void otp_calc_entropy(struct otp* pad)
 /* Calculate the free entropy */
-static void otp_calc_entropy(struct otp* pad){
-	int entropy = pad->filesize / 2 - pad->position - OTP_PROTECTED_ENTROPY;		/* Calculate the free entropy */
-
+{
+	int entropy = pad->filesize/2-pad->position-OTP_PROTECTED_ENTROPY;
 	if (entropy < 0){
 		pad->entropy = 0;
 	} else {
@@ -108,79 +99,79 @@ static void otp_calc_entropy(struct otp* pad){
 	}
 }
 
+static int otp_open_keyfile(int *fd, char **data,struct otp* pad)
 /* Opens a keyfile with memory mapping */
-static int otp_open_keyfile(int *fd, char **data,struct otp* pad){
+{
 	struct stat fstat;
 	if ((*fd = open(pad->filename, O_RDWR)) == -1) {
 		perror("open");
-		pad=NULL;
+		pad = NULL;
 		return FALSE;
 	}
 
 	if (stat(pad->filename, &fstat) == -1) {
 		perror("stat");
-		pad=NULL;
+		pad = NULL;
 		return FALSE;
 	}
 	pad->filesize=fstat.st_size;
 
-	if ((*data = mmap((caddr_t)0, pad->filesize, PROT_READ | PROT_WRITE, MAP_SHARED, *fd, 0)) == (caddr_t)(-1)) {
+	if ((*data = mmap((caddr_t)0, pad->filesize, PROT_READ | PROT_WRITE, 
+					MAP_SHARED, *fd, 0)) == (caddr_t)(-1)) {
 		perror("mmap");
-		pad=NULL;
+		pad = NULL;
 		return FALSE;
 	}
-	//printf("\nopen:\t%u %u\n\n",*fd,*data);
-	return TRUE;
+	return TRUE; // TODO v.0.2: Imperativ: Should be 0
 }
 
+static int otp_close_keyfile(int *fd, char **data,struct otp* pad)
 /* Closes a keyfile with memory mapping */
-static int otp_close_keyfile(int *fd, char **data,struct otp* pad){
-	//printf("\nclose:\t%u %u\n\n",*fd,*data);
+{
 	munmap(*data, pad->filesize);
 	close(*fd);
-	return TRUE;
+	return TRUE; // TODO v.0.2: Imperativ: Should be 0
 }
 
-/* Seek the position where the pad can be used for encryption */
-static int otp_seek_pos(char *data,int filesize){
-	int pos=0;
-/* 	otp_printint(data+pos,10); */
-	while ( ( (data+pos)[0] == PAD_EMPTYCHAR) && (pos < filesize) ) {
+static int otp_seek_pos(char *data,int filesize)
+/* Seeks the position where the pad can be used for encryption */
+{
+	int pos = 0;
+	while ( ((data+pos)[0] == PAD_EMPTYCHAR) && (pos < filesize) ) {
 		pos++;
 	}
 	return pos;
 }
 
+static struct otp* otp_seek_start(struct otp* pad)
 /* Seeks the the starting position,filesize and entropy from the keyfile */
-static struct otp* otp_seek_start(struct otp* pad){
-/* 	char* path = get_current_dir_name(); */
-	int *fd; char *b=""; char **data; data=&b; int wfd=0; fd=&wfd;
-	if (otp_open_keyfile(fd,data,pad)) {		/* Open the keyfile */
-	
-		//printf("\nworking:\t%u %u\n\n",*fd,*data);
-
+{
+	int wfd = 0; int *fd = &wfd; 
+	char *b = ""; char **data = &b;
+	if (otp_open_keyfile(fd,data,pad)) {
 		pad->position = otp_seek_pos(*data,pad->filesize);
 		otp_calc_entropy(pad);
-		otp_close_keyfile(fd,data,pad);		/* Close the keyfile */
+		otp_close_keyfile(fd,data,pad);
 	}else{
 		return NULL;
 	}
 	return pad;
 }
 
+static int otp_id_is_valid(char* id_str)
 /* Check if the ID is valid */
-static char* otp_check_id(char* id_str){
+{
 	if ( strlen(id_str) == OTP_ID_LENGTH * sizeof(char)) {
-		return id_str;				/* The ID only if the message was extracted as well.*/	
+		return TRUE;
 	}else{
-		return NULL;
+		return FALSE;
 	}
 }
 
+static int otp_key_is_random(char **key,int len) // TODO for v.0.1: Histogram test
 /* Checks the key by statistical means 
  * 
  * repeatprob=(1/256)^(repeatlength-1)*(keylength-repeatlength+1) (please check this formula)
- * 
  * expected number in lower half n_lower (not yet implemented)
  * Standard deviation sigma=sqrt(len/2/2)
  * Rejected if sum more then n sigmas away from exp_sum
@@ -188,9 +179,9 @@ static char* otp_check_id(char* id_str){
  * n=5 : 5.73*10^-7
  * n=6 : 1.97*10^-9
  * */
-static int otp_check_key(char **key,int len) {
+{
 //	int histo[256]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-	int i,rep=1;
+	int i,rep = 1;
 	double repeatprob;
 //	double sigma=0.0;
 //	int lower=0;
@@ -198,21 +189,21 @@ static int otp_check_key(char **key,int len) {
 //	char *c="098988787098709870987098709870887987098709870987000";
 //	len=strlen(c);
 	char *c;
-	c=*key;
+	c = *key;
 	int lastc=257; /* This is not a char */
 	
 	//otp_printint(*key,len);
 	
-	for(i=0;i<len;i++) {
+	for(i = 0;i < len;i++) {
 //		histo[(unsigned char)c[i]]++;
 //		if (c[i]<127) lower++;
-		if (c[i]==lastc) {
+		if (c[i] == lastc) {
 			rep++;
 		}else{
-			lastc=c[i];
+			lastc = c[i];
 		}
 	}
-	repeatprob=pow(1/256.0,rep-1.0)*(len-rep+1);
+	repeatprob = pow(1/256.0,rep-1.0)*(len-rep+1);
 	
 //	for (i=0;i<256;i++) {
 //		average+=histo[i]*i;
@@ -225,83 +216,67 @@ static int otp_check_key(char **key,int len) {
 	
 //	printf("\nlen:%i  ,lower:%i,  n*sigma:%f, lower border:%f,  higher border:%f\n",len,lower,NUMBERSIGMA*sigma,len/2.0-NUMBERSIGMA*sigma,len/2.0+NUMBERSIGMA*sigma);
 //	printf("Probability for a repeat of len %i: %e\n",rep,repeatprob);
-	
-	
-	
-	if (repeatprob<REPEATTOL) { /* Fail if the probability for a random key to have a repeat is smaller than the tolerance. */
+	if (repeatprob < REPEATTOL) { 
+	/* Fail if the probability for a random key to have a repeat is smaller than the tolerance. */
 		printf("Probability for a repeat of len %i: %e\n",rep,repeatprob);
 		return FALSE;
 	}
 	return TRUE;
 }
 
+static int otp_get_encryptkey_from_file(char **key , struct otp* pad, int len)
 /* Gets the key to encrypt from the keyfile */
-static int otp_get_encryptkey_from_file(char **key , struct otp* pad, int len) {
-	int *fd; char *b=""; char **data; data=&b; int wfd=0; fd=&wfd;
-	int i=0;
-	int protected_entropy=OTP_PROTECTED_ENTROPY;
-	int position=pad->position;
-	
-	if (pad->protected_position != 0) {								
-		protected_entropy=0;						/* allow usage of protected entropy*/
-		position=pad->protected_position;
+{
+	int wfd = 0; int *fd = &wfd;; char *b = ""; char **data = &b;
+	int i = 0;
+	int protected_entropy = OTP_PROTECTED_ENTROPY;
+	int position = pad->position;
+
+	if (pad->protected_position != 0) { 
+		/* allow usage of protected entropy*/
+		protected_entropy = 0;
+		position = pad->protected_position;
 	}
+	if ( (position+len-1 > (pad->filesize/2-protected_entropy) ) 
+							|| position < 0 ) return FALSE;
 
+	if (otp_open_keyfile(fd,data,pad) == FALSE) return FALSE;
 
-	if ( (position + len -1 > (pad->filesize / 2 - protected_entropy) ) || position < 0) {
-		return FALSE;
-	}
-	
-	if (otp_open_keyfile(fd,data,pad)) {		/* Open the keyfile */
-		char *vkey = (char *) g_malloc( (len) * sizeof(char) );
-		memcpy( vkey, *data+position ,len-1);  		/* the pad could be anything... use memcpy */
-		*key=vkey;
-/* 		otp_printint(*key,len-1); */
-	
-		char *datpos=*data+position;
-
+	char *vkey = (char *) g_malloc((len)*sizeof(char));
+	memcpy(vkey, *data+position ,len-1);  
+	/* the pad could be anything... using memcpy */
+	*key = vkey;
+	char *datpos = *data+position;
 
 #ifdef CHECKKEY
-/* What should i do if the key is rejected? ATM it just fails and destroys the keyblock.*/
-	if (otp_check_key(key,len-1)==FALSE) {
-		
-#ifdef KEYOVERWRITE	
-		if (pad->protected_position != 0) {	/* using protected entropy, do not destroy the protected entropy */
-		}else{						
-			for(i = 0 ; i < ( len - 1) ; i++){		/* Make the used key unusable in the keyfile */
-/* 				printf(" %d \n",datpos[i]); */
-				datpos[i] = PAD_EMPTYCHAR;
-/* 				printf(" %d \n",datpos[i]); */
-			}
+	/* TODO v.0.2: What should i do if the key is rejected? 
+	 * ATM it just fails and destroys the keyblock.*/
+	if (otp_key_is_random(key,len-1) == FALSE) {
+#ifdef KEYOVERWRITE
+		if (pad->protected_position == 0) {
+			/* not using protected entropy, make the used key unusable 
+			 * in the keyfile */
+			for(i = 0 ; i < ( len - 1) ; i++) datpos[i] = PAD_EMPTYCHAR;
 		}
-#endif
 		return FALSE;
+#endif
 	}
 #endif
-
 #ifdef KEYOVERWRITE	
-		if (pad->protected_position != 0) {	/* using protected entropy, do not destroy the protected entropy */
-		}else{						
-			for(i = 0 ; i < ( len - 1) ; i++){		/* Make the used key unusable in the keyfile */
-/* 				printf(" %d \n",datpos[i]); */
-				datpos[i] = PAD_EMPTYCHAR;
-/* 				printf(" %d \n",datpos[i]); */
-			}
+	if (pad->protected_position == 0) {
+		/* Make the used key unusable in the keyfile unless the entropy
+		 * is protected */
+		for(i = 0 ; i < ( len - 1) ; i++){
+			datpos[i] = PAD_EMPTYCHAR;
 		}
-#endif
-
-		otp_close_keyfile(fd,data,pad);		/* Close the keyfile */
-		if (pad->protected_position == 0) {	/* In all cases where the protected entropy is not used */
-			pad->position = pad->position + len -1;
-		}
-		otp_calc_entropy(pad);
-		
-	}else{
-		return FALSE;
 	}
-	
-	return TRUE;
-
+#endif
+	otp_close_keyfile(fd,data,pad);
+	if (pad->protected_position == 0) 
+						pad->position = pad->position + len -1;
+		/* In all cases where the protected entropy is not used */
+	otp_calc_entropy(pad);
+	return TRUE;  // TODO v.0.2: Imperativ: Should be 0
 }
 
 /* Gets the key to decrypt from the keyfile */
@@ -656,7 +631,11 @@ char* otp_get_id_from_message(char **message){
 
 	char *id_str = g_strdup(m_array[1]);
 
-	return otp_check_id(id_str);
+	if (otp_id_is_valid(id_str)==TRUE) {
+		return id_str;
+	}else{
+		return NULL;
+	} 
 }
 
 /* Creates an otp struct, returns NULL if the filename is incorrect,
@@ -703,7 +682,7 @@ struct otp* otp_get_from_file(const char* path, const char* input_filename){
 
 	g_strfreev(f_array);
 
-	if ( otp_check_id(pad->id) == NULL ) {
+	if ( otp_id_is_valid(pad->id) == FALSE ) {
 		return NULL;
 	}
 
