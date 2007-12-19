@@ -353,7 +353,6 @@ static int otp_base64_decode(char **message, gsize *plen)
 	return TRUE; // TODO v.0.2: Imperativ: Should be 0
 }
 
-
 static int otp_udecrypt(char **message, struct otp* pad, int decryptpos)
 /* Decrypt the message  */
 {
@@ -374,7 +373,6 @@ static int otp_udecrypt(char **message, struct otp* pad, int decryptpos)
 	otp_xor( message, key, len);
 	return TRUE; // TODO v.0.2: Imperativ: Should be 0
 }
-
 
 static int otp_uencrypt(char **message, struct otp* pad)
 /* Encrypt the message  */
@@ -416,46 +414,45 @@ static int otp_uencrypt(char **message, struct otp* pad)
 /*  ----------------- Public Functions of the Library------------ 
  * Exported in libtop.h */
 
+
+unsigned int otp_erase_key(struct otp* pad)
 /* destroys a keyfile by using up all encryption-entropy */
-unsigned int otp_erase_key(struct otp* pad) {
-
-	if(pad == NULL) {
-		return FALSE;
-	}
-	pad->protected_position=0;		
-
-
+{
+	if(pad == NULL) return FALSE;
+	pad->protected_position=0;
 	gsize len = (ERASEBLOCKSIZE+1) * sizeof(char);				/* get length of the used memory*/
-	char *b=""; char **key; key=&b;
-
-
+	char *b=""; char **key = &b;
 #ifdef HAVEKEYFILE
+	/* Using up all entropy */
 	int result=TRUE;
 	while( result == TRUE ) {
 		result = otp_get_encryptkey_from_file(key,pad,len);
 	}
 	result=TRUE;
 	len=1+1;
-		while( result == TRUE ) {
+	while( result == TRUE ) {
 		result = otp_get_encryptkey_from_file(key,pad,len);
 	}
 #endif
-
-	return TRUE;	
+	return TRUE; // TODO v.0.2: Imperativ: Should be 0
 }
 
-/* generates a new key pair (two files) with the name alice and bob of 'size' bytes. If source is NULL, /dev/urandom is used. */
-unsigned int otp_generate_key_pair(const char* alice,const  char* bob,const char* path,const char* source, unsigned int size) {
-	if(alice == NULL || bob == NULL || path == NULL || source == NULL || size==0) {
-		return FALSE;
-	}
-	
+unsigned int otp_generate_key_pair(const char* alice,
+						const  char* bob, const char* path,
+						const char* source, unsigned int size) 
+/* generates a new key pair (two files) with the name alice and bob of 
+ * 'size' bytes. If source is NULL, /dev/urandom is used. 
+ * The function can only generate Keyfiles with a filesize of n*BLOCKSIZE*/
+
+{
+	if(alice == NULL || bob == NULL || path == NULL 
+				|| source == NULL || size==0) return FALSE;
+
 	/* Check for things like '/'. Alice and Bob will become filenames */
-	if ((g_strrstr(alice,PATH_DELI)!=NULL) || (g_strrstr(bob,PATH_DELI)!=NULL)) {
-		return FALSE;	
-	}
-	
-	if ( size/BLOCKSIZE == (float) size/BLOCKSIZE ) { /* The function can only generate Keyfiles with a filesize of n*BLOCKSIZE */
+	if ((g_strrstr(alice,PATH_DELI)!=NULL) 
+				|| (g_strrstr(bob,PATH_DELI)!=NULL)) return FALSE;
+
+	if ( size/BLOCKSIZE == (float) size/BLOCKSIZE ) {
 		size=size/BLOCKSIZE;
 	}else{
 		size=size/BLOCKSIZE+1;
@@ -466,7 +463,6 @@ unsigned int otp_generate_key_pair(const char* alice,const  char* bob,const char
 		perror("open");
 		return FALSE;
 	}
-	
 	struct stat rfstat;
 	if (stat(source, &rfstat) == -1) {
 		perror("stat");
@@ -474,87 +470,77 @@ unsigned int otp_generate_key_pair(const char* alice,const  char* bob,const char
 	}
 
 	unsigned int rfilesize = rfstat.st_size;
-	if ( !( ((rfstat.st_mode|S_IFCHR) == rfstat.st_mode) || (rfilesize >= size*BLOCKSIZE) ) ) {		/* If the source is to small and not a character dev */
-		//printf("The source '%s' is too small!\n",source);
-		return FALSE;
-	}
-	
+	/* If the source is to small and not a character dev */
+	if ( !( ((rfstat.st_mode|S_IFCHR) == rfstat.st_mode) 
+				|| (rfilesize >= size*BLOCKSIZE) ) ) return FALSE;
 
 	unsigned int id;
-	read (rfd,&id,sizeof(id));		/* Our ID */
-	//id=1000;
-
-	char *idstr=g_strdup_printf ("%.8X",id);			/* Our ID string */;
-	
-
-	/* Create the directory for the entropy files if it does not exist */	
+	/* Our ID */
+	read(rfd,&id,sizeof(id));
+	/* Our ID string */;
+	char *idstr=g_strdup_printf ("%.8X",id);
 
 	DIR *dp;
 	dp = opendir (path);
-
 	if (dp == NULL) {
-		mkdir(path, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP );	/* Create the directory */
+		/* Create the directory for the entropy files if it does not exist */
+		mkdir(path, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP );
 	}else{
 		closedir(dp);
 	}
-
-
 	/* Opening the first file */
 	char *afilename=g_strconcat(path,alice,FILE_DELI,bob,FILE_DELI,idstr,".entropy",NULL);
-	//printf("%s\n",afilename);
 	
 	int afd=0; char *ab=""; char **adata; adata=&ab;
 	
 	if ((afd = open(afilename, O_RDWR)) == -1) {
 	}else{
+		/* File already exists. I will not overwrite any existing file!*/
 		close(afd);
 		close(rfd);
-		return FALSE; 	/* File already exists. I will not overwrite any existing file!*/
+		return FALSE;
 	}
-	if ((afd = open(afilename, O_RDWR|O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP )) == -1) {
+	if ((afd = open(afilename, 
+					O_RDWR|O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP ))
+					 == -1) {
 		perror("open");
 		close(rfd);
 		return FALSE;
-	}	
-	
+	}
 	char rand[BLOCKSIZE];
 	int i=0;
 	
 	/* Filling the first file */
 	for(i=0;i<size;i++) {
 		read (rfd, rand, BLOCKSIZE);
-		write (afd, rand, BLOCKSIZE);	
+		write (afd, rand, BLOCKSIZE);
 	}
-	
 	/* Close the entropy source */
 	close(rfd);
-	
-	
 	/* Opening the secound file */
-#ifdef USEDESKTOP	
-	const char *desktoppath=g_get_user_special_dir(G_USER_DIRECTORY_DESKTOP);  /* Owned by Glib. No need for g_free */
-	char *bfilename=g_strconcat(desktoppath,PATH_DELI,bob,FILE_DELI,alice,FILE_DELI,idstr,".entropy",NULL);
+#ifdef USEDESKTOP
+	/* Owned by Glib. No need for g_free */
+	const char *desktoppath=g_get_user_special_dir(G_USER_DIRECTORY_DESKTOP);
+	char *bfilename=g_strconcat(desktoppath,PATH_DELI,bob,FILE_DELI,
+						alice,FILE_DELI,idstr,".entropy",NULL);
 #else
-	char *bfilename=g_strconcat(path,bob,FILE_DELI,alice,FILE_DELI,idstr,".entropy",NULL);
+	char *bfilename=g_strconcat(path,bob,FILE_DELI,alice,FILE_DELI,
+						idstr,".entropy",NULL);
 #endif	
 
-	//printf("%s\n",bfilename);
-	
 	int bfd=0; 
-	
 	if ((bfd = open(bfilename, O_RDWR)) == -1) {
 	}else{
+		/* File already exists. I will not overwrite any existing file!*/
 		close(bfd);
-		return FALSE; 	/* File already exists. I will not overwrite any existing file!*/
+		return FALSE;
 	}
-	if ((bfd = open(bfilename, O_RDWR|O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP )) == -1) {
+	if ((bfd = open(bfilename, 
+					O_RDWR|O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP )) == -1) {
 		perror("open");
 		close(afd);
 		return FALSE;
 	}
-	
-	
-	
 	/* Opening a memory map for the first file */
 	struct stat afstat;
 	if (stat(afilename, &afstat) == -1) {
@@ -566,79 +552,65 @@ unsigned int otp_generate_key_pair(const char* alice,const  char* bob,const char
 		perror("mmap");
 		return FALSE;
 	}
-	
-	
 	/* Create the reversed second file from the first one */
 	int j=0;
 	char temp[BLOCKSIZE];
-	//otp_printint(*adata,afilesize);
-//	printf("Filesize:%u\n",afilesize);
 	for(i=afilesize-BLOCKSIZE;i>=0;i=i-BLOCKSIZE) {
-			for(j=0;j<BLOCKSIZE;j++) {
-				temp[BLOCKSIZE-1-j]=*(*adata+i+j);
-			}
-		//otp_printint(temp,BLOCKSIZE);
+		for(j=0;j<BLOCKSIZE;j++) {
+			temp[BLOCKSIZE-1-j]=*(*adata+i+j);
+		}
 		write(bfd,temp,BLOCKSIZE);
 	}
-	
-	
 	/* Close the second file */
 	close(bfd);
-	
 	/* Close the first file */
 	munmap(adata, afilesize);
 	close(afd);
-	
 	/* Cleanup */
 	g_free(idstr);
-	
-	return TRUE;
+	return TRUE;		// TODO v.0.2: Imperativ: Should be 0
 }
 
-/* encrypts a message with the protected entropy. protected_pos is the position in bytes to use. */
-unsigned int otp_encrypt_warning(struct otp* pad, char **message, int protected_pos) {
 
-	if(pad == NULL) {
-		return FALSE;
-	}
-	
+unsigned int otp_encrypt_warning(struct otp* pad, char **message, int protected_pos)
+/* encrypts a message with the protected entropy. 
+ * protected_pos is the position in bytes to use. */
+{
+	if(pad == NULL) return FALSE;
 	int oldpos=pad->position;
-	pad->protected_position = pad->filesize / 2 - OTP_PROTECTED_ENTROPY-protected_pos;  /* Assign a position in the protected entropy */
+	pad->protected_position = pad->filesize/2-OTP_PROTECTED_ENTROPY-protected_pos;
 	
 #ifdef RNDMSGLEN
 	oldpos+=1;
 #endif	
 
 #ifdef UCRYPT
-	if (otp_uencrypt(message,pad) == FALSE) {			/* Encrypt and base64 */
+	if (otp_uencrypt(message,pad) == FALSE) {
 		pad->protected_position=0;
 		return FALSE;
 	}
-#endif	
-
-	char *pos_str = g_strdup_printf ("%u",oldpos);			/* Our position in the pad*/			
-
-	char *new_msg = g_strconcat(pos_str,MSG_DELI,pad->id,MSG_DELI,*message,NULL);	/*Something like "3EF9|34EF4588|M+Rla2w=" */
+#endif
+	/* Our position in the pad*/
+	char *pos_str = g_strdup_printf ("%u",oldpos);
+	/*Something like "3EF9|34EF4588|M+Rla2w=" */
+	char *new_msg = g_strconcat(pos_str,MSG_DELI,
+						pad->id,MSG_DELI,*message,NULL);
 	g_free(*message);
 	g_free(pos_str);
 	*message = new_msg;
-	
-	
 	pad->protected_position=0;
-	return TRUE;
+	return TRUE;		// TODO v.0.2: Imperativ: Should be 0
 }
 
-/* extracts and returns the ID from a given encrypted message. Leaves the message constant. Returns NULL if it fails.*/
-char* otp_get_id_from_message(char **message){
-
+char* otp_get_id_from_message(char **message)
+/* extracts and returns the ID from a given encrypted message. 
+ * Leaves the message constant. Returns NULL if it fails.*/
+{
 	gchar** m_array = g_strsplit(*message, MSG_DELI, 3);
-
 	if ( (m_array[0] == NULL) || (m_array[1] == NULL) ) {
 		return FALSE;
 	}
-
 	char *id_str = g_strdup(m_array[1]);
-
 	if (otp_id_is_valid(id_str)==TRUE) {
 		return id_str;
 	}else{
@@ -646,57 +618,45 @@ char* otp_get_id_from_message(char **message){
 	} 
 }
 
+struct otp* otp_get_from_file(const char* path, const char* input_filename)
 /* Creates an otp struct, returns NULL if the filename is incorrect,
-   or if the file is missing */
-struct otp* otp_get_from_file(const char* path, const char* input_filename){
+ * or if the file is missing */
+{
 	static struct otp* pad;
-   	pad = (struct otp *) g_malloc(sizeof(struct otp));
-   	pad->protected_position=0;
-
-	if (input_filename == NULL ) {	/* empty filename */
-		return NULL;
-	}
-
-	if (path == NULL ) {	/* empty path */
-		return NULL;
-	}
-
+	pad = (struct otp *) g_malloc(sizeof(struct otp));
+	pad->protected_position=0;
+	if (input_filename == NULL ) return NULL;
+	if (path == NULL ) return NULL;
+	
 	char *filename = g_strconcat(path,input_filename,NULL);
 	pad->filename = filename;
-
 	gchar** f_array = g_strsplit(input_filename, FILE_DELI, 3);
 
-	if ( (f_array[0] == NULL) || (f_array[1] == NULL) || (f_array[2] == NULL) ) {
-		return NULL;
-	}
-	char *src = g_strdup(f_array[0]);	/* Our source i.e alice@yabber.org */
-	pad->src = src;
+	if ( (f_array[0] == NULL) 
+				|| (f_array[1] == NULL) 
+				|| (f_array[2] == NULL) ) return NULL;
 
-	char *dest = g_strdup(f_array[1]);	/* Our dest i.e bob@yabber.org */
+	/* Our source i.e alice@yabber.org */
+	char *src = g_strdup(f_array[0]);
+	pad->src = src;
+	/* Our dest i.e bob@yabber.org */
+	char *dest = g_strdup(f_array[1]);
 	pad->dest = dest;
 
 	gchar** p_array = g_strsplit(f_array[2], ".", 2);
-
-	if ( (p_array[0] == NULL ) || (p_array[1] == NULL ) ) {
-		return NULL;
-	}
-	if ( g_str_has_suffix(f_array[2], FILE_SUFFIX) == FALSE ) {
-		return NULL;
-	}
-	char *id = g_strdup(p_array[0]);	/* Our ID */
+	if ( (p_array[0] == NULL ) || (p_array[1] == NULL ) ) return NULL;
+	if ( g_str_has_suffix(f_array[2], FILE_SUFFIX) == FALSE ) return NULL;
+	/* Our ID */
+	char *id = g_strdup(p_array[0]);
 	pad->id = id;
 
 	g_strfreev(p_array);
-
 	g_strfreev(f_array);
 
-	if ( otp_id_is_valid(pad->id) == FALSE ) {
-		return NULL;
-	}
+	if ( otp_id_is_valid(pad->id) == FALSE ) return NULL;
 
 #ifdef HAVEFILE
-
-	pad = otp_seek_start(pad);		/* Try to open the keyfile and get position ans size */
+	pad = otp_seek_start(pad);
 #else
 /* 	 Dummy-values for development */
 	if (pad != NULL) {
@@ -707,81 +667,65 @@ struct otp* otp_get_from_file(const char* path, const char* input_filename){
 #endif
 	return pad;
 }
+void otp_destroy(struct otp* pad)
 /* destroys an otp object */
-void otp_destroy(struct otp* pad) {
+{
 	if (pad != NULL) {
-		if (pad->src != NULL)
-			g_free(pad->src);
-		if (pad->dest != NULL)
-			g_free(pad->dest);
-		if (pad->id != NULL)
-			g_free(pad->id);
-		if (pad->filename != NULL)
-			g_free(pad->filename);
+		if (pad->src != NULL) g_free(pad->src);
+		if (pad->dest != NULL) g_free(pad->dest);
+		if (pad->id != NULL) g_free(pad->id);
+		if (pad->filename != NULL) g_free(pad->filename);
 		g_free(pad);
 	}
 }
 
+unsigned int otp_encrypt(struct otp* pad, char **message)
 /* Creates the actual string of the encrypted message that is given to the application.
-returns TRUE if it could encrypt the message 
-*/
-unsigned int otp_encrypt(struct otp* pad, char **message){
-
-	if(pad == NULL) {
-		return FALSE;
-	}
+returns TRUE if it could encrypt the message */
+{
+	if(pad == NULL) return FALSE;
 	pad->protected_position=0;
 	int oldpos=pad->position;
-	
 #ifdef RNDMSGLEN
 	oldpos+=1;
 #endif	
-
 #ifdef UCRYPT
-	if (otp_uencrypt(message,pad) == FALSE) {			/* Encrypt and base64 */
-		return FALSE;
-	}
+	if (otp_uencrypt(message,pad) == FALSE) return FALSE;
 #endif	
 
-	char *pos_str = g_strdup_printf ("%u",oldpos);			/* Our position in the pad*/			
-
-	char *new_msg = g_strconcat(pos_str,MSG_DELI,pad->id,MSG_DELI,*message,NULL);	/*Something like "3EF9|34EF4588|M+Rla2w=" */
+	/* Our position in the pad*/
+	char *pos_str = g_strdup_printf ("%u",oldpos);
+	/*Something like "3EF9|34EF4588|M+Rla2w=" */
+	char *new_msg = g_strconcat(pos_str,MSG_DELI,pad->id,MSG_DELI,*message,NULL);
 	g_free(*message);
 	g_free(pos_str);
 	*message = new_msg;
-	return TRUE;
+	return TRUE; 		// TODO v.0.2: Imperativ: Should be 0
 }
 
+unsigned int otp_decrypt(struct otp* pad, char **message)
 /* Strips the encrypted message and decrypts it.
 returns TRUE if it could decrypt the message  */
-unsigned int otp_decrypt(struct otp* pad, char **message){
-
-	if (pad == NULL) {
-		return FALSE;
-	}
+{
+	if (pad == NULL) return FALSE;
 	pad->protected_position=0;
 	gchar** m_array = g_strsplit(*message, MSG_DELI, 3);
 
-	if ( (m_array[0] == NULL) || (m_array[1] == NULL) || (m_array[2] == NULL) ) {
-		return FALSE;
-	}
+	if ( (m_array[0] == NULL) 
+					|| (m_array[1] == NULL) 
+					|| (m_array[2] == NULL) ) return FALSE;
 
-	int decryptpos = (unsigned int) g_ascii_strtoll ( strdup (m_array[0]) ,NULL,10); 	/* Our position to decrypt in the pad */
+	/* Our position to decrypt in the pad */
+	int decryptpos = (unsigned int) g_ascii_strtoll ( strdup (m_array[0]) ,NULL,10);
 	pad->id = g_strdup(m_array[1]);
-
 	char *new_msg = g_strdup(m_array[2]);
 	g_free(*message);
 	*message = new_msg;
-
 	g_strfreev(m_array);
 
 #ifdef UCRYPT
-
-	if (otp_udecrypt(message,pad,decryptpos) == FALSE) {		/* Decrypt and debase64 */
-		return FALSE;
-	}
-
+	if (otp_udecrypt(message,pad,decryptpos) == FALSE) return FALSE;
 #endif
 
-	return TRUE;
+	return TRUE; 		// TODO v.0.2: Imperativ: Should be 0
 }
