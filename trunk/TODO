@@ -9,6 +9,7 @@ Version 0.1
 
 	paranoia.c
 	 * check message size limits
+	 * add generated key to keylist
  
 Version 0.2
 ============
@@ -23,7 +24,7 @@ Version 0.2
 	 * send entropy warnings (inside messages)
 	 * /otp scan, to read in new keys
 	 
-	 other
+	other
 	 * Commandline program that can use libotp for general usage
  
 Version 0.3
