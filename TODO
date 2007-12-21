@@ -9,11 +9,9 @@ Version 0.1
 
 	paranoia.c
 	 * check message size limits
-	 * send PARANOIA_EXIT to all conversations on plugin unload
-	 * remove fake <otp>
  
- Version 0.2
- ============
+Version 0.2
+============
  	libotp.c
  	 * detailed error-numbers instead of return FALSE
  	
@@ -27,12 +25,18 @@ Version 0.1
 	 
 	 other
 	 * Commandline program that can use libotp for general usage
- 	
- Version 1.0
- ============
+ 
+Version 0.3
+============
+	paranoia.c
+	 * string freeze
+
+Version 1.0
+============
  	paranoia.c
  	 * gettext support (translations)
  	 * no conversation windows that pop-up independently
+	 * all pidgin protocols are tested and work
  	
 Misc
  * Design a simple web page

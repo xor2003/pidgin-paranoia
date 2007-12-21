@@ -958,13 +958,22 @@ static gboolean par_im_msg_change_display(PurpleAccount *account,
 #endif
 
 #ifdef SHOW_STATUS
-	// TODO: Remove fake <otp> messages
-	
-	// System messages and warnings should not be labelled
-	if(!(flags & PURPLE_MESSAGE_NO_LOG || flags & PURPLE_MESSAGE_SYSTEM)) {
-		struct key* used_key = par_search_key_by_conv(conv);
-	
-		if(used_key != NULL) {
+	// Remove the first fake <otp> string (FIXME: it's a hack)
+	if (used_key == NULL || !used_key->opt->otp_enabled) {
+		char* evil = g_strstr_len(*message, (gssize) 200, "&lt;otp&gt;");
+		if (evil != NULL) {
+			evil += 4;
+			*evil = 'N';
+			evil++;
+			*evil = 'O';
+			evil++;
+			*evil = '!';
+		}
+	}
+
+	/* System messages and warnings are not labelled */
+	if (!(flags & PURPLE_MESSAGE_NO_LOG || flags & PURPLE_MESSAGE_SYSTEM)) {	
+		if (used_key != NULL) {
 			if (used_key->opt->otp_enabled && used_key->opt->ack_sent) {
 				par_add_status_str(message);
 			}
@@ -973,7 +982,7 @@ static gboolean par_im_msg_change_display(PurpleAccount *account,
 	
 #endif
 
-	//TRUE if the message should be canceled, or FALSE otherwise.
+	// TRUE if the message should be canceled, or FALSE otherwise.
 	return FALSE;
 }
 
@@ -1018,8 +1027,7 @@ static gboolean plugin_load(PurplePlugin *plugin) {
 		PURPLE_CMD_FUNC(par_cli_check_cmd), 
 		"otp &lt;command&gt: type /otp to get help", NULL);
 
-	// debug
-	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Done loading.\n");
+	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Plugin loaded.\n");
 	
 	return TRUE;
 }
@@ -1027,7 +1035,14 @@ static gboolean plugin_load(PurplePlugin *plugin) {
 /* --- gets called when disabling the plugin --- */
 gboolean plugin_unload(PurplePlugin *plugin) {
 
-	// TODO: send PARANOIA_EXIT to all conversations
+	// send PARANOIA_EXIT to all open conversations
+	struct key* key_ptr = keylist;
+	while (key_ptr != NULL) {
+		if (key_ptr->conv != NULL) {
+			par_session_close(key_ptr->conv);
+		}
+		key_ptr = key_ptr->next;
+	}
 
 	// disconnect all signals
 	purple_signals_disconnect_by_handle(plugin);
@@ -1038,8 +1053,7 @@ gboolean plugin_unload(PurplePlugin *plugin) {
 	// free the key list
 	par_free_key_list();
 
-	// debug
-	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Done unloading.\n");
+	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Plugin unloaded.\n");
 
 	return TRUE;
 }
