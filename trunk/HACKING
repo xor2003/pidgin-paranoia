@@ -1,21 +1,27 @@
 --------------------------------------------------------------------------------
-                               Developer Help
+                           Hacking Pidgin-Paranoia
 --------------------------------------------------------------------------------
+
+CODING STYLE
+--------------------------------------------------------------------------------
+Linux kernel coding style:
+http://lxr.linux.no/linux/Documentation/CodingStyle
+or /usr/src/linux/Documentation/CodingStyle
 
 ANSI C
 --------------------------------------------------------------------------------
 C tutorial: http://www.pronix.de/pronix-4.html
 Pointers: http://www.c-plusplus.de/forum/viewtopic-var-t-is-124532
+Casting: http://www.cpax.org.uk/prg/writings/casting.php
 
 LIBRARIES
 --------------------------------------------------------------------------------
+GNOMELib (glib) API: 
+	http://developer.gnome.org/doc/API/2.0/glib/index.html
 GNUlibC (glibc) - String and Array Utilities: 
 	http://www.gnu.org/software/libc/manual/html_node/String-and-Array-Utilities.html
-GNOMELib (glib) API: http://developer.gnome.org/doc/API/2.0/glib/index.html
-
-Libpurple: http://developer.pidgin.im/doxygen/dev/html/group__core.html
-Conversation Signals: http://developer.pidgin.im/doxygen/dev/html/conversation-signals.html
-Pidgin-Encrypt SRC: http://pidgin-encrypt.cvs.sourceforge.net/pidgin-encrypt/encrypt/encrypt.c?view=markup
+Libpurple:
+	http://developer.pidgin.im/doxygen/dev/html/group__core.html
 
 AUTOTOOLS
 --------------------------------------------------------------------------------
