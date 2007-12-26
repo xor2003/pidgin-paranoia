@@ -399,7 +399,7 @@ unsigned int otp_erase_key(struct otp* pad)
 {
 	if (pad == NULL) return FALSE;
 	pad->protected_position = 0;
-	gsize len = (ERASEBLOCKSIZE+1) * sizeof(char);                         /* get length of the used memory*/
+	gsize len = (ERASEBLOCKSIZE+1) * sizeof(char);
 	char *space1 = "";
 	char **key = &space1;
 	/* Using up all entropy */
