@@ -2,7 +2,7 @@
                      Installation (on Debian/Ubuntu) 
 --------------------------------------------------------------------------------
 
-1. Pidgin
+(1. Pidgin)
 ==========
 
 Download and extract the newest pidgin source
@@ -20,6 +20,8 @@ run pidgin
 
 2. Pidgin-Paranoia
 ===================
+
+You need to have following tools installed: libtool,automake,autoconf
 
 Get it from svn:
 $ svn co https://pidgin-paranoia.svn.sourceforge.net/svnroot/pidgin-paranoia/trunk pidgin-paranoia

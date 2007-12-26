@@ -30,7 +30,7 @@
 
 
 /* great stuff */
-#include "libotp.h"
+#include "../libotp.h"
 
 #define PARANOIA_PATH "/.paranoia/"		/* TODO: REMOVE */
 
