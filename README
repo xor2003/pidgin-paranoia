@@ -37,7 +37,8 @@ TODO
 Commands are entered by typing a message beginning with /otp.
 
 /otp help - shows a list of all available commands
-/otp genkey <destination account> <size> - generates a key pair of <size> kB
+/otp genkey <size> <entropy source> - generates a key pair of <size> kB
+The source parameter is optional.
 /otp on - tries to start the encryption
 /otp off - stops the encryption
 /otp info - shows details about the used key

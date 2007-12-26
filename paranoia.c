@@ -455,8 +455,8 @@ static gboolean par_session_check_msg(struct key* used_key,
 PurpleCmdId par_cmd_id;
 
 #define PARANOIA_HELP_STR "Welcome to the One-Time Pad CLI.\n\
-otp help: shows this message \notp genkey &lt;destination \
-account&gt; &lt;size&gt;: generates a key pair of &lt;size&gt; \
+otp help: shows this message \notp genkey &lt;size&gt; &lt;entropy \
+source&gt;: generates a key pair of &lt;size&gt; \
 kB\notp on: tries to start the encryption\notp off: stops the \
 encryption\notp info: shows details about the used key"
 #define PARANOIA_ERROR_STR "Wrong argument(s). Type '/otp help' for help."
@@ -567,11 +567,11 @@ static void par_cli_key_details(PurpleConversation *conv)
 
 static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv, 
 		const gchar *cmd, gchar **args, gchar **error, void *data)
-/* executes all the otp commads */
+/* checks and executes all otp commads */
 {
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 		"An otp command was received. sweet!\n");
-
+		
 	if (args[0] == NULL) {
 		par_cli_set_default_error(error);
 		return PURPLE_CMD_RET_FAILED;
@@ -593,13 +593,13 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 		else if (strncmp("genkey ", *args, 7) == 0) {
 			gchar** param_array = g_strsplit(*args + 7, " ", 2); /* to skip "genkey " */
 
-			if (param_array[1] == NULL || param_array[0] == NULL) {
+			if (param_array[0] == NULL) {
 				g_strfreev(param_array);
 				par_cli_set_default_error(error);
 				return PURPLE_CMD_RET_FAILED;
 			}
 			
-			int size = strtol(param_array[1], NULL, 0);
+			int size = strtol(param_array[0], NULL, 0);
          	/* overflow detection */
 			if (size >= INT_MAX || size <= INT_MIN) {
 				purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
@@ -610,7 +610,6 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 				return PURPLE_CMD_RET_FAILED;
 				
 			} else {
-				// integer detection
 				if (size <= 0) {
 					purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 						"The size value is not a positive int!\n");
@@ -618,26 +617,58 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 					par_cli_set_default_error(error);
 					return PURPLE_CMD_RET_FAILED;
 				} else {
-					// found a positive int -> DO IT!
-					// FIXME: additional garbage is just ignored(?)
+					/* found a positive int */
+					// FIXME: additional garbage after the int is just ignored(?)
 					purple_conversation_write(conv, NULL, 
 						"Please wait. Generating keys...", 
 						PURPLE_MESSAGE_NO_LOG, time(NULL));
 					const char* my_acc = par_strip_jabber_ressource(
 						purple_account_get_username(
 						purple_conversation_get_account(conv)));
-					if (otp_generate_key_pair(my_acc, param_array[0], global_otp_path, "/dev/urandom", size*1024)) {
-						purple_conversation_write(conv, NULL, 
-							"Key files successfully generated.\n"
-							"Your key was stored in the directory '~/.paranoia'.\n"
-							"Please send the key on the desktop in a secure way to your partner.\n", 
-							PURPLE_MESSAGE_NO_LOG, time(NULL));
-						purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-							"Generated two otp files of %d kB size.\n", (gint) size);
+					const char* other_acc = par_strip_jabber_ressource(
+						purple_conversation_get_name(conv));
+
+					purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+						"Generate new key: my_acc: %s, other_acc: %s, size: %ikB\n",
+						my_acc, other_acc, size);
+
+					if (param_array[1] == NULL) {
+						/* default entropy source */
+						if (otp_generate_key_pair(my_acc, 
+								other_acc, global_otp_path, 
+								"/dev/urandom", size*1024)) {
+							purple_conversation_write(conv, NULL, 
+								"Key files successfully generated.\n"
+								"Your key was stored in the directory '~/.paranoia'.\n"
+								"Please send the key on the desktop in a secure way to your partner.\n", 
+								PURPLE_MESSAGE_NO_LOG, time(NULL));
+							purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+								"Generated two entropy files of %ikB size.\n", 
+								size);
+						} else {
+							purple_conversation_write(conv, NULL, 
+								"Key files could not be generated.", 
+								PURPLE_MESSAGE_NO_LOG, time(NULL));
+						}
 					} else {
-						purple_conversation_write(conv, NULL, 
-							"Key files could not be generated.", 
-							PURPLE_MESSAGE_NO_LOG, time(NULL));
+						if (otp_generate_key_pair(my_acc, other_acc,
+								global_otp_path, g_strstrip(param_array[1]),
+								size*1024)) {
+							purple_conversation_write(conv, NULL, 
+								"Key files successfully generated.\n"
+								"Your key was stored in the directory '~/.paranoia'.\n"
+								"Please send the key on the desktop in a secure way to your partner.\n", 
+								PURPLE_MESSAGE_NO_LOG, time(NULL));
+							purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+								"Generated two entropy files of %ikB size.\n", 
+								size);
+						} else {
+							purple_conversation_write(conv, NULL, 
+								"Key files could not be generated.", 
+								PURPLE_MESSAGE_NO_LOG, time(NULL));
+							purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+								"Key generation failed!\n");
+						}
 					}
 				}
 			}
@@ -722,7 +753,6 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 	char** stripped_message;
 	stripped_message = &tmp_message;
 	
-	// debug
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Stripped Msg: %s\n", *stripped_message);
 
 	/* checks for the Paranoia Header and removes it if found */
@@ -758,7 +788,6 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 		return FALSE;
 	}
 	
-	// debug
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Un-Headered message: %s\n", *stripped_message);
 
 	/* apply jabber and header changes */
@@ -797,7 +826,7 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 		// TODO: detect ACK message
 		if (!used_key->opt->has_plugin) {
 			used_key->opt->has_plugin = TRUE;
-			//debug
+
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Encrypted msg received. Now has_plugin = TRUE.\n");
 		}
 
