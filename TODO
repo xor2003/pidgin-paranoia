@@ -14,7 +14,7 @@ Version 0.2
 ============
  	libotp.c
  	 * detailed error-numbers instead of return FALSE
-	 * integrate the threaded key-genrator
+	 * integrate the threaded key-generator
  	
  	paranoia.c
 	 * add generated key to keylist
@@ -26,7 +26,7 @@ Version 0.2
 	 * /otp scan, to read in new keys
 	 
 	other
-	 * Commandline program that can use libotp for general usage
+	 * commandline program that can use libotp for general usage
  
 Version 0.3
 ============

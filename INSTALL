@@ -20,7 +20,7 @@ Comments:
 
 * The installation should work with other distributions (and maybe even on other OS)
   You just need to find out the names of the required tools and you need to
-  make sure that they are at new enough. If it does not work please tell us.
+  make sure that they are new enough. If it does not work please tell us.
 
 1: Install pidgin or finch (the command line client)
 
@@ -57,7 +57,6 @@ Comments:
       $ svn co https://pidgin-paranoia.svn.sourceforge.net/svnroot/pidgin-paranoia/trunk pidgin-paranoia
 
     3.b.4: Do 'autoconf' to create the configure script.
-            (This step is not needed for the release)
       $ cd pidgin-paranoia
       $  ./autogen.sh
 
