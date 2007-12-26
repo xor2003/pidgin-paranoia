@@ -1,45 +1,93 @@
 --------------------------------------------------------------------------------
                      Installation (on Debian/Ubuntu) 
 --------------------------------------------------------------------------------
+This file explains how to install pidgin-paranoia in Debian testing.
 
-(1. Pidgin)
-==========
+This procedure was tested on amd64 at the 26.12.2007
 
-Download and extract the newest pidgin source
+Comments:
 
-# aptitude install libgtk2.0-dev libgstreamer0.10-dev libgtkspell-dev libdbus-glib-1-dev libgnutls-dev libxss-dev libmeanwhile-dev libgadu-dev libnss3-dev tcl8.4-dev tk8.4-dev libltdl3-dev libperl-dev libstartup-notification0-dev libzephyr-dev libxml2-dev libebook1.2-dev libedata-book1.2-dev libcamel1.2-dev libxml-parser-perl libncursesw5-dev libsasl2-dev libsilc-1.1-2-dev libavahi-compat-howl-dev doxygen
+* Commands beginning with '#' are meant to be executed as root whereas commands 
+  beginning with '$' are meant to be executed as user.
 
-Note: Not all libraries are necessary!
+* '1:' and '2:' means that you have to do step 1 and step 2, but 'a:' and 'b:'
+  means that you can decide between variant a and b.
 
-$ cd pidgin-*
-$ ./configure
-$ make
-# make install
+* To save time it is recommended to read the whole text first and to install 
+  everything at once.
 
-run pidgin
+* The plugin requires libpurple >= 2.2.0 and libglib >= 2.12.
 
-2. Pidgin-Paranoia
-===================
+* The installation should work with other distributions (and maybe even on other OS)
+  You just need to find out the names of the required tools and you need to
+  make sure that they are at new enough. If it does not work please tell us.
 
-You need to have following tools installed: libtool,automake,autoconf
+1: Install pidgin or finch (the command line client)
 
-Get it from svn:
-$ svn co https://pidgin-paranoia.svn.sourceforge.net/svnroot/pidgin-paranoia/trunk pidgin-paranoia
+  1.a: Install Pidgin
+    # aptitude install pidgin 
 
-$ cd pidgin-paranoia
-$ ./autogen.sh
-$ ./configure
-$ make
-# make install
+  1.b: Install Finch
+    # aptitude install finch
 
-Done. Activate it in the pidgin plug-in menu.
+2: Install the tools needed to compile Pidgin-paranoia:
 
-To see the debug messages of the plugin, run pidgin like that:
+  2.1: Install compilers and stuff:
+    # install build-essential
 
-$ pidgin -d | grep paranoia
+  2.2: Install the headers for the pidgin (and finch) libraries (libpurple):
+    # install libpurple-dev
 
+3. Get the Pidgin-paranoia-source from SVN or as tar.gz (Recommended)
 
-uninstall: (who wants to do that anyway? ;) )
-$ cd pidgin-paranoia
-# make uninstall
+  3.a: Get the newest release of pidgin paranoia (Recommended)
+
+    3.a: Extract the source-code:
+    $  tar -xvzf pidgin-paranoia-VERSION.tar.gz
+
+  3.b: Get the development version from the SVN.
+
+    3.b.1: First install SVN:
+      # aptitude install subversion
+
+    3.b.2: Get the tools needed for autoconf
+      #  aptitude install libtool autoconf
+
+    3.b.3: Get the source code from SVN:
+      $ svn co https://pidgin-paranoia.svn.sourceforge.net/svnroot/pidgin-paranoia/trunk pidgin-paranoia
+
+    3.b.4: Do 'autoconf' to create the configure script.
+            (This step is not needed for the release)
+      $ cd pidgin-paranoia
+      $  ./autogen.sh
+
+4. Compile Pidgin-paranoia:
+
+  4.1: Go into the directory:
+    $ cd pidgin-paranoia-VERSION
+
+  4.2: Create the makefile
+    $ ./configure
+    If you encounter an error you probably lack a program, library or headers.
+    Just paste the error into your favorite search-engine.
+
+  4.3: Compile it
+    $ make
+    If you encounter errors or warnings please tell us.
+
+  4.4: Install it
+    # make install
+
+5. Start pidgin (or finch) and load the plugin
+
+  5.1: Start pidgin or finch (you can start them in debug mode with -d)
+  
+  5.2: Pidgin: Tools->Plugins: One-Time Pad encryption (Check)
+
+  5.3: Please consult the file 'README' to find out how to use the plugin
+
+(6. uninstall: (who wants to do that anyway? ;) ))
+
+  $ cd pidgin-paranoia
+  # make uninstall
 
