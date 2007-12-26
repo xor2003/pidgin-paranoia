@@ -8,15 +8,16 @@ Version 0.1
 	 * bugfixing
 
 	paranoia.c
-	 * check message size limits
-	 * add generated key to keylist
+	 * check message size limit
  
 Version 0.2
 ============
  	libotp.c
  	 * detailed error-numbers instead of return FALSE
+	 * integrate the threaded key-genrator
  	
  	paranoia.c
+	 * add generated key to keylist
  	 * enhanced session management (ack)
  	 * evaluate "buddy-signed-off" signal
  	 * support multiple key files per conversation
