@@ -77,7 +77,7 @@
 //#define USEDESKTOP
 /* Requires GNOMElib 2.14! Bob's
  * keyfile is placed onto the desktop. If not set, the
- * file is placed in the .paranoia folder. */
+ * file is placed in the home directory.*/
 
 /*  ------------------- Defines (development) ------------------------
  * In development. Regraded as unstable. Those functions are nice
@@ -418,6 +418,11 @@ unsigned int otp_erase_key(struct otp* pad)
 unsigned int otp_generate_key_pair(const char* alice,
                                    const char* bob, const char* path,
                                    const char* source, unsigned int size)
+//TODO: v.0.2: give the filenames back
+//unsigned int otp_generate_key_pair(const char* alice,
+//                                   const char* bob, const char* path,
+//                                   const char* source, unsigned int size
+//                                   char** filenames[])
 /* generates a new key pair (two files) with the name alice and bob of
  * 'size' bytes. If source is NULL, /dev/urandom is used.
  * The function can only generate Keyfiles with a filesize of n*BLOCKSIZE*/
@@ -500,12 +505,12 @@ unsigned int otp_generate_key_pair(const char* alice,
 #ifdef USEDESKTOP
 	/* Owned by Glib. No need for g_free */
 	const char *desktoppath = g_get_user_special_dir(G_USER_DIRECTORY_DESKTOP);
+#else
+	const char *desktoppath = g_get_home_dir ();
+#endif
+
 	char *bfilename = g_strconcat(desktoppath, PATH_DELI, bob, FILE_DELI,
 	                              alice, FILE_DELI, idstr, ".entropy", NULL);
-#else
-	char *bfilename = g_strconcat(path, bob, FILE_DELI, alice, FILE_DELI,
-	                              idstr, ".entropy", NULL);
-#endif
 
 	int bfd = 0;
 	if ((bfd = open(bfilename, O_RDWR)) == -1) {
