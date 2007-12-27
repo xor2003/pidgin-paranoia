@@ -103,7 +103,7 @@ static int otp_xor(char **message, char **key, int len)
 		(*message)[i] = (*message)[i]^(*key)[i];
 	}
 	g_free(*key);
-	return TRUE; // TODO v.0.2: Imperativ: Should be 0
+	return TRUE; // TODO v0.2: Imperativ: Should be 0
 }
 
 #ifdef DEBUG
@@ -153,7 +153,7 @@ static int otp_open_keyfile(int *fd, char **data, struct otp* pad)
 		pad = NULL;
 		return FALSE;
 	}
-	return TRUE; // TODO v.0.2: Imperativ: Should be 0
+	return TRUE; // TODO v0.2: Imperativ: Should be 0
 }
 
 static int otp_close_keyfile(int *fd, char **data, struct otp* pad)
@@ -161,7 +161,7 @@ static int otp_close_keyfile(int *fd, char **data, struct otp* pad)
 {
 	munmap(*data, pad->filesize);
 	close(*fd);
-	return TRUE; // TODO v.0.2: Imperativ: Should be 0
+	return TRUE; // TODO v0.2: Imperativ: Should be 0
 }
 
 static int otp_seek_pos(char *data, int filesize)
@@ -201,31 +201,18 @@ static int otp_id_is_valid(char* id_str)
 	}
 }
 
-static int otp_key_is_random(char **key, int len) // TODO for v.0.1: Histogram test
+static int otp_key_is_random(char **key, int len)
 /* Checks the key by statistical means
  *
- * repeatprob=(1/256)^(repeatlength-1)*(keylength-repeatlength+1) (please check this formula)
- * expected number in lower half n_lower (not yet implemented)
- * Standard deviation sigma=sqrt(len/2/2)
- * Rejected if sum more then n sigmas away from exp_sum
- * n=4 : 6.44*10^-5
- * n=5 : 5.73*10^-7
- * n=6 : 1.97*10^-9
- * */
+ * repeatprob=(1/256)^(repeatlength-1)*(keylength-repeatlength+1) */
 {
-//	int histo[256]={0};
 	int i, rep = 1;
 	double repeatprob;
-//	double sigma=0.0;
-//	int lower=0;
-//	int histomax=0; int histomin=len;
-//	char *c="098988787098709870987098709870887987098709870987000";
+//	char *c="test1111";
 //	len=strlen(c);
 	char *c = *key;
-	int lastc = 257; /* This is not a char */
+	int lastc = 257; /* Startvalue: This is not a char */
 	for (i = 0; i < len; i++) {
-//		histo[(unsigned char)c[i]]++;
-//		if (c[i]<127) lower++;
 		if (c[i] == lastc) {
 			rep++;
 		} else {
@@ -233,15 +220,6 @@ static int otp_key_is_random(char **key, int len) // TODO for v.0.1: Histogram t
 		}
 	}
 	repeatprob = pow(1/256.0, rep-1.0)*(len-rep+1);
-
-//	for (i=0;i<256;i++) {
-//		average+=histo[i]*i;
-//		if (histomax<histo[i]) {histomax=histo[i];}
-//		if (histomin>histo[i]) {histomin=histo[i];}
-//		printf("%d ",histo[i]);
-//	}
-//	sigma = sqrt(len/4.0);
-//	printf("\nlen:%i  ,lower:%i,  n*sigma:%f, lower border:%f,  higher border:%f\n",len,lower,NUMBERSIGMA*sigma,len/2.0-NUMBERSIGMA*sigma,len/2.0+NUMBERSIGMA*sigma);
 //	printf("Probability for a repeat of len %i: %e\n",rep,repeatprob);
 	if (repeatprob < REPEATTOL) {
 		/* Fail if the probability for a random key to have a repeat is smaller than the tolerance. */
@@ -279,7 +257,7 @@ static int otp_get_encryptkey_from_file(char **key, struct otp* pad, int len)
 	char *datpos = *data+position;
 
 #ifdef CHECKKEY
-	/* TODO v.0.2: What should i do if the key is rejected?
+	/* TODO v0.2: What should i do if the key is rejected?
 	 * ATM it just fails and destroys the keyblock.*/
 	if (otp_key_is_random(key, len-1) == FALSE) {
 #ifdef KEYOVERWRITE
@@ -306,7 +284,7 @@ static int otp_get_encryptkey_from_file(char **key, struct otp* pad, int len)
 		pad->position = pad->position + len -1;
 	/* In all cases where the protected entropy is not used */
 	otp_calc_entropy(pad);
-	return TRUE;  // TODO v.0.2: Imperativ: Should be 0
+	return TRUE;  // TODO v0.2: Imperativ: Should be 0
 }
 
 static int otp_get_decryptkey_from_file(char **key, struct otp* pad, int len, int decryptpos)
@@ -327,7 +305,7 @@ static int otp_get_decryptkey_from_file(char **key, struct otp* pad, int len, in
 	for (i = 0; i <= (len -1); i++) vkey[i] = datpos[len - 2 - i];
 	*key = vkey;
 	otp_close_keyfile(fd, data, pad);
-	return TRUE; // TODO v.0.2: Imperativ: Should be 0
+	return TRUE; // TODO v0.2: Imperativ: Should be 0
 }
 
 static int otp_base64_encode(char **message, gsize len)
@@ -339,7 +317,7 @@ static int otp_base64_encode(char **message, gsize len)
 
 	g_free(*message);
 	*message = msg;
-	return TRUE; // TODO v.0.2: Imperativ: Should be 0
+	return TRUE; // TODO v0.2: Imperativ: Should be 0
 }
 
 static int otp_base64_decode(char **message, gsize *plen)
@@ -348,8 +326,8 @@ static int otp_base64_decode(char **message, gsize *plen)
 {
 	guchar* msg = g_base64_decode( *message, plen);
 	g_free(*message);
-	*message = (char*)msg; //TODO v.0.1: difference char / unsigned char?
-	return TRUE; // TODO v.0.2: Imperativ: Should be 0
+	*message = (char*)msg;
+	return TRUE; // TODO v0.2: Imperativ: Should be 0
 }
 
 static int otp_udecrypt(char **message, struct otp* pad, int decryptpos)
@@ -366,7 +344,7 @@ static int otp_udecrypt(char **message, struct otp* pad, int decryptpos)
 	otp_printint(*key,len, "paranoia: decryptkey");
 #endif
 	otp_xor(message, key, len);
-	return TRUE;                    // TODO v.0.2: Imperativ: Should be 0
+	return TRUE;                    // TODO v0.2: Imperativ: Should be 0
 }
 
 static int otp_uencrypt(char **message, struct otp* pad)
@@ -399,7 +377,7 @@ static int otp_uencrypt(char **message, struct otp* pad)
 #endif
 	otp_xor(message, key, len);
 	otp_base64_encode(message, len);
-	return TRUE; // TODO v.0.2: Imperativ: Should be 0
+	return TRUE; // TODO v0.2: Imperativ: Should be 0
 }
 
 
@@ -425,13 +403,13 @@ unsigned int otp_erase_key(struct otp* pad)
 	while ( result == TRUE ) {
 		result = otp_get_encryptkey_from_file(key, pad, len);
 	}
-	return TRUE; // TODO v.0.2: Imperativ: Should be 0
+	return TRUE; // TODO v0.2: Imperativ: Should be 0
 }
 
 unsigned int otp_generate_key_pair(const char* alice,
                                    const char* bob, const char* path,
                                    const char* source, unsigned int size)
-//TODO: v.0.2: give the filenames back
+//TODO: v0.2: give the filenames back
 //unsigned int otp_generate_key_pair(const char* alice,
 //                                   const char* bob, const char* path,
 //                                   const char* source, unsigned int size
@@ -565,7 +543,7 @@ unsigned int otp_generate_key_pair(const char* alice,
 	close(afd);
 	/* Cleanup */
 	g_free(idstr);
-	return TRUE;            // TODO v.0.2: Imperativ: Should be 0
+	return TRUE;            // TODO v0.2: Imperativ: Should be 0
 }
 
 
@@ -595,7 +573,7 @@ unsigned int otp_encrypt_warning(struct otp* pad, char **message, int protected_
 	g_free(pos_str);
 	*message = new_msg;
 	pad->protected_position = 0;
-	return TRUE;            // TODO v.0.2: Imperativ: Should be 0
+	return TRUE;            // TODO v0.2: Imperativ: Should be 0
 }
 
 char* otp_get_id_from_message(char **message)
@@ -692,7 +670,7 @@ unsigned int otp_encrypt(struct otp* pad, char **message)
 #ifdef DEBUG 
 	otp_printint(*message,strlen(*message), "paranoia: after encrypt");
 #endif
-	return TRUE;            // TODO v.0.2: Imperativ: Should be 0
+	return TRUE;            // TODO v0.2: Imperativ: Should be 0
 }
 
 unsigned int otp_decrypt(struct otp* pad, char **message)
@@ -725,5 +703,5 @@ unsigned int otp_decrypt(struct otp* pad, char **message)
 #ifdef DEBUG 
 	otp_printint(*message,strlen(*message), "paranoia: after decrypt");
 #endif
-	return TRUE;            // TODO v.0.2: Imperativ: Should be 0
+	return TRUE;            // TODO v0.2: Imperativ: Should be 0
 }
