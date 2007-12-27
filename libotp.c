@@ -79,12 +79,19 @@
  * keyfile is placed onto the desktop. If not set, the
  * file is placed in the home directory.*/
 
-/*  ------------------- Defines (development) ------------------------
+/*  ------------------- Defines (in development) ------------------------
  * In development. Regraded as unstable. Those functions are nice
  * but not critical. */
 
 #define CHECKKEY                /* Histogram/repeat checking of the key */
 #define RNDMSGLEN               /* Add a random-length string onto the message */
+
+/*  ------------------- Defines (for development) ------------------------
+ * For development. */
+
+//#define DEBUG
+                 /* Enables the function otp_printint
+*                and dumps the way of the message and key byte by byte. */
 
 /*  ----------------- Private Functions of the Library------------ */
 
@@ -99,16 +106,18 @@ static int otp_xor(char **message, char **key, int len)
 	return TRUE; // TODO v.0.2: Imperativ: Should be 0
 }
 
-static void otp_printint(char *m, int len)
+#ifdef DEBUG
+static void otp_printint(char *m, int len, const char *hint)
 /* Helper function for debugging */
 {
 	int i;
-	printf("\t\tIntegers:\t");
+	printf("\t\t%s:\t",hint);
 	for (i = 0; i < len; i++) {
 		printf("%i ", m[i]);
 	}
 	printf("\n");
 }
+#endif
 
 static void otp_calc_entropy(struct otp* pad)
 /* Calculate the free entropy */
@@ -214,7 +223,6 @@ static int otp_key_is_random(char **key, int len) // TODO for v.0.1: Histogram t
 //	len=strlen(c);
 	char *c = *key;
 	int lastc = 257; /* This is not a char */
-	//otp_printint(*key,len);
 	for (i = 0; i < len; i++) {
 //		histo[(unsigned char)c[i]]++;
 //		if (c[i]<127) lower++;
@@ -354,7 +362,9 @@ static int otp_udecrypt(char **message, struct otp* pad, int decryptpos)
 
 	if (otp_get_decryptkey_from_file(key, pad, len, decryptpos) == FALSE)
 		return FALSE;
-
+#ifdef DEBUG 
+	otp_printint(*key,len, "paranoia: decryptkey");
+#endif
 	otp_xor(message, key, len);
 	return TRUE;                    // TODO v.0.2: Imperativ: Should be 0
 }
@@ -383,7 +393,10 @@ static int otp_uencrypt(char **message, struct otp* pad)
 	len += rnd;
 #endif
 	if ( otp_get_encryptkey_from_file(key, pad, len)
-	     == FALSE ) return FALSE;
+			== FALSE ) return FALSE;
+#ifdef DEBUG 
+	otp_printint(*key,len, "paranoia: encryptkey");
+#endif
 	otp_xor(message, key, len);
 	otp_base64_encode(message, len);
 	return TRUE; // TODO v.0.2: Imperativ: Should be 0
@@ -656,6 +669,9 @@ unsigned int otp_encrypt(struct otp* pad, char **message)
 /* Creates the actual string of the encrypted message that is given to the application.
    returns TRUE if it could encrypt the message */
 {
+#ifdef DEBUG 
+	otp_printint(*message,strlen(*message), "paranoia: before encrypt");
+#endif
 	if (pad == NULL) return FALSE;
 	pad->protected_position = 0;
 	int oldpos = pad->position;
@@ -673,6 +689,9 @@ unsigned int otp_encrypt(struct otp* pad, char **message)
 	g_free(*message);
 	g_free(pos_str);
 	*message = new_msg;
+#ifdef DEBUG 
+	otp_printint(*message,strlen(*message), "paranoia: after encrypt");
+#endif
 	return TRUE;            // TODO v.0.2: Imperativ: Should be 0
 }
 
@@ -680,6 +699,9 @@ unsigned int otp_decrypt(struct otp* pad, char **message)
 /* Strips the encrypted message and decrypts it.
    returns TRUE if it could decrypt the message  */
 {
+#ifdef DEBUG 
+	otp_printint(*message,strlen(*message), "paranoia: before decrypt");
+#endif
 	if (pad == NULL) return FALSE;
 	pad->protected_position = 0;
 	gchar** m_array = g_strsplit(*message, MSG_DELI, 3);
@@ -700,5 +722,8 @@ unsigned int otp_decrypt(struct otp* pad, char **message)
 	if (otp_udecrypt(message, pad, decryptpos) == FALSE) return FALSE;
 #endif
 
+#ifdef DEBUG 
+	otp_printint(*message,strlen(*message), "paranoia: after decrypt");
+#endif
 	return TRUE;            // TODO v.0.2: Imperativ: Should be 0
 }
