@@ -12,6 +12,8 @@ The plug-in is written in C and released under the GPL (version 3).
 The plug-in aims to give 'perfect' security with a encryption system that is a 
 simple as possible and easy to understand.
 
+Please read the file INFO.
+
 2. Installation
 --------------------------------------------------------------------------------
 
@@ -26,12 +28,7 @@ Maybe /dev/urandom is not the best choice but /dev/random is way to slow ...
 Read "INFO" for detailed information how the encryption and decryption 
 exactly works.
 
-4. Proof for the security of one-time-pads
---------------------------------------------------------------------------------
-
-TODO
-
-5. Command line interface in pidgin
+4. Command line interface in pidgin
 --------------------------------------------------------------------------------
 
 Commands are entered by typing a message beginning with /otp.
@@ -44,15 +41,13 @@ The source parameter is optional.
 /otp info - shows details about the used key
 
 
-6. Usage of the otptester
+5. Usage of the otptester
 --------------------------------------------------------------------------------
 The program takes any amount of arguments/commands and goes through all of them 
 from the beginning to the end.
 Start "otptester --help" for more information.
 
-TODO
-
-7. Known bugs, limitations and planned features
+6. Known bugs, limitations and planned features
 --------------------------------------------------------------------------------
  * we do not support the creation of loop-keys
 

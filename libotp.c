@@ -410,13 +410,12 @@ unsigned int otp_generate_key_pair(const char* alice,
                                    const char* bob, const char* path,
                                    const char* source, unsigned int size)
 //TODO: v0.2: give the filenames back
+//TODO: v0.2: support loop-keys (alice=bob)
 //unsigned int otp_generate_key_pair(const char* alice,
 //                                   const char* bob, const char* path,
 //                                   const char* source, unsigned int size
 //                                   char** filenames[])
-/* generates a new key pair (two files) with the name alice and bob of
- * 'size' bytes. If source is NULL, /dev/urandom is used.
- * The function can only generate Keyfiles with a filesize of n*BLOCKSIZE*/
+ /* The function can only generate Keyfiles with a filesize of n*BLOCKSIZE*/
 
 {
 	if (alice == NULL || bob == NULL || path == NULL
@@ -425,6 +424,9 @@ unsigned int otp_generate_key_pair(const char* alice,
 	/* Check for things like '/'. Alice and Bob will become filenames */
 	if ((g_strrstr(alice, PATH_DELI) != NULL)
 	    || (g_strrstr(bob, PATH_DELI) != NULL)) return FALSE;
+	
+	/* Loop-Keys not supported */
+	if (strcmp(alice,bob)==NULL) return FALSE;
 
 	if ( size/BLOCKSIZE == (float)size/BLOCKSIZE ) {
 		size = size/BLOCKSIZE;
