@@ -426,7 +426,7 @@ unsigned int otp_generate_key_pair(const char* alice,
 	    || (g_strrstr(bob, PATH_DELI) != NULL)) return FALSE;
 	
 	/* Loop-Keys not supported */
-	if (strcmp(alice,bob)==NULL) return FALSE;
+	if (strcmp(alice,bob)==0) return FALSE;
 
 	if ( size/BLOCKSIZE == (float)size/BLOCKSIZE ) {
 		size = size/BLOCKSIZE;
@@ -545,6 +545,9 @@ unsigned int otp_generate_key_pair(const char* alice,
 	close(afd);
 	/* Cleanup */
 	g_free(idstr);
+	
+	g_free(afilename);
+	g_free(bfilename);
 	return TRUE;            // TODO v0.2: Imperativ: Should be 0
 }
 
