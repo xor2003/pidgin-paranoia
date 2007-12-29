@@ -420,7 +420,6 @@ unsigned int otp_generate_key_pair(const char* alice,
                                    const char* source, unsigned int size)
 //TODO: v0.2: give the filenames back
 //TODO: v0.2: support loop-keys (alice=bob)
-//!!!!
 //unsigned int otp_generate_key_pair(const char* alice,
 //                                   const char* bob, const char* path,
 //                                   const char* source, unsigned int size
@@ -432,22 +431,22 @@ unsigned int otp_generate_key_pair(const char* alice,
 			|| source == NULL || size <= 0) {
 		return FALSE;
 	}
-
 	/* Check for things like '/'. Alice and Bob will become filenames */
 	if ((g_strrstr(alice, PATH_DELI) != NULL)
 			|| (g_strrstr(bob, PATH_DELI) != NULL)) {
 		return FALSE;
 	}
-	
 	/* Loop-Keys not supported */
-	if (strcmp(alice,bob) == 0) return FALSE;
+	if (strcmp(alice, bob) == 0) return FALSE;
+
 
 	if ( size/BLOCKSIZE == (float)size/BLOCKSIZE ) {
 		size = size/BLOCKSIZE;
 	} else {
-		size = size/BLOCKSIZE+1;
+		size = size/BLOCKSIZE + 1;
 	}
 
+	/* open entropy source */
 	int rfd = 0;
 	if ((rfd = open(source, O_RDONLY)) == -1) {
 		perror("open");
@@ -456,6 +455,7 @@ unsigned int otp_generate_key_pair(const char* alice,
 	struct stat rfstat;
 	if (stat(source, &rfstat) == -1) {
 		perror("stat");
+		close(rfd);
 		return FALSE;
 	}
 
@@ -463,15 +463,34 @@ unsigned int otp_generate_key_pair(const char* alice,
 	/* If the source is to small and not a character dev */
 	if ( !( ((rfstat.st_mode|S_IFCHR) == rfstat.st_mode)
 			|| (rfilesize >= size*BLOCKSIZE) ) ) {
+		close(rfd);
 		return FALSE;
 	}
 
+	/* id string from integer */
 	unsigned int id;
-	/* Our ID */
+	/* Create ID from entropy source */
 	read(rfd, &id, sizeof(id));
 	/* Our ID string */;
 	char *idstr = g_strdup_printf("%.8X", id);
+	
+	/* alloc filesnames */	
+	/* get filepath to drop bob's key */
+#ifdef USEDESKTOP
+	/* Owned by Glib. No need for g_free */
+	const char *desktoppath = g_get_user_special_dir(G_USER_DIRECTORY_DESKTOP);
+#else
+	const char *desktoppath = g_get_home_dir ();
+#endif
+	char *afilename = g_strconcat(path, alice, FILE_DELI, bob, FILE_DELI, 
+			idstr, ".entropy", NULL);
 
+	char *bfilename = g_strconcat(desktoppath, PATH_DELI, bob, FILE_DELI,
+			alice, FILE_DELI, idstr, ".entropy", NULL);
+
+	g_free(idstr);
+
+	/* entropy source ready, check for paranoia dir */
 	DIR *dp;
 	dp = opendir(path);
 	if (dp == NULL) {
@@ -480,17 +499,17 @@ unsigned int otp_generate_key_pair(const char* alice,
 	} else {
 		closedir(dp);
 	}
-	/* Opening the first file */
-	char *afilename = g_strconcat(path, alice, FILE_DELI, bob, FILE_DELI, idstr, ".entropy", NULL);
-
+	
+	/* Opening the alice's key file */
 	int afd = 0;
 	char *space1 = "";
 	char **adata = &space1;
 	if ((afd = open(afilename, O_RDWR)) == -1) {
 	} else {
 		/* File already exists. I will not overwrite any existing file!*/
-		close(afd);
 		close(rfd);
+		g_free(afilename);
+		g_free(bfilename);
 		return FALSE;
 	}
 	if ((afd = open(afilename,
@@ -498,77 +517,81 @@ unsigned int otp_generate_key_pair(const char* alice,
 	    == -1) {
 		perror("open");
 		close(rfd);
+		close(afd);
+		g_free(afilename);
+		g_free(bfilename);
 		return FALSE;
 	}
-	char rand[BLOCKSIZE];
+	
+	/* Source and alice key file is open, copy entropy */
+	char buffer[BLOCKSIZE];
 	int i = 0;
 
 	/* Filling the first file */
 	for (i = 0; i < size; i++) {
-		read(rfd, rand, BLOCKSIZE);
-		write(afd, rand, BLOCKSIZE);
+		read(rfd, buffer, BLOCKSIZE);
+		write(afd, buffer, BLOCKSIZE);
 	}
 	/* Close the entropy source */
 	close(rfd);
-	/* Opening the secound file */
-#ifdef USEDESKTOP
-	/* Owned by Glib. No need for g_free */
-	const char *desktoppath = g_get_user_special_dir(G_USER_DIRECTORY_DESKTOP);
-#else
-	const char *desktoppath = g_get_home_dir ();
-#endif
-
-	char *bfilename = g_strconcat(desktoppath, PATH_DELI, bob, FILE_DELI,
-			alice, FILE_DELI, idstr, ".entropy", NULL);
-
+	
+	/* Alice's file written, opening the Bob's file */
 	int bfd = 0;
 	if ((bfd = open(bfilename, O_RDWR)) == -1) {
 	} else {
 		/* File already exists. I will not overwrite any existing file!*/
-		close(bfd);
+		close(afd);
+		g_free(afilename);
+		g_free(bfilename);
 		return FALSE;
 	}
 	if ((bfd = open(bfilename,
 			O_RDWR|O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP )) == -1) {
 		perror("open");
 		close(afd);
+		close(bfd);
+		g_free(afilename);
+		g_free(bfilename);
 		return FALSE;
 	}
-	/* Opening a memory map for the first file */
+	
+	/* Opening a memory map for Alice's file */
 	struct stat afstat;
 	if (stat(afilename, &afstat) == -1) {
 		perror("stat");
+		close(afd);
+		close(bfd);
+		g_free(afilename);
+		g_free(bfilename);
 		return FALSE;
 	}
 	int afilesize = afstat.st_size;
 	if ((*adata = mmap((caddr_t)0, afilesize, PROT_READ, MAP_SHARED, afd, 0)) == (caddr_t)(-1)) {
 		perror("mmap");
+		close(afd);
+		close(bfd);
+		g_free(afilename);
+		g_free(bfilename);
 		return FALSE;
 	}
-	/* Create the reversed second file from the first one */
-	char temp[BLOCKSIZE];
+	/* Create the reversed second file from Alice's one */
 	int j;
 	for (i = afilesize-BLOCKSIZE; i >= 0; i = i-BLOCKSIZE) {
 		for (j = 0; j < BLOCKSIZE; j++) {
-			temp[BLOCKSIZE-1-j] = *(*adata+i+j);
+			buffer[BLOCKSIZE-1-j] = *(*adata+i+j);
 		}
-		write(bfd, temp, BLOCKSIZE);
+		write(bfd, buffer, BLOCKSIZE);
 	}
-	/* Close the second file */
-	close(bfd);
-	/* Close the first file */
 	munmap(adata, afilesize);
 	close(afd);
-	/* Cleanup */
-	g_free(idstr);
-	
+	close(bfd);
 	g_free(afilename);
 	g_free(bfilename);
 	return TRUE;            // TODO v0.2: Imperativ: Should be 0
 }
 
 
-unsigned int otp_encrypt_warning(struct otp* pad, char **message, int protected_pos)
+unsigned int otp_encrypt_warning(struct otp* pad, char **message, unsigned int protected_pos)
 /* encrypts a message with the protected entropy.
  * protected_pos is the position in bytes to use. */
 {
@@ -625,20 +648,29 @@ char* otp_get_id_from_message(char **message)
 struct otp* otp_get_from_file(const char* path, const char* input_filename)
 /* Creates an otp struct, returns NULL if the filename is incorrect,
  * or if the file is missing */
-// !!!
 {
-	static struct otp* pad;
-	pad = (struct otp *)g_malloc(sizeof(struct otp));
-	pad->protected_position = 0;
-	if (input_filename == NULL ) return NULL;
-	if (path == NULL ) return NULL;
-	char *filename = g_strconcat(path, input_filename, NULL);
-	pad->filename = filename;
+	if (input_filename == NULL || path == NULL ) return NULL;
+
 	gchar** f_array = g_strsplit(input_filename, FILE_DELI, 3);
 
-	if ( (f_array[0] == NULL)
-			|| (f_array[1] == NULL)
-			|| (f_array[2] == NULL) ) return NULL;
+	if ( (f_array[0] == NULL) || (f_array[1] == NULL)
+				|| (f_array[2] == NULL) ) {
+		g_strfreev(f_array);
+		return NULL;
+	}
+
+	gchar** p_array = g_strsplit(f_array[2], ".", 2);
+	if ((p_array[0] == NULL ) || (p_array[1] == NULL )) {
+		if (g_str_has_suffix(f_array[2], FILE_SUFFIX) == FALSE )
+			g_strfreev(f_array);
+			g_strfreev(p_array);
+			return NULL;
+	}
+
+	struct otp* pad;
+	pad = (struct otp *)g_malloc(sizeof(struct otp));
+	pad->protected_position = 0;
+	pad->filename = g_strconcat(path, input_filename, NULL);
 
 	/* Our source i.e alice@yabber.org */
 	char *src = g_strdup(f_array[0]);
@@ -646,10 +678,6 @@ struct otp* otp_get_from_file(const char* path, const char* input_filename)
 	/* Our dest i.e bob@yabber.org */
 	char *dest = g_strdup(f_array[1]);
 	pad->dest = dest;
-
-	gchar** p_array = g_strsplit(f_array[2], ".", 2);
-	if ( (p_array[0] == NULL ) || (p_array[1] == NULL ) ) return NULL;
-	if ( g_str_has_suffix(f_array[2], FILE_SUFFIX) == FALSE ) return NULL;
 	/* Our ID */
 	char *id = g_strdup(p_array[0]);
 	pad->id = id;

@@ -627,7 +627,7 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 							purple_conversation_get_name(conv));
 
 					purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-							"Generate new key: my_acc: %s, other_acc: %s, size: %ikiB\n",
+							"Generate new key: my_acc: %s, other_acc: %s, size: %ikB\n",
 							my_acc, other_acc, size);
 
 					if (param_array[1] == NULL) {
@@ -643,7 +643,7 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 									"Please reload the plugin to add your key.\n",
 									PURPLE_MESSAGE_NO_LOG, time(NULL));
 							purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-									"Generated two entropy files of %ikiB size.\n", 
+									"Generated two entropy files of %ikB size.\n", 
 									size);
 							// TODO: add key to the list
 						} else {
@@ -657,11 +657,13 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 									size*1000)) {
 							purple_conversation_write(conv, NULL, 
 									"Key files successfully generated.\n"
-									"Your key was stored in the directory '~/.paranoia'.\n"
-									"Please send the key on the desktop in a secure way to your partner.\n", 
+									"Your own key was stored in the directory '~/.paranoia'.\n"
+									"Your buddy's key is stored in your home directory.\n"
+									"Please send this key in a <b>secure</b> way to your partner.\n"
+									"Please reload the plugin to add your key.\n", 
 									PURPLE_MESSAGE_NO_LOG, time(NULL));
 							purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-									"Generated two entropy files of %ikiB size.\n", 
+									"Generated two entropy files of %ikB size.\n", 
 									size);
 						} else {
 							purple_conversation_write(conv, NULL, 

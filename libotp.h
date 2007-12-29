@@ -53,7 +53,7 @@ unsigned int otp_generate_key_pair(const char* alice, const char* bob, const cha
  The entropy is not consumed by this function. 
  To used the function securely, the signal-messages should not overlap and every signal has to stay constant! 
  When only one signal is used, use protected_pos=0. */
-unsigned int otp_encrypt_warning(struct otp* mypad, char **message, int protected_pos);
+unsigned int otp_encrypt_warning(struct otp* mypad, char **message, unsigned int protected_pos);
 
 /* destroys a keyfile by using up all encryption-entropy */
 unsigned int otp_erase_key(struct otp* mypad);
