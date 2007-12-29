@@ -172,7 +172,7 @@ static int otp_seek_pos(char *data, int filesize)
 	return pos;
 }
 
-static struct otp* otp_seek_start(struct otp* pad)
+static int otp_seek_start(struct otp* pad)
 /* Seeks the the starting position, filesize and entropy from the keyfile */
 {
 	int space1 = 0;
@@ -184,9 +184,9 @@ static struct otp* otp_seek_start(struct otp* pad)
 		otp_calc_entropy(pad);
 		otp_close_keyfile(fd, data, pad);
 	} else {
-		return NULL;
+		return FALSE;
 	}
-	return pad;
+	return TRUE; // TODO v0.2: Imperativ: Should be 0
 }
 
 static int otp_id_is_valid(char* id_str)
@@ -655,9 +655,12 @@ struct otp* otp_get_from_file(const char* path, const char* input_filename)
 	g_strfreev(p_array);
 	g_strfreev(f_array);
 
-	if ( otp_id_is_valid(pad->id) == FALSE ) return NULL;
+	if (otp_id_is_valid(pad->id) == FALSE) return NULL;
 
-	pad = otp_seek_start(pad);
+	if (otp_seek_start(pad) == FALSE) {
+		otp_destroy(pad);
+		return NULL;
+	}
 	return pad;
 }
 
