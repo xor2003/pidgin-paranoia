@@ -111,7 +111,7 @@ static void otp_printint(char *m, int len, const char *hint)
 /* Helper function for debugging */
 {
 	int i;
-	printf("\t\t%s:\t",hint);
+	printf("\t\t%s:\t", hint);
 	for (i = 0; i < len; i++) {
 		printf("%i ", m[i]);
 	}
@@ -136,13 +136,11 @@ static int otp_open_keyfile(int *fd, char **data, struct otp* pad)
 	struct stat fstat;
 	if ((*fd = open(pad->filename, O_RDWR)) == -1) {
 		perror("open");
-		pad = NULL;
 		return FALSE;
 	}
 
 	if (stat(pad->filename, &fstat) == -1) {
 		perror("stat");
-		pad = NULL;
 		return FALSE;
 	}
 	pad->filesize = fstat.st_size;
@@ -150,7 +148,6 @@ static int otp_open_keyfile(int *fd, char **data, struct otp* pad)
 	if ((*data = mmap((caddr_t)0, pad->filesize, PROT_READ | PROT_WRITE,
 	                  MAP_SHARED, *fd, 0)) == (caddr_t)(-1)) {
 		perror("mmap");
-		pad = NULL;
 		return FALSE;
 	}
 	return TRUE; // TODO v0.2: Imperativ: Should be 0
@@ -162,6 +159,7 @@ static int otp_close_keyfile(int *fd, char **data, struct otp* pad)
 	munmap(*data, pad->filesize);
 	close(*fd);
 	return TRUE; // TODO v0.2: Imperativ: Should be 0
+	// TODO v0.2: munmap error handling? 
 }
 
 static int otp_seek_pos(char *data, int filesize)
@@ -175,7 +173,7 @@ static int otp_seek_pos(char *data, int filesize)
 }
 
 static struct otp* otp_seek_start(struct otp* pad)
-/* Seeks the the starting position,filesize and entropy from the keyfile */
+/* Seeks the the starting position, filesize and entropy from the keyfile */
 {
 	int space1 = 0;
 	int *fd = &space1;
@@ -219,8 +217,8 @@ static int otp_key_is_random(char **key, int len)
 			lastc = c[i];
 		}
 	}
+	/* Probability for a repeat of len*/
 	repeatprob = pow(1/256.0, rep-1.0)*(len-rep+1);
-//	printf("Probability for a repeat of len %i: %e\n",rep,repeatprob);
 	if (repeatprob < REPEATTOL) {
 		/* Fail if the probability for a random key to have a repeat is smaller than the tolerance. */
 		printf("Probability for a repeat of len %i: %e\n", rep, repeatprob);
@@ -250,10 +248,9 @@ static int otp_get_encryptkey_from_file(char **key, struct otp* pad, int len)
 
 	if (otp_open_keyfile(fd, data, pad) == FALSE) return FALSE;
 
-	char *vkey = (char *)g_malloc((len)*sizeof(char));
-	memcpy(vkey, *data+position, len-1);
+	*key = (char *)g_malloc((len)*sizeof(char));
+	memcpy(*key, *data+position, len-1);
 	/* the pad could be anything... using memcpy */
-	*key = vkey;
 	char *datpos = *data+position;
 
 #ifdef CHECKKEY
@@ -264,7 +261,7 @@ static int otp_get_encryptkey_from_file(char **key, struct otp* pad, int len)
 		if (pad->protected_position == 0) {
 			/* not using protected entropy, make the used key unusable
 			 * in the keyfile */
-			for (i = 0 ; i < ( len - 1) ; i++) datpos[i] = PAD_EMPTYCHAR;
+			for (i = 0; i < (len - 1); i++) datpos[i] = PAD_EMPTYCHAR;
 		}
 		return FALSE;
 #endif
@@ -274,7 +271,7 @@ static int otp_get_encryptkey_from_file(char **key, struct otp* pad, int len)
 	if (pad->protected_position == 0) {
 		/* Make the used key unusable in the keyfile unless the entropy
 		 * is protected */
-		for (i = 0 ; i < ( len - 1) ; i++) {
+		for (i = 0; i < (len - 1); i++) {
 			datpos[i] = PAD_EMPTYCHAR;
 		}
 	}
@@ -308,7 +305,7 @@ static int otp_get_decryptkey_from_file(char **key, struct otp* pad, int len, in
 	return TRUE; // TODO v0.2: Imperativ: Should be 0
 }
 
-static int otp_base64_encode(char **message, gsize len)
+static void otp_base64_encode(char **message, gsize len)
 /* Encodes message into the base64 form */
 {
 	char* msg = g_base64_encode( (guchar*)*message, len);
@@ -317,17 +314,17 @@ static int otp_base64_encode(char **message, gsize len)
 
 	g_free(*message);
 	*message = msg;
-	return TRUE; // TODO v0.2: Imperativ: Should be 0
+	return;
 }
 
-static int otp_base64_decode(char **message, gsize *plen)
+static void otp_base64_decode(char **message, gsize *plen)
 /* Decodes message from the base64 form
  * The function needs the length as pointer because the length will change*/
 {
 	guchar* msg = g_base64_decode( *message, plen);
 	g_free(*message);
 	*message = (char*)msg;
-	return TRUE; // TODO v0.2: Imperativ: Should be 0
+	return;
 }
 
 static int otp_udecrypt(char **message, struct otp* pad, int decryptpos)
@@ -341,7 +338,7 @@ static int otp_udecrypt(char **message, struct otp* pad, int decryptpos)
 	if (otp_get_decryptkey_from_file(key, pad, len, decryptpos) == FALSE)
 		return FALSE;
 #ifdef DEBUG 
-	otp_printint(*key,len, "paranoia: decryptkey");
+	otp_printint(*key, len, "paranoia: decryptkey");
 #endif
 	otp_xor(message, key, len);
 	return TRUE;                    // TODO v0.2: Imperativ: Should be 0
@@ -400,7 +397,7 @@ unsigned int otp_erase_key(struct otp* pad)
 	}
 	result = TRUE;
 	len = 1+1;
-	while ( result == TRUE ) {
+	while (result == TRUE) {
 		result = otp_get_encryptkey_from_file(key, pad, len);
 	}
 	return TRUE; // TODO v0.2: Imperativ: Should be 0
@@ -411,6 +408,7 @@ unsigned int otp_generate_key_pair(const char* alice,
                                    const char* source, unsigned int size)
 //TODO: v0.2: give the filenames back
 //TODO: v0.2: support loop-keys (alice=bob)
+//!!!!
 //unsigned int otp_generate_key_pair(const char* alice,
 //                                   const char* bob, const char* path,
 //                                   const char* source, unsigned int size
@@ -419,14 +417,14 @@ unsigned int otp_generate_key_pair(const char* alice,
 
 {
 	if (alice == NULL || bob == NULL || path == NULL
-	    || source == NULL || size == 0) return FALSE;
+		    || source == NULL || size <= 0) return FALSE;
 
 	/* Check for things like '/'. Alice and Bob will become filenames */
 	if ((g_strrstr(alice, PATH_DELI) != NULL)
 	    || (g_strrstr(bob, PATH_DELI) != NULL)) return FALSE;
 	
 	/* Loop-Keys not supported */
-	if (strcmp(alice,bob)==0) return FALSE;
+	if (strcmp(alice,bob) == 0) return FALSE;
 
 	if ( size/BLOCKSIZE == (float)size/BLOCKSIZE ) {
 		size = size/BLOCKSIZE;
@@ -503,7 +501,7 @@ unsigned int otp_generate_key_pair(const char* alice,
 #endif
 
 	char *bfilename = g_strconcat(desktoppath, PATH_DELI, bob, FILE_DELI,
-	                              alice, FILE_DELI, idstr, ".entropy", NULL);
+			              alice, FILE_DELI, idstr, ".entropy", NULL);
 
 	int bfd = 0;
 	if ((bfd = open(bfilename, O_RDWR)) == -1) {
@@ -530,8 +528,8 @@ unsigned int otp_generate_key_pair(const char* alice,
 		return FALSE;
 	}
 	/* Create the reversed second file from the first one */
-	int j = 0;
 	char temp[BLOCKSIZE];
+	int j;
 	for (i = afilesize-BLOCKSIZE; i >= 0; i = i-BLOCKSIZE) {
 		for (j = 0; j < BLOCKSIZE; j++) {
 			temp[BLOCKSIZE-1-j] = *(*adata+i+j);
@@ -556,8 +554,12 @@ unsigned int otp_encrypt_warning(struct otp* pad, char **message, int protected_
 /* encrypts a message with the protected entropy.
  * protected_pos is the position in bytes to use. */
 {
-	if (pad == NULL) return FALSE;
+	if (pad == NULL || message == NULL || *message == NULL || protected_pos <= 0) {
+		if (protected_pos <= OTP_PROTECTED_ENTROPY - strlen(*message))
+				return FALSE;
+	}
 	int oldpos = pad->position;
+	// TODO v0.2 oldpos is unflexible
 	pad->protected_position = pad->filesize/2-OTP_PROTECTED_ENTROPY-protected_pos;
 #ifdef RNDMSGLEN
 	oldpos += 1;
@@ -585,21 +587,26 @@ char* otp_get_id_from_message(char **message)
 /* extracts and returns the ID from a given encrypted message.
  * Leaves the message constant. Returns NULL if it fails.*/
 {
+	if (message == NULL || *message == NULL) return NULL;
 	gchar** m_array = g_strsplit(*message, MSG_DELI, 3);
 	if ( (m_array[0] == NULL) || (m_array[1] == NULL) ) {
-		return FALSE;
+		g_strfreev(m_array);	
+		return NULL;
 	}
 	char *id_str = g_strdup(m_array[1]);
+	g_strfreev(m_array);
 	if (otp_id_is_valid(id_str) == TRUE) {
 		return id_str;
 	} else {
+		g_free(id_str);
 		return NULL;
-	}
+	}	
 }
 
 struct otp* otp_get_from_file(const char* path, const char* input_filename)
 /* Creates an otp struct, returns NULL if the filename is incorrect,
  * or if the file is missing */
+// !!!
 {
 	static struct otp* pad;
 	pad = (struct otp *)g_malloc(sizeof(struct otp));
@@ -636,6 +643,7 @@ struct otp* otp_get_from_file(const char* path, const char* input_filename)
 	pad = otp_seek_start(pad);
 	return pad;
 }
+
 void otp_destroy(struct otp* pad)
 /* destroys an otp object */
 {
@@ -655,7 +663,7 @@ unsigned int otp_encrypt(struct otp* pad, char **message)
 #ifdef DEBUG 
 	otp_printint(*message,strlen(*message), "paranoia: before encrypt");
 #endif
-	if (pad == NULL) return FALSE;
+	if (pad == NULL || message == NULL || *message == NULL) return FALSE;
 	pad->protected_position = 0;
 	int oldpos = pad->position;
 #ifdef RNDMSGLEN
@@ -683,15 +691,18 @@ unsigned int otp_decrypt(struct otp* pad, char **message)
    returns TRUE if it could decrypt the message  */
 {
 #ifdef DEBUG 
-	otp_printint(*message,strlen(*message), "paranoia: before decrypt");
+	otp_printint(*message, strlen(*message), "paranoia: before decrypt");
 #endif
 	if (pad == NULL) return FALSE;
 	pad->protected_position = 0;
 	gchar** m_array = g_strsplit(*message, MSG_DELI, 3);
 
 	if ( (m_array[0] == NULL)
-	     || (m_array[1] == NULL)
-	     || (m_array[2] == NULL) ) return FALSE;
+		     || (m_array[1] == NULL)
+		     || (m_array[2] == NULL) ) {
+		g_strfreev(m_array);
+		return FALSE;
+		}
 
 	/* Our position to decrypt in the pad */
 	int decryptpos = (unsigned int)g_ascii_strtoll( strdup(m_array[0]), NULL, 10);
