@@ -141,6 +141,7 @@ static int otp_open_keyfile(int *fd, char **data, struct otp* pad)
 
 	if (stat(pad->filename, &fstat) == -1) {
 		perror("stat");
+		close(*fd);
 		return FALSE;
 	}
 	pad->filesize = fstat.st_size;
@@ -148,6 +149,7 @@ static int otp_open_keyfile(int *fd, char **data, struct otp* pad)
 	if ((*data = mmap((caddr_t)0, pad->filesize, PROT_READ | PROT_WRITE,
 			MAP_SHARED, *fd, 0)) == (caddr_t)(-1)) {
 		perror("mmap");
+		close(*fd);
 		return FALSE;
 	}
 	return TRUE; // TODO v0.2: Imperativ: Should be 0
