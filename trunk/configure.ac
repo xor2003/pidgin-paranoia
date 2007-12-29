@@ -31,7 +31,7 @@ LIBTOOL="$LIBTOOL --silent"
 # Additional paranoia_config.h entires!
 #
 
-AC_DEFINE_UNQUOTED(PARANOIA_WEBSITE, "http://sourceforge.net/projects/pidgin-paranoia", [Pidgin-Paranoia's Website])
+AC_DEFINE_UNQUOTED(PARANOIA_WEBSITE, "http://pidgin-paranoia.sourceforge.net/", [Pidgin-Paranoia's Website])
 AC_DEFINE_UNQUOTED(PARANOIA_AUTHORS, "Simon Wenner <simon@wenner.ch> Christian Wäckerlin <christian@waeckerlin.com>", [Pidgin-Paranoia's Authors])
 AC_DEFINE_UNQUOTED(PARANOIA_ID, "core-paranoia", [Pidgin-Paranoia Plugin ID])
 
