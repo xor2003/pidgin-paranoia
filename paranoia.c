@@ -637,8 +637,9 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 									"/dev/urandom", size*1000)) {
 							purple_conversation_write(conv, NULL, 
 									"Key files successfully generated.\n"
-									"Your key was stored in the directory '~/.paranoia'.\n"
-									"Please send the key on the desktop in a secure way to your partner.\n"
+									"Your own key was stored in the directory '~/.paranoia'.\n"
+									"Your buddy's key is stored in your home directory.\n"
+									"Please send this key in a <b>secure</b> way to your partner.\n"
 									"Please reload the plugin to add your key.\n",
 									PURPLE_MESSAGE_NO_LOG, time(NULL));
 							purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
