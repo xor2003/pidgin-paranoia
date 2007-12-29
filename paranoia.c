@@ -544,10 +544,12 @@ static void par_cli_key_details(PurpleConversation *conv)
 	struct key* used_key = par_search_key_by_conv(conv);
 	char* disp_string = NULL;
 	if(used_key != NULL) {
-		disp_string = g_strdup_printf("Key Infos:\nID: %s\nSize: %i\n"
-				"Position: %i\nEntropy: %i\nAck sent: %i\nHas plugin: %i\n"
-				"OTP enabled: %i\nAuto enable: %i\nNo entropy: %i",
-				used_key->pad->id, used_key->pad->filesize, 
+		disp_string = g_strdup_printf("Key infos:\nSource:\t\t%s\n"
+				"Destination:\t%s\nID:\t\t\t%s\nSize:\t\t\t%i\nPosition:\t\t%i\n"
+				"Entropy:\t\t%i\nAck sent:\t\t%i\nHas plugin:\t%i\n"
+				"OTP enabled:\t%i\nAuto enable:\t%i\nNo entropy:\t%i",
+				used_key->pad->src, used_key->pad->dest, used_key->pad->id, 
+				used_key->pad->filesize, 
 				used_key->pad->position, used_key->pad->entropy, 
 				used_key->opt->ack_sent, used_key->opt->has_plugin, 
 				used_key->opt->otp_enabled, used_key->opt->auto_enable, 
@@ -639,7 +641,7 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 									"Key files successfully generated.\n"
 									"Your own key was stored in the directory '~/.paranoia'.\n"
 									"Your buddy's key is stored in your home directory.\n"
-									"Please send this key in a <b>secure</b> way to your partner.\n"
+									"Please send this key in a secure way to your partner.\n"
 									"Please reload the plugin to add your key.\n",
 									PURPLE_MESSAGE_NO_LOG, time(NULL));
 							purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
@@ -659,7 +661,7 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 									"Key files successfully generated.\n"
 									"Your own key was stored in the directory '~/.paranoia'.\n"
 									"Your buddy's key is stored in your home directory.\n"
-									"Please send this key in a <b>secure</b> way to your partner.\n"
+									"Please send this key in a secure way to your partner.\n"
 									"Please reload the plugin to add your key.\n", 
 									PURPLE_MESSAGE_NO_LOG, time(NULL));
 							purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
