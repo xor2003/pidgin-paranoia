@@ -18,6 +18,7 @@ Version 0.2
 	 * /otp scan, to read in new keys
 	 
 	other
+	 * check libpurple and glib minor version number in configure
 	 * commandline program that can use libotp for general usage
  
 Version 0.3
@@ -33,7 +34,6 @@ Version 1.0
 	 * all pidgin protocols are tested and work
  	
 Misc
- * Design a simple web page
  * Debian/Ubuntu package
  * Test all the less common protocols (Gadu-Gadu, QQ, SIMPLE...)
 

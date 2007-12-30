@@ -42,24 +42,7 @@ maybe quantum computers those cryptosystems could be broken.
 This section describes libotp and it is independent of the application libotp is 
 used in.
 
-2.1 The security of One-Time-Pads
---------------------------------------------------------------------------------
-
-A cryptosystem is information-theoretically secure if the ciphertext (and the 
-algorithm) does not give the adversary enough information to find the 
-plaintext. Since a one-time-pad uses a key that has the same length as the 
-plaintext, every ciphertext with a certain length can decrypt to any plaintext,
-if decrypted with the appropriate key. If truly random keys are used and not 
-repeated, the interception of ciphertext does not give the adversary information
-about the plaintext (except information about the length of the 
-plaintext in some implementations).
-Other cryptosystems like symmetric and asymmetric encryption are computationally
-secure but not information-theoretically secure since the adversary has the 
-information in theory needed to recover the plaintext but is limited in practice
-by the required computation time. With faster computers, better algorithms or 
-maybe quantum computers those cryptosystems could be broken.
-
-2.2 The key files:
+2.1 The key files:
 --------------------------------------------------------------------------------
 Alice creates a file consisting of perfectly random numbers (very hard to 
 implement, (-;) of a size of i.e 1MB. Alice generates a random 8 characters
@@ -80,7 +63,7 @@ anymore and can delete it.
 Both Alice and Bob can use the first half of their key file for encryption. 
 The second part of the key file is used to decrypt the message.
 
-2.3 Encryption:
+2.2 Encryption:
 --------------------------------------------------------------------------------
 Alice finds the first byte in her key file that is not \0. Alice takes one byte 
 from the key file for every byte of her message and creates her encrypted 
@@ -99,14 +82,14 @@ A string formed like "3234|34EF4588|M+Rla2w=" is transmitted.
 To prevent the adversary from knowing the exact length of the message, a random
 length tail of \0-bytes is added and encrypted.
 
-2.4 Decryption:
+2.3 Decryption:
 --------------------------------------------------------------------------------
 Bob decodes the Base64 encoded message and decrypts it with that bytes read 
 from the key file in reverse order at the position (counting from the end of 
 the key file) described in the transmitted string.
 
 
-2. Description of the Pidgin one-time-pad plugin
+3. Description of the Pidgin one-time-pad plugin
 --------------------------------------------------------------------------------
 This section describes the Pidgin plugin that uses libotp.
 

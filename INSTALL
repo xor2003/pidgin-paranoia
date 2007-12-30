@@ -1,26 +1,26 @@
 --------------------------------------------------------------------------------
                      Installation (on Debian/Ubuntu) 
 --------------------------------------------------------------------------------
-This file explains how to install pidgin-paranoia in Debian testing.
+This file explains how to install pidgin-paranoia.
 
-This procedure was tested on amd64 at the 26.12.2007
+This procedure was tested on Debian Testing (amd64/i386) and Ubuntu 7.10 (i386).
 
 Comments:
 
-* Commands beginning with '#' are meant to be executed as root whereas commands 
-  beginning with '$' are meant to be executed as user.
+ * Commands beginning with '#' are meant to be executed as root whereas commands 
+   beginning with '$' are meant to be executed as user.
 
-* '1:' and '2:' means that you have to do step 1 and step 2, but 'a:' and 'b:'
-  means that you can decide between variant a and b.
+ * '1:' and '2:' means that you have to do step 1 and step 2, but 'a:' and 'b:'
+   means that you can decide between variant a and b.
 
-* To save time it is recommended to read the whole text first and to install 
-  everything at once.
+ * To save time it is recommended to read the whole text first and to install 
+   everything at once.
 
-* The plugin requires libpurple >= 2.2.0 and libglib >= 2.12.
+ * The plugin requires libpurple >= 2.2.0 and libglib >= 2.12.
 
-* The installation should work with other distributions (and maybe even on other OS)
-  You just need to find out the names of the required tools and you need to
-  make sure that they are new enough. If it does not work please tell us.
+ * The installation should work with other distributions (and maybe even on other OS)
+   You just need to find out the names of the required tools and you need to
+   make sure that they are new enough. If it does not work please tell us.
 
 1: Install pidgin or finch (the command line client)
 
