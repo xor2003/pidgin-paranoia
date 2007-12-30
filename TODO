@@ -2,14 +2,6 @@
                               TODO list
 -----------------------------------------------------------------------
 
-Version 0.1
-============
-	libotp.c
-	 * bugfixing
-
-	paranoia.c
-	 * check message size limit
- 
 Version 0.2
 ============
  	libotp.c
