@@ -5,8 +5,8 @@
 1. Introduction 
 --------------------------------------------------------------------------------
 
-The plug-in allows to use one-time-pads 
-(see: http://de.wikipedia.org/wiki/One-Time-Pad) to provide information-
+The plug-in allows to use one-time pads 
+(see: http://en.wikipedia.org/wiki/One-Time_Pad) to provide information-
 theoretically secure encrypted conversations in the IM-client Pidgin.
 A key file with random content is created by Alice. Alice also creates the byte 
 wise reverse version of its key file and transferes it in a secure way to Bob. 
@@ -19,12 +19,12 @@ The plug-in is written in C and released under the GPL (version 3).
 The plug-in aims to give 'perfect' security with a encryption system that is a 
 simple as possible and easy to understand.
 
-1.1 The security of One-Time-Pads
+1.1 The security of One-time pads
 --------------------------------------------------------------------------------
 
 A cryptosystem is information-theoretically secure if the ciphertext (and the 
 algorithm) does not give the adversary enough information to find the 
-plaintext. Since a one-time-pad uses a key that has the same length as the 
+plaintext. Since a one-time pad uses a key that has the same length as the 
 plaintext, every ciphertext with a certain length can decrypt to any plaintext,
 if decrypted with the appropriate key. If truly random keys are used and not 
 repeated, the interception of ciphertext does not give the adversary information
@@ -36,10 +36,10 @@ information in theory needed to recover the plaintext but is limited in practice
 by the required computation time. With faster computers, better algorithms or 
 maybe quantum computers those cryptosystems could be broken.
 
-2. Description of the encryption/decryption protocol implemented in libotp:
+2. Description of the encryption/decryption protocol implemented in libotp library:
 --------------------------------------------------------------------------------
 
-This section describes libotp and it is independent of the application libotp is 
+This section describes libotp and it is independent of the application the library is 
 used in.
 
 2.1 The key files:
