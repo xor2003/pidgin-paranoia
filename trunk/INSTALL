@@ -33,17 +33,17 @@ Comments:
 2: Install the tools needed to compile Pidgin-paranoia:
 
   2.1: Install compilers and stuff:
-    # install build-essential
+    # aptitude install build-essential
 
-  2.2: Install the headers for the pidgin (and finch) libraries (libpurple):
-    # install libpurple-dev
+  2.2: Install the headers for libpurple and gnomelib:
+    # aptitude install libpurple-dev libglib2.0-dev
 
 3. Get the Pidgin-paranoia-source from SVN or as tar.gz (Recommended)
 
   3.a: Get the newest release of pidgin paranoia (Recommended)
 
     3.a: Extract the source-code:
-    $  tar -xvzf pidgin-paranoia-VERSION.tar.gz
+      $ tar -xvzf pidgin-paranoia-VERSION.tar.gz
 
   3.b: Get the development version from the SVN.
 
@@ -51,14 +51,14 @@ Comments:
       # aptitude install subversion
 
     3.b.2: Get the tools needed for autoconf
-      #  aptitude install libtool autoconf
+      # aptitude install libtool autoconf
 
     3.b.3: Get the source code from SVN:
       $ svn co https://pidgin-paranoia.svn.sourceforge.net/svnroot/pidgin-paranoia/trunk pidgin-paranoia
 
     3.b.4: Do 'autoconf' to create the configure script.
       $ cd pidgin-paranoia
-      $  ./autogen.sh
+      $ ./autogen.sh
 
 4. Compile Pidgin-paranoia:
 
@@ -68,7 +68,7 @@ Comments:
   4.2: Create the makefile
     $ ./configure
     If you encounter an error you probably lack a program, library or headers.
-    Just paste the error into your favorite search-engine.
+    Just paste the error into your favorite search engine.
 
   4.3: Compile it
     $ make

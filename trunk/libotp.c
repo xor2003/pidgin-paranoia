@@ -74,7 +74,6 @@
 /*  ------------------- Defines (optional) ------------------------
  * These defines give new, additional features. */
 
-#define CHECKKEY                /* Histogram/repeat checking of the key */
 #define RNDMSGLEN               /* Add a random-length string onto the message */
 
 /*  ------------------- Defines (in development) ------------------------
@@ -85,11 +84,12 @@
 /* Requires GNOMElib 2.14! Bob's
  * keyfile is placed onto the desktop. If not set, the
  * file is placed in the home directory.*/
+//#define CHECKKEY                /* Histogram/repeat checking of the key (Needs testing) */
 
 /*  ------------------- Defines (for development) ------------------------
  * Useful for Developpers */
 
-//#define DEBUG
+#define DEBUG
                  /* Enables the function otp_printint
 *                and dumps the way of the message and key byte by byte. */
 
@@ -204,7 +204,7 @@ static int otp_id_is_valid(char* id_str)
 static int otp_key_is_random(char **key, int len)
 /* Checks the key by statistical means
  *
- * repeatprob=(1/256)^(repeatlength-1)*(keylength-repeatlength+1) */
+ * */
 {
 	int i, rep = 1;
 	double repeatprob;
@@ -220,10 +220,10 @@ static int otp_key_is_random(char **key, int len)
 		}
 	}
 	/* Probability for a repeat of len*/
-	repeatprob = pow(1/256.0, rep-1.0)*(len-rep+1);
+	repeatprob = 1.0; // TODO v.0.2: Formula needed
 	if (repeatprob < REPEATTOL) {
 		/* Fail if the probability for a random key to have a repeat is smaller than the tolerance. */
-		printf("Probability for a repeat of len %i: %e\n", rep, repeatprob);
+		printf("core-paranoia: Probability for a repeat of len %i: %e\n", rep, repeatprob);
 		return FALSE;
 	}
 	return TRUE;
@@ -267,6 +267,10 @@ static int otp_get_encryptkey_from_file(char **key, struct otp* pad, int len)
 			 * in the keyfile */
 			for (i = 0; i < (len - 1); i++) datpos[i] = PAD_EMPTYCHAR;
 		}
+		if (pad->protected_position == 0) {
+			pad->position = pad->position + len -1;
+		}
+		otp_calc_entropy(pad);
 		return FALSE;
 #endif
 	}
@@ -349,6 +353,9 @@ static int otp_udecrypt(char **message, struct otp* pad, int decryptpos)
 	otp_printint(*key, len, "paranoia: decryptkey");
 #endif
 	otp_xor(message, key, len);
+#ifdef DEBUG 
+	otp_printint(*key,len, "paranoia: decrypt-xor");
+#endif
 	return TRUE;                    // TODO v0.2: Imperativ: Should be 0
 }
 
@@ -385,6 +392,9 @@ static int otp_uencrypt(char **message, struct otp* pad)
 	otp_printint(*key,len, "paranoia: encryptkey");
 #endif
 	otp_xor(message, key, len);
+#ifdef DEBUG 
+	otp_printint(*key,len, "paranoia: encrypt-xor");
+#endif
 	otp_base64_encode(message, len);
 	return TRUE; // TODO v0.2: Imperativ: Should be 0
 }
