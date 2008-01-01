@@ -130,19 +130,19 @@ static void otp_calc_entropy(struct otp* pad)
 	}
 }
 
-static int otp_open_keyfile(int *fd, char **data, struct otp* pad)
+static OtpError otp_open_keyfile(int *fd, char **data, struct otp* pad)
 /* Opens a keyfile with memory mapping */
 {
 	struct stat fstat;
 	if ((*fd = open(pad->filename, O_RDWR)) == -1) {
 		perror("open");
-		return FALSE;
+		return OTPERRFILE;
 	}
 
 	if (stat(pad->filename, &fstat) == -1) {
 		perror("stat");
 		close(*fd);
-		return FALSE;
+		return OTPERRFILE;
 	}
 	pad->filesize = fstat.st_size;
 
@@ -150,9 +150,9 @@ static int otp_open_keyfile(int *fd, char **data, struct otp* pad)
 			MAP_SHARED, *fd, 0)) == (caddr_t)(-1)) {
 		perror("mmap");
 		close(*fd);
-		return FALSE;
+		return OTPERRMMAP;
 	}
-	return TRUE; // TODO v0.2: Imperativ: Should be 0
+	return OTPSUCCESS;
 }
 
 static int otp_close_keyfile(int *fd, char **data, struct otp* pad)
@@ -174,21 +174,23 @@ static int otp_seek_pos(char *data, int filesize)
 	return pos;
 }
 
-static int otp_seek_start(struct otp* pad)
+static OtpError otp_seek_start(struct otp* pad)
 /* Seeks the the starting position, filesize and entropy from the keyfile */
 {
 	int space1 = 0;
 	int *fd = &space1;
 	char *space2 = "";
 	char **data = &space2;
-	if (otp_open_keyfile(fd, data, pad)) {
+	OtpError syndrome = otp_open_keyfile(fd, data, pad);
+	if (syndrome == OTPSUCCESS) {
 		pad->position = otp_seek_pos(*data, pad->filesize);
 		otp_calc_entropy(pad);
 		otp_close_keyfile(fd, data, pad);
 	} else {
-		return FALSE;
+//		printf("open-keyfile: %.8X\n",syndrome);
+		return syndrome;
 	}
-	return TRUE; // TODO v0.2: Imperativ: Should be 0
+	return syndrome;
 }
 
 static int otp_id_is_valid(char* id_str)
@@ -229,7 +231,7 @@ static int otp_key_is_random(char **key, int len)
 	return TRUE;
 }
 
-static int otp_get_encryptkey_from_file(char **key, struct otp* pad, int len)
+static OtpError otp_get_encryptkey_from_file(char **key, struct otp* pad, int len)
 /* Gets the key to encrypt from the keyfile */
 {
 	int space1 = 0;
@@ -239,6 +241,7 @@ static int otp_get_encryptkey_from_file(char **key, struct otp* pad, int len)
 	int i = 0;
 	int protected_entropy = OTP_PROTECTED_ENTROPY;
 	int position = pad->position;
+	OtpError syndrome = OTPSUCCESS;
 
 	if (pad->protected_position != 0) {
 		/* allow usage of protected entropy*/
@@ -247,11 +250,15 @@ static int otp_get_encryptkey_from_file(char **key, struct otp* pad, int len)
 	}
 	if ( (position+len-1 > (pad->filesize/2-protected_entropy) )
 			|| position < 0 ) {
-		return FALSE;
+		printf("key empty: %.8X\n",OTPERRKEYEMPTY);
+		return OTPERRKEYEMPTY;
 	}
-
-	if (otp_open_keyfile(fd, data, pad) == FALSE) return FALSE;
-
+	syndrome = otp_open_keyfile(fd, data, pad);
+	if (syndrome > OTPWARN) {
+		printf("syndrome: %.8X\n",syndrome);
+		return syndrome;
+	}
+		
 	*key = (char *)g_malloc((len)*sizeof(char));
 	memcpy(*key, *data+position, len-1);
 	/* the pad could be anything... using memcpy */
@@ -273,6 +280,8 @@ static int otp_get_encryptkey_from_file(char **key, struct otp* pad, int len)
 		otp_calc_entropy(pad);
 		return FALSE;
 #endif
+	} else {
+		syndrome = OTPWARNKEYNOTRANDOM;
 	}
 #endif
 #ifdef KEYOVERWRITE
@@ -290,10 +299,10 @@ static int otp_get_encryptkey_from_file(char **key, struct otp* pad, int len)
 	}
 	/* In all cases where the protected entropy is not used */
 	otp_calc_entropy(pad);
-	return TRUE;  // TODO v0.2: Imperativ: Should be 0
+	return syndrome;
 }
 
-static int otp_get_decryptkey_from_file(char **key, struct otp* pad, int len, int decryptpos)
+static OtpError otp_get_decryptkey_from_file(char **key, struct otp* pad, int len, int decryptpos)
 /* Gets the key to decrypt from the keyfile */
 {
 	int space1 = 0;
@@ -301,11 +310,17 @@ static int otp_get_decryptkey_from_file(char **key, struct otp* pad, int len, in
 	char *space2 = "";
 	char **data = &space2;
 	int i = 0;
+	OtpError syndrome = OTPSUCCESS;
+
 	if (pad->filesize < (pad->filesize-decryptpos - (len -1))
 			|| (pad->filesize-decryptpos) < 0) {
-		return FALSE;
+		syndrome = OTPERRKEYSIZEMISMATCH;
+		printf("keysizemismatch: %.8X\n",syndrome);
+		return syndrome;
 	}
-	if (otp_open_keyfile(fd, data, pad) == FALSE) return FALSE;
+	syndrome = otp_open_keyfile(fd, data, pad);
+	printf("syndrome: %.8X\n",syndrome);
+	if (syndrome > OTPWARN) return syndrome;
 
 	char *vkey = (char *)g_malloc( len*sizeof(char) );
 	char *datpos = *data + pad->filesize - decryptpos - (len - 1);
@@ -313,7 +328,7 @@ static int otp_get_decryptkey_from_file(char **key, struct otp* pad, int len, in
 	for (i = 0; i <= (len -1); i++) vkey[i] = datpos[len - 2 - i];
 	*key = vkey;
 	otp_close_keyfile(fd, data, pad);
-	return TRUE; // TODO v0.2: Imperativ: Should be 0
+	return syndrome;
 }
 
 static void otp_base64_encode(char **message, gsize len)
@@ -346,7 +361,8 @@ static int otp_udecrypt(char **message, struct otp* pad, int decryptpos)
 	char **key = &space1;
 	otp_base64_decode(message, &len);
 
-	if (otp_get_decryptkey_from_file(key, pad, len, decryptpos) == FALSE) {
+	if (otp_get_decryptkey_from_file(key, pad, len, decryptpos) > OTPWARN) {
+		
 		return FALSE;
 	}
 #ifdef DEBUG 
@@ -372,8 +388,7 @@ static int otp_uencrypt(char **message, struct otp* pad)
 
 #ifdef RNDMSGLEN
 	/* get one byte from keyfile for random length */
-	if ( otp_get_encryptkey_from_file(rand, pad, 1+1)
-			== FALSE ) {
+	if ( otp_get_encryptkey_from_file(rand, pad, 1+1) > OTPWARN ) {
 		return FALSE;
 	}
 	rnd = (unsigned char)*rand[0]*RNDLENMAX/255;
@@ -384,8 +399,7 @@ static int otp_uencrypt(char **message, struct otp* pad)
 	*message = msg;
 	len += rnd;
 #endif
-	if ( otp_get_encryptkey_from_file(key, pad, len)
-			== FALSE ) {
+	if ( otp_get_encryptkey_from_file(key, pad, len) > OTPWARN ) {
 		return FALSE;
 	}
 #ifdef DEBUG 
@@ -414,12 +428,12 @@ unsigned int otp_erase_key(struct otp* pad)
 	char **key = &space1;
 	/* Using up all entropy */
 	int result = TRUE;
-	while (result == TRUE) {
+	while (result <= OTPWARN ) {
 		result = otp_get_encryptkey_from_file(key, pad, len);
 	}
 	result = TRUE;
 	len = 1+1;
-	while (result == TRUE) {
+	while (result<= OTPWARN) {
 		result = otp_get_encryptkey_from_file(key, pad, len);
 	}
 	return TRUE; // TODO v0.2: Imperativ: Should be 0
@@ -697,7 +711,8 @@ struct otp* otp_get_from_file(const char* path, const char* input_filename)
 
 	if (otp_id_is_valid(pad->id) == FALSE) return NULL;
 
-	if (otp_seek_start(pad) == FALSE) {
+	OtpError syndrome = otp_seek_start(pad);
+	if (syndrome > OTPWARN) {
 		otp_destroy(pad);
 		return NULL;
 	}

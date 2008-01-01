@@ -19,6 +19,33 @@
 #define OTP_ID_LENGTH 8			/* Size of the ID-string */
 #define OTP_PROTECTED_ENTROPY 100	/* The amount of entropy that is only used for "out of entropy" messages */ 
 
+typedef enum {
+	OTPSUCCESS	= 0x00000000,
+	OTPWARNKEYNOTRANDOM	= 0x00000001,
+	OTPWARN2	= 0x00000002,
+	OTPWARN3	= 0x00000004,
+	OTPWARN4	= 0x00000008,
+	OTPWARN5	= 0x00000010,
+	OTPWARN6	= 0x00000020,
+	OTPWARN7	= 0x00000040,
+	OTPWARN8	= 0x00000080,
+	OTPWARN9	= 0x00000100,
+	OTPWARN10	= 0x00000200,
+	OTPWARN11	= 0x00000400,
+	OTPWARN12	= 0x00000800,
+	OTPWARN13	= 0x00001000,
+	OTPWARN14	= 0x00002000,
+	OTPWARN15	= 0x00004000,
+	OTPWARN16	= 0x00008000,
+	OTPERRFILE		= 0x00010000,
+	OTPERRMMAP		= 0x00020000,
+	OTPERRKEYEMPTY	= 0x00030000,
+	OTPERRKEYSIZEMISMATCH	=0x00040000,
+
+	OTPWARN		= 0x0000FFFF,	/* Every syndrome '<=' then this is a warning (or a success of course)
+ * Every syndrome '>' then this is a (fatal) error */
+} OtpError;
+
 struct otp {
  	char* src; 		/* for pidgin: 'account' like alice@jabber.org */
 	char* dest; 		/* for pidgin: 'account' like bob@jabber.org */
