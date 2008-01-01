@@ -17,31 +17,18 @@
 */
 
 
-// pthread.h has to be included first
 #include <glib.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/resource.h>
 #include <sys/time.h>
 
-/*
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/ioctl.h>
-#include <termio.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <time.h>
-*/
-
-
+// buffer which is stores the bytes before they are written into the keyfile
 #define BUFFSIZE 20
+// do not change, for developement purpose
 #define CHARSIZE 256
 #define OFFSET 0
 
-/* generates a new key pair (two files) with the name alice and bob of 'size' bytes.
-unsigned int otp_generate_key_pair(const char* alice,const char* bob,const char* path,const char* source, unsigned int size);
-*/
 
 // Definition for the funcions and global variables. => Has to be moved into the header file later
 unsigned char bit2char(short buf[8]);
@@ -54,10 +41,11 @@ gpointer prg(gpointer data);
 gpointer mutex = NULL;
 
 
+int main()
 /*
 *	The main function starts the threads which collect entropie from different sources.
 */
-int main() {
+{
 	GThread *p1, *p2, *p3, *p4;	 	 		// define threads
 #ifdef FAST
 	GThread *p5;
@@ -93,11 +81,13 @@ int main() {
 } // end main();
 
 
+
+unsigned char bit2char(short buf[8])
 /*
-* function which takes an array of 8 bits, and output an ascii char. The buf array should only contain
-* 0 or 1, else the return value is not usefule
+* bit2char takes an array of 8 bits, and output an ascii char. The buf array should only contain
+* 0 or 1, to get an useful result
 */
-unsigned char bit2char(short buf[8]) {
+{
 	short i,l,in;
 	unsigned char out;
 	l = 1;
@@ -110,11 +100,11 @@ unsigned char bit2char(short buf[8]) {
 	return out;
 } // end bit2char()
 
-
+gpointer devrand(gpointer data)
 /*
 * devrand() collects entropie from the /dev/random device and writes it into a keyfile
 */
-gpointer devrand(gpointer data) {
+{
 	int fd1, file;
 	unsigned char c1;
 	unsigned char buffer[BUFFSIZE];
@@ -169,12 +159,13 @@ gpointer stub(gpointer data) {
 } // end stub ()
 
 
+gpointer threads(gpointer data)
 /*
 *	threads() collects entropie from thread timing, by just mesuring the time it takes
 *	to open and close the stub() thread. This function takes one sample every second
 * 	and writes the entropie to the keyfile
 */
-gpointer threads(gpointer data) {
+{
 	short i;
 	unsigned char diff;
 	struct timeval start, finish;
@@ -214,13 +205,14 @@ gpointer threads(gpointer data) {
 } // end threads()
 
 
+gpointer audio(gpointer data)
 /*
 	audio() collect entropie from /dev/audio and xor it with a value from /dev/urandom to
 	get a better distribution even if no sound is running.
 	This function generates one bit of entropie out of 7 samples, generates an ascii char
 	and write this to the keyfile
 */
-gpointer audio(gpointer data) {
+{
 	int fd, fd1, file;
 	short i;
 	unsigned char c, d, oldc;
@@ -286,13 +278,14 @@ gpointer audio(gpointer data) {
 } // end audio()
 
 
+gpointer sysstate(gpointer data)
 /*
 *	sysstate() collects entropy by adding up system time user time and minor pagefaults and generates one byte of entropy
 *	if the current state is different from the last state. Because I use microseconds as measurement, the time depends on
 *	the CPU strenght and only the time of the current program is measured the output is not predictable or manipulatable
 *	from outside.
 */
-gpointer sysstate(gpointer data) {
+{
 	int minflt, fp, who;
 	double systime, usertime;
 	unsigned int result = 0, old_result = 0;
@@ -300,7 +293,10 @@ gpointer sysstate(gpointer data) {
 	struct rusage usage;
 	who = RUSAGE_SELF;
 
-	fp = open("keyfile", O_RDWR|O_CREAT|O_APPEND, 00644);
+	if((fp = open("keyfile", O_RDWR|O_CREAT|O_APPEND, 00644)) < 0){
+		g_printerr("could not open keyfile\n");
+		return 0;
+	}
 
 	while (1) {
 		getrusage(who, &usage);
@@ -330,7 +326,12 @@ gpointer sysstate(gpointer data) {
 	return 0;
 }
 
-gpointer prg(gpointer data) {
+gpointer prg(gpointer data)
+/*
+*	prg collects entropy from the pseudo random generator /dev/urandom. This function is only used if the FAST flag is set.
+*	This function weakens the key, and is only used to fasten the generation process.
+*/
+{
 	int fp_file, fp_prg;
 	unsigned short c;
 
