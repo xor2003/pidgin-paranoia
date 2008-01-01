@@ -4,7 +4,7 @@
 # gaim-encryption configure script, thanks guys ;)
 #
 
-AC_INIT([pidgin-paranoia], [0.1.0], [there are no bugs!])
+AC_INIT([pidgin-paranoia], [0.2.0], [there are no bugs!])
 AC_CANONICAL_SYSTEM
 AC_GNU_SOURCE
 AM_CONFIG_HEADER(pre_config.h)
@@ -28,14 +28,14 @@ AM_PROG_LIBTOOL
 LIBTOOL="$LIBTOOL --silent"
 
 #
-# Additional paranoia_config.h entires!
+# Additional paranoia_config.h entires
 #
 
 AC_DEFINE_UNQUOTED(PARANOIA_WEBSITE, "http://pidgin-paranoia.sourceforge.net/", [Pidgin-Paranoia's Website])
 AC_DEFINE_UNQUOTED(PARANOIA_AUTHORS, "Simon Wenner <simon@wenner.ch> Christian Wäckerlin <christian@waeckerlin.com>", [Pidgin-Paranoia's Authors])
 AC_DEFINE_UNQUOTED(PARANOIA_ID, "core-paranoia", [Pidgin-Paranoia Plugin ID])
 
-# Swich for realotp support: 
+# Swich for realotp support:
 # See: http://sourceware.org/autobook/autobook/autobook_283.html#SEC283
 AC_MSG_CHECKING(for realotp support)
 AC_ARG_ENABLE(otp,
@@ -54,32 +54,30 @@ AC_ARG_ENABLE(otp,
 #
 CFLAGS_save="$CFLAGS"
 AC_PROG_CC_STDC
-CFLAGS="$CFLAGS_save"
-
-CFLAGS="$CFLAGS -Wall"
+CFLAGS="$CFLAGS_save -Wall"
 
 AC_SUBST(CFLAGS)
 
 #
-# Check for pidgin (libpurple)
+# Check for libpurple
 #
 
-PKG_CHECK_MODULES(PURPLE, purple,
-[
-	AC_DEFINE(HAVE_PURPLE, 1, [Define if we've found purple.])
-])
+PKG_CHECK_MODULES(PURPLE, purple >= 2.2.0,, AC_MSG_ERROR([
+*** Lib Purple >= 2.2.0 is required to build pidgin-paranoia.
+*** The purple header files are available at http://www.pidgin.im/.]))
 
-AC_SUBST(PURPLE)
-PURPLE_LIBDIR=`pkg-config --variable=libdir purple`
-PURPLE_DATADIR=`pkg-config --variable=datadir purple`
-AC_SUBST(PURPLE_LIBDIR)
-AC_SUBST(PURPLE_DATADIR)
+# Maybe a better solution in the future:
+#AM_PATH_PURPLE(2.2.0,, AC_MSG_ERROR([
+#*** LibPurple is required to build pidgin-paranoia.
+#*** It's available at http://www.pidgin.im/.]))
+
+AC_SUBST(PURPLE_CFLAGS)
 
 #
-# check for glib
+# Check for glib2.0
 #
 
-AM_PATH_GLIB_2_0(2.0.0,,AC_MSG_ERROR([
+AM_PATH_GLIB_2_0(2.12.0,,AC_MSG_ERROR([
 *** GLib 2.0 is required to build pidgin-paranoia; please make sure you have the.
 *** GLib development headers installed. The latest version of GLib is always
 *** available at http://www.gtk.org/.]))
