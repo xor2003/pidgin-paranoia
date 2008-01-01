@@ -18,7 +18,6 @@ Version 0.2
 	 * /otp scan, to read in new keys
 	 
 	other
-	 * check libpurple and glib minor version number in configure
 	 * commandline program that can use libotp for general usage
  
 Version 0.3
