@@ -20,8 +20,13 @@
 #define OTP_PROTECTED_ENTROPY 100	/* The amount of entropy that is only used for "out of entropy" messages */ 
 
 typedef enum {
-	OTPSUCCESS	= 0x00000000,
-	OTPWARNKEYNOTRANDOM	= 0x00000001,
+	OTPOK	= 0x00000000,
+
+/* function: otp_encrypt, otp_encrypt_warning
+ * origin: otp_get_encryptkey_from_file
+ * The used entropy failed statistical tests */
+	OTPWARN_KEY_NOT_RANDOM	= 0x00000001,
+
 	OTPWARN2	= 0x00000002,
 	OTPWARN3	= 0x00000004,
 	OTPWARN4	= 0x00000008,
@@ -37,13 +42,41 @@ typedef enum {
 	OTPWARN14	= 0x00002000,
 	OTPWARN15	= 0x00004000,
 	OTPWARN16	= 0x00008000,
-	OTPERRFILE		= 0x00010000,
-	OTPERRMMAP		= 0x00020000,
-	OTPERRKEYEMPTY	= 0x00030000,
-	OTPERRKEYSIZEMISMATCH	=0x00040000,
 
-	OTPWARN		= 0x0000FFFF,	/* Every syndrome '<=' then this is a warning (or a success of course)
+/* function: all
+ * origin: otp_open_keyfile
+ * A File can not be opened */
+	OTPERR_FILE		= 0x00010000,
+
+/* function: otp_encrypt, otp_encrypt_warning
+ * origin: otp_get_encryptkey_from_file
+ * The message does not fit into the entropy file */
+	OTPERR_KEY_EMPTY	= 0x00030000,
+
+/* function: otp_decrypt
+ * origin: otp_get_decryptkey_from_file 
+ * Position in the message does not exist in the entropy file */
+	OTPERR_KEY_SIZE_MISMATCH	 =0x00040000,
+
+/* function: all
+ * origin: the same functions
+ * The input into the fuction is not valid i.e. NULL*/
+	OTPERR_INPUT				=0x00050000,
+
+/* function: otp_decrypt 
+ * origin: otp_decrypt
+ * The message is not in the format "3234|34EF4588|M+Rla2w=" and can not be splitted */
+	OTPERR_MSG_FORMAT			=0x00060000,
+
+/* function: otp_decrypt
+ * origin: otp_decrypt
+ * The ID '34EF4588' does not match with the one in the pad */
+	OTPERR_ID_MISMATCH		=0x00070000,
+
+/* This should be used to check if a error occurred
+ * Every syndrome '<=' then this is a warning (or a success of course)
  * Every syndrome '>' then this is a (fatal) error */
+	OTPWARN		= 0x0000FFFF,
 } OtpError;
 
 struct otp {
@@ -58,10 +91,10 @@ struct otp {
 };
 
 /* returns 1 if it could encrypt the message */
-unsigned int otp_encrypt(struct otp* mypad, char **message);
+OtpError otp_encrypt(struct otp* mypad, char **message);
 
 /* returns 1 if it could decrypt the message */
-unsigned int otp_decrypt(struct otp* mypad, char **message);
+OtpError otp_decrypt(struct otp* mypad, char **message);
 
 /* creates an otp object with the data from a key file */
 struct otp* otp_get_from_file(const char* path, const char* filename);
@@ -80,7 +113,7 @@ unsigned int otp_generate_key_pair(const char* alice, const char* bob, const cha
  The entropy is not consumed by this function. 
  To used the function securely, the signal-messages should not overlap and every signal has to stay constant! 
  When only one signal is used, use protected_pos=0. */
-unsigned int otp_encrypt_warning(struct otp* mypad, char **message, unsigned int protected_pos);
+OtpError otp_encrypt_warning(struct otp* mypad, char **message, unsigned int protected_pos);
 
 /* destroys a keyfile by using up all encryption-entropy */
 unsigned int otp_erase_key(struct otp* mypad);
