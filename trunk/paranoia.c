@@ -455,7 +455,7 @@ PurpleCmdId par_cmd_id;
 #define PARANOIA_HELP_STR "Welcome to the One-Time Pad CLI.\n\
 otp help: shows this message \notp genkey &lt;size&gt; &lt;entropy \
 source&gt;: generates a key pair of &lt;size&gt; \
-kB\notp on: tries to start the encryption\notp off: stops the \
+kiB\notp on: tries to start the encryption\notp off: stops the \
 encryption\notp info: shows details about the used key"
 #define PARANOIA_ERROR_STR "Wrong argument(s). Type '/otp help' for help."
 #define PARANOIA_KEYSIZE_ERROR "Your key size is too large."
@@ -628,18 +628,18 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 				purple_conversation_get_name(conv));
 
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-				"Generate new key: my_acc: %s, other_acc: %s, size: %ikB\n",
+				"Generate new key: my_acc: %s, other_acc: %s, size: %ikiB\n",
 				my_acc, other_acc, size);
 
 		if (param_array[1] == NULL) {
 			/* default entropy source */
 			syndrome = otp_generate_key_pair(my_acc, 
 						other_acc, global_otp_path, 
-						"/dev/urandom", size*1000);
+						"/dev/urandom", size*1024);
 		} else {
 			syndrome = otp_generate_key_pair(my_acc, other_acc,
 					global_otp_path, g_strstrip(param_array[1]),
-					size*1000);
+					size*1024);
 		}
 		if (syndrome > OTP_WARN) {
 			purple_conversation_write(conv, NULL, 
@@ -647,19 +647,19 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 					PURPLE_MESSAGE_NO_LOG, time(NULL));
 					purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 					"Key files could not be generated! %.8X\n", syndrome);
-					// TODO: notify the user
+			// TODO: notify the user
 		} else {
 			if (syndrome == OTP_OK) {
-			purple_conversation_write(conv, NULL, 
-					"Key files successfully generated.\n"
-					"Your own key was stored in the directory '~/.paranoia'.\n"
-					"Your buddy's key is stored in your home directory.\n"
-					"Please send this key in a secure way to your partner.\n"
-					"Please reload the plugin to add your key.\n",
-					PURPLE_MESSAGE_NO_LOG, time(NULL));
-			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-					"Generated two entropy files of %ikB size.\n", size);
-			// TODO: add key to the list
+				purple_conversation_write(conv, NULL, 
+						"Key files successfully generated.\n"
+						"Your own key was stored in the directory '~/.paranoia'.\n"
+						"Your buddy's key is stored in your home directory.\n"
+						"Please send this key in a secure way to your partner.\n"
+						"Please reload the plugin to add your key.\n",
+						PURPLE_MESSAGE_NO_LOG, time(NULL));
+				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+						"Generated two entropy files of %ikiB size.\n", size);
+				// TODO: add key to the list
 			} else {
 				purple_conversation_write(conv, NULL, 
 				"Key files successfully generated.\n"
@@ -669,8 +669,9 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 				"Please reload the plugin to add your key.\n"
 				"There was a warning issued!\n",
 				PURPLE_MESSAGE_NO_LOG, time(NULL));
-			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-					"Generated two entropy files of %ikB size with a warning! %.8X\n", size, syndrome);
+				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+						"Generated two entropy files of %ikiB size with a warning! %.8X\n",
+						size, syndrome);
 				} 
 			}
 		g_strfreev(param_array);
@@ -809,12 +810,12 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 		syndrome = otp_decrypt(used_key->pad, message);
 		if (syndrome > OTP_WARN) {
 			purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
-					"Could not decrypt the message! That's a serious error! %.8X\n",syndrome);
+					"Could not decrypt the message! That's a serious error! %.8X\n", syndrome);
 			// TODO: notify the user
 		} else {
 			if (syndrome != OTP_OK) {
 				purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
-						"Message decrypted but there is a warning! %.8X\n",syndrome);
+						"Message decrypted but there is a warning! %.8X\n", syndrome);
 			}
 		}
 #endif
@@ -969,12 +970,12 @@ static void par_im_msg_sending(PurpleAccount *account,
 		syndrome = otp_encrypt(used_key->pad, message);
 		if (syndrome > OTP_WARN) {
 			purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
-					"Could not encrypt the message. That's a serious error! %.8X\n",syndrome);
+					"Could not encrypt the message. That's a serious error! %.8X\n", syndrome);
 			// TODO: notify the user
 		} else {
 			if (syndrome != OTP_OK) {
 				purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
-						"Message encrypted but there is a warning! %.8X\n",syndrome);
+						"Message encrypted but there is a warning! %.8X\n", syndrome);
 			}
 		}
 #endif
