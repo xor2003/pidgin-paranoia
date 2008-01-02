@@ -226,17 +226,24 @@ int encrypt() {
 	if(*argpos+takes-1 >= *argnumber) {
 		return FALSE;
 	}
+	printf("Unencrypted message:\t%s\n",*permmessage);
+	char *stupid = g_strdup(*permmessage); // Timeing problem?
 	
 	if (permmessage == NULL) {
 		printf("No message set!\n");
 		return FALSE;	
 	}
-	if (otp_encrypt(encryptpad,permmessage) == FALSE) {
-		printf("Encrypt failed!\n");		
+	
+	printf("Unencrypted message:\t%s\n",*permmessage);
+	OtpError syndrome = otp_encrypt(encryptpad, permmessage);
+	//printf("* Syndrome:\t%.8X\n",syndrome);
+	if (syndrome > OTPWARN) {
+		printf("Encrypt failed! %.8X\n",syndrome);
 		return FALSE;	
 	}
 	printf("Encrypted message:\t%s\n",*permmessage);
 	if (debuglevel) {
+		printf("* Syndrome:\t%.8X\n",syndrome);
 		printf("* Pad:\tPos:\t\t%u\n",encryptpad->position);
 		printf("* Pad:\tentropy:\t%u\n",encryptpad->entropy);
 	}
@@ -257,13 +264,15 @@ int signalencrypt() {
 	if (debuglevel) {
 		printf("* Message:\t%s\n",*message);
 	}
-	if (otp_encrypt_warning(encryptpad,message,0) == FALSE) {
-		printf("Signalencrypt failed!\n");	
+	OtpError syndrome = otp_encrypt_warning(encryptpad,message,0);
+	if (syndrome > OTPWARN) {
+		printf("Signalencrypt failed! %.8X\n",syndrome);
 		return FALSE;	
 	}
 	printf("Enc. signal message:\t%s\n",*message);	
 	
 	if (debuglevel) {
+		printf("* Syndrome:\t%.8X\n",syndrome);
 		printf("* Pad:\tPos:\t\t%u\n",encryptpad->position);
 		printf("* Pad:\tentropy:\t%u\n",encryptpad->entropy);
 	}
@@ -283,7 +292,7 @@ int decrypt() {
 	if(*argpos+takes-1 >= *argnumber) {
 		return FALSE;
 	}
-	
+	char *stupid = g_strdup(*permmessage); // Timeing problem?
 	if (permmessage == NULL) {
 		printf("No message set!\n");
 		return FALSE;	
@@ -291,12 +300,16 @@ int decrypt() {
 	if (debuglevel) {
 		printf("* Encrypted message:\t%s\n",*permmessage);
 	}
-	if (otp_decrypt(decryptpad,permmessage) == FALSE) {
-		printf("Decrypt failed!\n");	
+	OtpError syndrome = otp_decrypt(decryptpad,permmessage); 
+	if (syndrome > OTPWARN) {
+		printf("Decrypt failed! %.8X\n",syndrome);
 		return FALSE;	
 	}
 	printf("Decrypted message:\t%s\n",*permmessage);
 	
+	if (debuglevel) {
+		printf("* Syndrome:\t%.8X\n",syndrome);
+	}
 	*argpos=*argpos+takes;
 	return TRUE;	
 }

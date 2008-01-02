@@ -737,7 +737,7 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 	if ((message == NULL) || (*message == NULL)) {
 		return TRUE;
 	}
-
+	OtpError syndrome;
 	/* my account name, i.e. alice@jabber.org */
 	const char* my_acc_name = purple_account_get_username(account);
 
@@ -813,10 +813,16 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 		// DISABLE LIBOTP
 #else
 		// ENABLE LIBOTP
-		if (!otp_decrypt(used_key->pad, message)) {
+		syndrome = otp_decrypt(used_key->pad, message);
+		if (syndrome > OTPWARN) {
 			purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
-					"Could not decrypt the message! That's a serious error!.\n");
+					"Could not decrypt the message! That's a serious error! %.8X\n",syndrome);
 			// TODO: notify the user
+		} else {
+			if (syndrome != OTPOK) {
+				purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
+						"Message decrypted but there is a warning! %.8X\n",syndrome);
+			}
 		}
 #endif
 
@@ -865,6 +871,7 @@ static void par_im_msg_sending(PurpleAccount *account,
 /* signal handler for "sending-im-msg" */
 {
 	const char* my_acc_name = purple_account_get_username(account);
+	OtpError syndrome;
 
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 			"My account: %s\n", my_acc_name);
@@ -925,10 +932,19 @@ static void par_im_msg_sending(PurpleAccount *account,
 				/* delete message and send no entropy msg */
 				g_free(*message);
 				*message = g_strdup(PARANOIA_NO_ENTROPY);
-				if (!otp_encrypt_warning(used_key->pad, message, 0)) {
+				
+				syndrome = otp_encrypt_warning(used_key->pad, message, 0);
+				if (syndrome > OTPWARN) {
 					purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
-							"Could not send an entropy warning. That's a serious error!.\n");
+							"Could not send an entropy warning. That's a serious error! %.8X\n",syndrome);
+				// TODO: notify the user
+				} else {
+					if (syndrome != OTPOK) {
+						purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
+								"Entropy waring sent but there is a warning! %.8X\n",syndrome);
+					}
 				}
+				
 				par_add_header(message);
 				return;
 			} else {
@@ -947,10 +963,18 @@ static void par_im_msg_sending(PurpleAccount *account,
 #ifdef NO_OTP
 		// DISABLE LIBOTP
 #else
-		// ENABLE LIBOT
-		if (!otp_encrypt(used_key->pad, message)) {
+		// ENABLE LIBOP
+		
+		syndrome = otp_encrypt(used_key->pad, message);
+		if (syndrome > OTPWARN) {
 			purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
-					"Could not encrypt the message. That's a serious error!.\n");
+					"Could not encrypt the message. That's a serious error! %.8X\n",syndrome);
+			// TODO: notify the user
+		} else {
+			if (syndrome != OTPOK) {
+				purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
+						"Message encrypted but there is a warning! %.8X\n",syndrome);
+			}
 		}
 #endif
 

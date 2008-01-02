@@ -136,13 +136,13 @@ static OtpError otp_open_keyfile(int *fd, char **data, struct otp* pad)
 	struct stat fstat;
 	if ((*fd = open(pad->filename, O_RDWR)) == -1) {
 		perror("open");
-		return OTPERRFILE;
+		return OTPERR_FILE;
 	}
 
 	if (stat(pad->filename, &fstat) == -1) {
 		perror("stat");
 		close(*fd);
-		return OTPERRFILE;
+		return OTPERR_FILE;
 	}
 	pad->filesize = fstat.st_size;
 
@@ -150,18 +150,16 @@ static OtpError otp_open_keyfile(int *fd, char **data, struct otp* pad)
 			MAP_SHARED, *fd, 0)) == (caddr_t)(-1)) {
 		perror("mmap");
 		close(*fd);
-		return OTPERRMMAP;
+		return OTPERR_FILE;
 	}
-	return OTPSUCCESS;
+	return OTPOK;
 }
 
-static int otp_close_keyfile(int *fd, char **data, struct otp* pad)
+static void otp_close_keyfile(int *fd, char **data, struct otp* pad)
 /* Closes a keyfile with memory mapping */
 {
 	munmap(*data, pad->filesize);
 	close(*fd);
-	return TRUE; // TODO v0.2: Imperativ: Should be 0
-	// TODO v0.2: munmap error handling? 
 }
 
 static int otp_seek_pos(char *data, int filesize)
@@ -182,12 +180,11 @@ static OtpError otp_seek_start(struct otp* pad)
 	char *space2 = "";
 	char **data = &space2;
 	OtpError syndrome = otp_open_keyfile(fd, data, pad);
-	if (syndrome == OTPSUCCESS) {
+	if (syndrome == OTPOK) {
 		pad->position = otp_seek_pos(*data, pad->filesize);
 		otp_calc_entropy(pad);
 		otp_close_keyfile(fd, data, pad);
 	} else {
-//		printf("open-keyfile: %.8X\n",syndrome);
 		return syndrome;
 	}
 	return syndrome;
@@ -241,7 +238,7 @@ static OtpError otp_get_encryptkey_from_file(char **key, struct otp* pad, int le
 	int i = 0;
 	int protected_entropy = OTP_PROTECTED_ENTROPY;
 	int position = pad->position;
-	OtpError syndrome = OTPSUCCESS;
+	OtpError syndrome = OTPOK;
 
 	if (pad->protected_position != 0) {
 		/* allow usage of protected entropy*/
@@ -250,14 +247,10 @@ static OtpError otp_get_encryptkey_from_file(char **key, struct otp* pad, int le
 	}
 	if ( (position+len-1 > (pad->filesize/2-protected_entropy) )
 			|| position < 0 ) {
-		printf("key empty: %.8X\n",OTPERRKEYEMPTY);
-		return OTPERRKEYEMPTY;
+		return OTPERR_KEY_EMPTY;
 	}
 	syndrome = otp_open_keyfile(fd, data, pad);
-	if (syndrome > OTPWARN) {
-		printf("syndrome: %.8X\n",syndrome);
-		return syndrome;
-	}
+	if (syndrome > OTPWARN) return syndrome;
 		
 	*key = (char *)g_malloc((len)*sizeof(char));
 	memcpy(*key, *data+position, len-1);
@@ -281,7 +274,7 @@ static OtpError otp_get_encryptkey_from_file(char **key, struct otp* pad, int le
 		return FALSE;
 #endif
 	} else {
-		syndrome = OTPWARNKEYNOTRANDOM;
+		syndrome = OTPWARN_KEY_NOT_RANDOM;
 	}
 #endif
 #ifdef KEYOVERWRITE
@@ -310,16 +303,14 @@ static OtpError otp_get_decryptkey_from_file(char **key, struct otp* pad, int le
 	char *space2 = "";
 	char **data = &space2;
 	int i = 0;
-	OtpError syndrome = OTPSUCCESS;
+	OtpError syndrome = OTPOK;
 
 	if (pad->filesize < (pad->filesize-decryptpos - (len -1))
 			|| (pad->filesize-decryptpos) < 0) {
-		syndrome = OTPERRKEYSIZEMISMATCH;
-		printf("keysizemismatch: %.8X\n",syndrome);
+		syndrome = OTPERR_KEY_SIZE_MISMATCH;
 		return syndrome;
 	}
 	syndrome = otp_open_keyfile(fd, data, pad);
-	printf("syndrome: %.8X\n",syndrome);
 	if (syndrome > OTPWARN) return syndrome;
 
 	char *vkey = (char *)g_malloc( len*sizeof(char) );
@@ -353,18 +344,16 @@ static void otp_base64_decode(char **message, gsize *plen)
 	return;
 }
 
-static int otp_udecrypt(char **message, struct otp* pad, int decryptpos)
+static OtpError otp_udecrypt(char **message, struct otp* pad, int decryptpos)
 /* Decrypt the message  */
 {
 	gsize len = (strlen(*message)+1)* sizeof(char);
 	char *space1 = "";
 	char **key = &space1;
 	otp_base64_decode(message, &len);
-
-	if (otp_get_decryptkey_from_file(key, pad, len, decryptpos) > OTPWARN) {
-		
-		return FALSE;
-	}
+	OtpError syndrome = OTPOK;
+	syndrome = otp_get_decryptkey_from_file(key, pad, len, decryptpos);
+	if (syndrome > OTPWARN) return syndrome;
 #ifdef DEBUG 
 	otp_printint(*key, len, "paranoia: decryptkey");
 #endif
@@ -372,10 +361,10 @@ static int otp_udecrypt(char **message, struct otp* pad, int decryptpos)
 #ifdef DEBUG 
 	otp_printint(*key,len, "paranoia: decrypt-xor");
 #endif
-	return TRUE;                    // TODO v0.2: Imperativ: Should be 0
+	return syndrome;
 }
 
-static int otp_uencrypt(char **message, struct otp* pad)
+static OtpError otp_uencrypt(char **message, struct otp* pad)
 /* Encrypt the message  */
 {
 	gsize len = (strlen(*message)+1) * sizeof(char);
@@ -385,12 +374,13 @@ static int otp_uencrypt(char **message, struct otp* pad)
 	char **key = &space2;
 	char *msg;
 	int rnd;
+	OtpError syndrome = OTPOK;
 
 #ifdef RNDMSGLEN
 	/* get one byte from keyfile for random length */
-	if ( otp_get_encryptkey_from_file(rand, pad, 1+1) > OTPWARN ) {
-		return FALSE;
-	}
+	syndrome = otp_get_encryptkey_from_file(rand, pad, 1+1);
+	if ( syndrome > OTPWARN ) return syndrome;
+	
 	rnd = (unsigned char)*rand[0]*RNDLENMAX/255;
 	g_free(*rand);
 	msg = g_malloc0(rnd+len);       /* Create a new,longer message */
@@ -399,9 +389,8 @@ static int otp_uencrypt(char **message, struct otp* pad)
 	*message = msg;
 	len += rnd;
 #endif
-	if ( otp_get_encryptkey_from_file(key, pad, len) > OTPWARN ) {
-		return FALSE;
-	}
+	syndrome = otp_get_encryptkey_from_file(key, pad, len);
+	if ( syndrome > OTPWARN ) return syndrome;
 #ifdef DEBUG 
 	otp_printint(*key,len, "paranoia: encryptkey");
 #endif
@@ -410,7 +399,7 @@ static int otp_uencrypt(char **message, struct otp* pad)
 	otp_printint(*key,len, "paranoia: encrypt-xor");
 #endif
 	otp_base64_encode(message, len);
-	return TRUE; // TODO v0.2: Imperativ: Should be 0
+	return syndrome;
 }
 
 
@@ -427,14 +416,14 @@ unsigned int otp_erase_key(struct otp* pad)
 	char *space1 = "";
 	char **key = &space1;
 	/* Using up all entropy */
-	int result = TRUE;
-	while (result <= OTPWARN ) {
-		result = otp_get_encryptkey_from_file(key, pad, len);
+	OtpError syndrome = OTPOK;
+	while (syndrome <= OTPWARN ) {
+		syndrome = otp_get_encryptkey_from_file(key, pad, len);
 	}
-	result = TRUE;
+	syndrome = OTPOK;
 	len = 1+1;
-	while (result<= OTPWARN) {
-		result = otp_get_encryptkey_from_file(key, pad, len);
+	while (syndrome <= OTPWARN) {
+		syndrome = otp_get_encryptkey_from_file(key, pad, len);
 	}
 	return TRUE; // TODO v0.2: Imperativ: Should be 0
 }
@@ -615,13 +604,14 @@ unsigned int otp_generate_key_pair(const char* alice,
 }
 
 
-unsigned int otp_encrypt_warning(struct otp* pad, char **message, unsigned int protected_pos)
+OtpError otp_encrypt_warning(struct otp* pad, char **message, unsigned int protected_pos)
 /* encrypts a message with the protected entropy.
  * protected_pos is the position in bytes to use. */
 {
+	OtpError syndrome = OTPOK;
 	if (pad == NULL || message == NULL || *message == NULL || protected_pos <= 0) {
 		if (protected_pos <= OTP_PROTECTED_ENTROPY - strlen(*message)) {
-			return FALSE;
+			return OTPERR_INPUT;
 		}
 	}
 	int oldpos = pad->position;
@@ -632,9 +622,11 @@ unsigned int otp_encrypt_warning(struct otp* pad, char **message, unsigned int p
 #endif
 
 #ifdef UCRYPT
-	if (otp_uencrypt(message, pad) == FALSE) {
+	syndrome = otp_uencrypt(message, pad);
+	if (syndrome > OTPWARN) {
 		pad->protected_position = 0;
-		return FALSE;
+		printf("syndrome: %.8X\n",syndrome);
+		return syndrome;
 	}
 #endif
 	/* Our position in the pad */
@@ -646,7 +638,7 @@ unsigned int otp_encrypt_warning(struct otp* pad, char **message, unsigned int p
 	g_free(pos_str);
 	*message = new_msg;
 	pad->protected_position = 0;
-	return TRUE;            // TODO v0.2: Imperativ: Should be 0
+	return syndrome;
 }
 
 char* otp_get_id_from_message(char **message)
@@ -731,21 +723,26 @@ void otp_destroy(struct otp* pad)
 	}
 }
 
-unsigned int otp_encrypt(struct otp* pad, char **message)
+OtpError otp_encrypt(struct otp* pad, char **message)
 /* Creates the actual string of the encrypted message that is given to the application.
    returns TRUE if it could encrypt the message */
 {
+	OtpError syndrome = OTPOK;
 #ifdef DEBUG 
 	otp_printint(*message,strlen(*message), "paranoia: before encrypt");
 #endif
-	if (pad == NULL || message == NULL || *message == NULL) return FALSE;
+	if (pad == NULL || message == NULL || *message == NULL) return OTPERR_INPUT;
 	pad->protected_position = 0;
 	int oldpos = pad->position;
 #ifdef RNDMSGLEN
 	oldpos += 1;
 #endif
 #ifdef UCRYPT
-	if (otp_uencrypt(message, pad) == FALSE) return FALSE;
+	syndrome = otp_uencrypt(message, pad);
+	if (syndrome > OTPWARN) {
+		printf("syndrome: %.8X\n",syndrome);
+		return syndrome;
+	}
 #endif
 
 	/* Our position in the pad*/
@@ -758,17 +755,19 @@ unsigned int otp_encrypt(struct otp* pad, char **message)
 #ifdef DEBUG 
 	otp_printint(*message,strlen(*message), "paranoia: after encrypt");
 #endif
-	return TRUE;            // TODO v0.2: Imperativ: Should be 0
+	printf("syndrome: %.8X\n",syndrome);
+	return syndrome;
 }
 
-unsigned int otp_decrypt(struct otp* pad, char **message)
+OtpError otp_decrypt(struct otp* pad, char **message)
 /* Strips the encrypted message and decrypts it.
    returns TRUE if it could decrypt the message  */
 {
 #ifdef DEBUG 
 	otp_printint(*message, strlen(*message), "paranoia: before decrypt");
 #endif
-	if (pad == NULL) return FALSE;
+	OtpError syndrome = OTPOK;
+	if (pad == NULL) return OTPERR_INPUT;
 	pad->protected_position = 0;
 	gchar** m_array = g_strsplit(*message, MSG_DELI, 3);
 
@@ -776,23 +775,29 @@ unsigned int otp_decrypt(struct otp* pad, char **message)
 			|| (m_array[1] == NULL)
 			|| (m_array[2] == NULL) ) {
 		g_strfreev(m_array);
-		return FALSE;
+		return OTPERR_MSG_FORMAT;
 		}
 
 	/* Our position to decrypt in the pad */
 	int decryptpos = (unsigned int)g_ascii_strtoll( strdup(m_array[0]), NULL, 10);
-	pad->id = g_strdup(m_array[1]);
+	printf("%s\n",pad->id);
+	if (strcmp(m_array[1], pad->id) != 0) return OTPERR_ID_MISMATCH;
 	char *new_msg = g_strdup(m_array[2]);
 	g_free(*message);
 	*message = new_msg;
 	g_strfreev(m_array);
+	
 
 #ifdef UCRYPT
-	if (otp_udecrypt(message, pad, decryptpos) == FALSE) return FALSE;
+	syndrome = otp_udecrypt(message, pad, decryptpos);
+	if (syndrome > OTPWARN) {
+		printf("syndrome: %.8X\n",syndrome);
+		return syndrome;
+	}
 #endif
 
 #ifdef DEBUG 
 	otp_printint(*message,strlen(*message), "paranoia: after decrypt");
 #endif
-	return TRUE;            // TODO v0.2: Imperativ: Should be 0
+	return syndrome;
 }
