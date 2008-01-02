@@ -70,14 +70,19 @@ PKG_CHECK_MODULES(PURPLE, purple >= 2.2.0,, AC_MSG_ERROR([
 #AM_PATH_PURPLE(2.2.0,, AC_MSG_ERROR([
 #*** LibPurple is required to build pidgin-paranoia.
 #*** It's available at http://www.pidgin.im/.]))
+#AC_SUBST(PURPLE_CFLAGS)
 
-AC_SUBST(PURPLE_CFLAGS)
+AC_SUBST(PURPLE)
+PURPLE_LIBDIR=`pkg-config --variable=libdir purple`
+PURPLE_DATADIR=`pkg-config --variable=datadir purple`
+AC_SUBST(PURPLE_LIBDIR)
+AC_SUBST(PURPLE_DATADIR)
 
 #
 # Check for glib2.0
 #
 
-AM_PATH_GLIB_2_0(2.12.0,,AC_MSG_ERROR([
+AM_PATH_GLIB_2_0(2.12.0,, AC_MSG_ERROR([
 *** GLib 2.0 is required to build pidgin-paranoia; please make sure you have the.
 *** GLib development headers installed. The latest version of GLib is always
 *** available at http://www.gtk.org/.]))
