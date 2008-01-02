@@ -81,8 +81,15 @@ int create() {
 		printf("* Keypath:\t%s\n",path);
 		printf("* Keysize:\t%u\n",size);
 	}
-	if (otp_generate_key_pair(argvalue[*argpos],argvalue[*argpos+1], path, argvalue[*argpos+2],size) == FALSE) {
+	OtpError syndrome = otp_generate_key_pair(
+			argvalue[*argpos],argvalue[*argpos+1],
+			path, argvalue[*argpos+2],size);
+	if (syndrome > OTP_WARN) {
+		printf("Error creating keys %.8X\n",syndrome);
 		return FALSE;
+	}
+	if (debuglevel) {
+		printf("* Syndrome:\t%.8X\n",syndrome);
 	}
 	
 	*argpos=*argpos+takes;
@@ -114,8 +121,13 @@ int erasekey() {
 	if(*argpos+takes-1 >= *argnumber) {
 		return FALSE;
 	}
-	if (otp_erase_key(encryptpad) == FALSE) {
+	OtpError syndrome = otp_erase_key(encryptpad);
+	if (syndrome > OTP_WARN) {
+		printf("Error erasing keys %.8X\n",syndrome);
 		return FALSE;
+	}
+	if (debuglevel) {
+		printf("* Syndrome:\t%.8X\n",syndrome);
 	}
 	*argpos=*argpos+takes;
 	return TRUE;	
@@ -237,7 +249,7 @@ int encrypt() {
 	printf("Unencrypted message:\t%s\n",*permmessage);
 	OtpError syndrome = otp_encrypt(encryptpad, permmessage);
 	//printf("* Syndrome:\t%.8X\n",syndrome);
-	if (syndrome > OTPWARN) {
+	if (syndrome > OTP_WARN) {
 		printf("Encrypt failed! %.8X\n",syndrome);
 		return FALSE;	
 	}
@@ -265,7 +277,7 @@ int signalencrypt() {
 		printf("* Message:\t%s\n",*message);
 	}
 	OtpError syndrome = otp_encrypt_warning(encryptpad,message,0);
-	if (syndrome > OTPWARN) {
+	if (syndrome > OTP_WARN) {
 		printf("Signalencrypt failed! %.8X\n",syndrome);
 		return FALSE;	
 	}
@@ -301,7 +313,7 @@ int decrypt() {
 		printf("* Encrypted message:\t%s\n",*permmessage);
 	}
 	OtpError syndrome = otp_decrypt(decryptpad,permmessage); 
-	if (syndrome > OTPWARN) {
+	if (syndrome > OTP_WARN) {
 		printf("Decrypt failed! %.8X\n",syndrome);
 		return FALSE;	
 	}
