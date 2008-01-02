@@ -93,8 +93,10 @@ AC_SUBST(GLIB_CFLAGS)
 # Finish up
 #
 
-AC_OUTPUT([Makefile
-	   VERSION
+AC_OUTPUT([
+	Makefile
+	VERSION
+	tools/Makefile
 	  ])
 
 echo;
