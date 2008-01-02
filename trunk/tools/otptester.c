@@ -239,19 +239,19 @@ int encrypt() {
 		return FALSE;
 	}
 	printf("Unencrypted message:\t%s\n",*permmessage);
-	char *stupid = g_strdup(*permmessage); // Timeing problem?
+	//char *stupid = g_strdup(*permmessage); // Timeing problem?
 	
 	if (permmessage == NULL) {
 		printf("No message set!\n");
-		return FALSE;	
+		return FALSE;
 	}
 	
 	printf("Unencrypted message:\t%s\n",*permmessage);
 	OtpError syndrome = otp_encrypt(encryptpad, permmessage);
-	//printf("* Syndrome:\t%.8X\n",syndrome);
+	//OtpError syndrome=0;
 	if (syndrome > OTP_WARN) {
 		printf("Encrypt failed! %.8X\n",syndrome);
-		return FALSE;	
+		return FALSE;
 	}
 	printf("Encrypted message:\t%s\n",*permmessage);
 	if (debuglevel) {
@@ -304,7 +304,7 @@ int decrypt() {
 	if(*argpos+takes-1 >= *argnumber) {
 		return FALSE;
 	}
-	char *stupid = g_strdup(*permmessage); // Timeing problem?
+//	char *stupid = g_strdup(*permmessage); // Timeing problem?
 	if (permmessage == NULL) {
 		printf("No message set!\n");
 		return FALSE;	
