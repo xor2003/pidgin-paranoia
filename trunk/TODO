@@ -36,4 +36,7 @@ Misc
  * Debian/Ubuntu package
  * Test all the less common protocols (Gadu-Gadu, QQ, SIMPLE...)
 
-
+Ideas
+ * Support for loop key creation
+ * Entropy pool file
+ * Encrypted file transfer

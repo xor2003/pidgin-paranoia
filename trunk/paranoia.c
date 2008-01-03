@@ -207,6 +207,7 @@ static gboolean par_init_key_list()
 		// TODO: return?
 	} else {
 		/* loop over global key dir */
+		// TODO: detect dublicate id's? loop keys?
 		while (tmp_filename != NULL) {
 			tmp_path = g_strconcat(global_otp_path, tmp_filename, NULL);
 			
@@ -252,6 +253,40 @@ static void par_free_key_list()
 	return;
 }
 
+static char** par_search_ids(const char* src, const char* dest) 
+/* searches all ids for a src/dest pair in the keylist.
+ * Returns NULL if none found.
+ * */
+{
+	int maxids = 8;
+	int currid = 0;
+	char** ids = (char **) g_malloc (maxids * sizeof(char*));
+
+	char* src_copy = par_strip_jabber_ressource(src);
+	char* dest_copy = par_strip_jabber_ressource(dest);
+
+	struct key* tmp_ptr = keylist;
+	
+	while (!(tmp_ptr == NULL)) {
+		if ((strcmp(tmp_ptr->pad->src, src_copy) == 0) 
+				&& (strcmp(tmp_ptr->pad->dest, dest_copy) == 0) 
+						&& currid <= maxids) {
+			/* add the id */
+			ids[currid] = tmp_ptr->pad->id;
+			currid++;
+		}
+		tmp_ptr = tmp_ptr->next;
+	}
+	
+	if (currid == 0) {
+		g_free(ids);
+		ids = NULL;
+	}
+	g_free(src_copy);
+	g_free(dest_copy);
+	return ids;
+}
+
 static struct key* par_search_key(const char* src, const char* dest, 
 		const char* id)
 /* searches a key in the keylist, the id is optional. If no ID is given
@@ -269,10 +304,14 @@ static struct key* par_search_key(const char* src, const char* dest,
 
 			if (id == NULL) {
 				/* takes the first matching key, any id */
+				g_free(src_copy);
+				g_free(dest_copy);
 				return tmp_ptr;
 			} else {
 				/* takes the exact key */
 				if (strcmp(tmp_ptr->pad->id, id) == 0) {
+					g_free(src_copy);
+					g_free(dest_copy);
 					return tmp_ptr;
 				}
 			}
@@ -345,6 +384,7 @@ static gboolean par_session_check_req(const char* alice, const char* bob,
 		char* id = g_strndup(tmp_ptr, OTP_ID_LENGTH);
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "REQUEST ID extracted: %s\n", id);
 		
+		// NEW: searches for all given IDs
 		struct key* temp_key = par_search_key(alice, bob, id);
 		if (temp_key != NULL) {
 			temp_key->conv = conv;
@@ -731,7 +771,9 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 	if ((message == NULL) || (*message == NULL)) {
 		return TRUE;
 	}
+	
 	OtpError syndrome;
+	
 	/* my account name, i.e. alice@jabber.org */
 	const char* my_acc_name = purple_account_get_username(account);
 
@@ -747,8 +789,7 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 	// detect the protcol id:
 	// purple_account_get_protocol_id(account)
 
-
-	char* tmp_message = g_strdup(purple_markup_strip_html(*message));	
+	char* tmp_message = g_strdup(purple_markup_strip_html(*message));
 	char** stripped_message;
 	stripped_message = &tmp_message;
 	
@@ -761,7 +802,7 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 			g_free(*stripped_message);
 			return FALSE;
 		}
-		
+		// NEW: proplematic code!
 		struct key* used_key = par_search_key(my_acc_name, *sender, NULL);
 		if (used_key != NULL) {
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
@@ -790,10 +831,10 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 	g_free(*message);
 	*message = *stripped_message;
 
-	char* recv_id = otp_get_id_from_message(message);
-
 	/* search in key list */
+	char* recv_id = otp_get_id_from_message(message);
 	struct key* used_key = par_search_key(my_acc_name, *sender, recv_id);
+	g_free(recv_id);
 
 	if (used_key != NULL) {
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
@@ -875,6 +916,7 @@ static void par_im_msg_sending(PurpleAccount *account,
 			"Original Msg: %s\n", *message);
 
 	/* search in key list */
+	// NEW: search in key list for an initialised key
 	struct key* used_key = par_search_key(my_acc_name, receiver, NULL);
 
 	if (used_key != NULL) {
@@ -882,7 +924,6 @@ static void par_im_msg_sending(PurpleAccount *account,
 				"Found a matching Key with pad ID: %s\n", used_key->pad->id);
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "otp_enabled == %i\n", used_key->opt->otp_enabled);
 
-		/* add the ID to the request message */
 		if (strncmp(*message, PARANOIA_REQUEST, PARANOIA_REQUEST_LEN) == 0) {
 			/* don't send requests if we have no entropy. */
 			if (used_key->opt->no_entropy) {
@@ -892,6 +933,8 @@ static void par_im_msg_sending(PurpleAccount *account,
 				*message = NULL;
 				return;
 			}
+			/* add the ID to the request message */
+			// NEW: search for all matching ids and send them
 			char *req_msg = g_strdup_printf(*message, used_key->pad->id, PARANOIA_WEBSITE);
 			g_free(*message);
 			*message = req_msg;
