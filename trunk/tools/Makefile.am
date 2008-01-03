@@ -1,4 +1,4 @@
-INCLUDES = $(CFLAGS) $(GLIB_CFLAGS)
+INCLUDES = $(GLIB_CFLAGS)
 
 # with install: bin_PROGRAMS = otptester
 noinst_PROGRAMS = otptester
