@@ -626,6 +626,26 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 	}
 	else if (strcmp("off", *args) == 0) {
 		par_cli_disable_enc(conv);
+	}
+	else if (strcmp("drop", *args) == 0) {
+	// REMOVE ME (just for testing!)
+		struct key* used_key = par_search_key_by_conv(conv);
+		if (used_key != NULL) {
+			if (used_key->opt->otp_enabled) {
+				used_key->opt->otp_enabled = FALSE;
+				purple_conversation_write(conv, NULL, 
+						"Encryption disabled. (local and temporal)", 
+						PURPLE_MESSAGE_NO_LOG, time(NULL));
+			} else {
+				purple_conversation_write(conv, NULL, 
+						"Encryption already disabled.", 
+						PURPLE_MESSAGE_NO_LOG, time(NULL));
+			}
+		} else {
+			purple_conversation_write(conv, NULL, 
+					"Couldn't drop the encryption. No key available.",
+					PURPLE_MESSAGE_NO_LOG, time(NULL));	
+		} // REMOVE ME end
 	} 
 	else if (strcmp("info", *args) == 0) {
 		par_cli_key_details(conv);
