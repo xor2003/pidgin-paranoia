@@ -223,8 +223,8 @@ int setmessage() {
 	if (permmessage!=NULL) {
 		g_free(*permmessage);
 	}
-	char *vmessage = g_strdup(argvalue[*argpos]);
-	permmessage = &vmessage;
+	permmessage = g_malloc(sizeof(char*));
+	*permmessage = g_strdup(argvalue[*argpos]);
 	if (debuglevel) {
 		printf("* Message:\t\t%s\n",*permmessage);
 	}
