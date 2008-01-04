@@ -7,6 +7,9 @@ Version 0.2.0
 Simon Wenner:
  * Check libpurple and glib minor version number in configure
 
+Christian Wäckerlin:
+ * Libotp: System of error numbers (OtpError) implemented (API changed)
+
 
 
 Version 0.1.0
