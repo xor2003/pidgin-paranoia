@@ -302,9 +302,8 @@ static OtpError otp_get_decryptkey_from_file(char **key, struct otp* pad, int le
 	char **data = &space2;
 	int i = 0;
 	OtpError syndrome = OTP_OK;
-
-	if (pad->filesize < (pad->filesize-decryptpos - (len -1))
-			|| (pad->filesize-decryptpos) < 0) {
+	if ((decryptpos + (len+1) + pad->filesize/2) > pad->filesize
+			|| decryptpos < 0) {
 		syndrome = OTP_ERR_KEY_SIZE_MISMATCH;
 		return syndrome;
 	}
@@ -312,9 +311,9 @@ static OtpError otp_get_decryptkey_from_file(char **key, struct otp* pad, int le
 	if (syndrome > OTP_WARN) return syndrome;
 
 	char *vkey = (char *)g_malloc( len*sizeof(char) );
-	char *datpos = *data + pad->filesize - decryptpos - (len - 1);
+	char *datpos = *data + pad->filesize - decryptpos - (len+1);
 	/* read reverse*/
-	for (i = 0; i <= (len -1); i++) vkey[i] = datpos[len - 2 - i];
+	for (i = 0; i <= (len -1); i++) vkey[i] = datpos[len - i];
 	*key = vkey;
 	otp_close_keyfile(fd, data, pad);
 	return syndrome;
@@ -786,6 +785,7 @@ OtpError otp_decrypt(struct otp* pad, char **message)
 	*message = new_msg;
 	g_strfreev(m_array);
 	
+
 
 #ifdef UCRYPT
 	syndrome = otp_udecrypt(message, pad, decryptpos);
