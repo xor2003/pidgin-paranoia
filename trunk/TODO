@@ -5,7 +5,7 @@
 Version 0.2
 ============
  	libotp.c
- 	 * detailed error-numbers instead of return FALSE
+ 	 * detailed error-numbers instead of return FALSE (Done)
 	 * integrate the threaded key-generator
 	 * setter/getter API
 	 * en/decryption gives **messages back if it fails
