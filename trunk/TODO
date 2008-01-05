@@ -7,6 +7,9 @@ Version 0.2
  	libotp.c
  	 * detailed error-numbers instead of return FALSE
 	 * integrate the threaded key-generator
+	 * setter/getter API
+	 * en/decryption gives **messages back if it fails
+	 * keyfile entropy really checked for patterns
  	
  	paranoia.c
 	 * add generated key to keylist

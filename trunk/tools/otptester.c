@@ -44,6 +44,7 @@ struct otp* decryptpad;
 int debuglevel=0;
 char **permmessage;
 int repeatnumber=1;
+struct otp_config* config;
 
 
 /* Usage */
@@ -54,20 +55,71 @@ int usage() {
 --repeat # TODO\n\
 --encrypt\n\
 --decrypt\n\
---create alice bob sourcefile size\n\
+--genkey alice bob sourcefile size\n\
 --openpad filename encrypt|decrypt\n\
 --closepad encrypt|decrypt\n\
+--create_config\n\
+--destroy_config\n\
 --erasekey\n\
 --test\n\
 --debug\n\
 --nodebug\n\
 \n\
-%s --openpad \"bob@jabber.org alice@jabber.org 2222222F.entropy\" encrypt --openpad \"alice@jabber.org bob@jabber.org 2222222F.entropy\" decrypt --setmessage \"test\" --encrypt --decrypt --closepad encrypt --closepad decrypt\n\
+%s --create_config --openpad \"bob@jabber.org alice@jabber.org 22222222.entropy\" encrypt --openpad \"alice@jabber.org bob@jabber.org 22222222.entropy\" decrypt --setmessage \"test\" --encrypt --decrypt --closepad encrypt --closepad decrypt --destroy_config\n\
 ",programname);
 	return TRUE;
 }
 
-int create() {
+int something() {
+	int takes=0;
+	if(*argpos+takes-1 >= *argnumber) {
+		return FALSE;
+	}
+	//printf("%.8X\n",otp_conf_set_path(config, "testtest"));
+	//printf("%.8X\n",otp_conf_set_export_path(config, "testtest"));
+	//printf("%s\n",otp_conf_get_path(config));
+	//printf("%s\n",otp_conf_get_export_path(config));
+	//printf("%.8X\n",otp_conf_set_random_msg_tail_max_len(config,88));
+	//printf("%i\n",otp_conf_get_random_msg_tail_max_len(config));
+	//printf("%.8X\n",otp_conf_set_msg_key_improbability_limit(config,9));
+	//printf("%e\n",otp_conf_get_msg_key_improbability_limit(config));
+	//printf("%i\n",strlen("sdfsdfsdf http://pidgin-...."));
+	return TRUE;	
+}
+
+int create_config() {
+	int takes=0;
+	if(*argpos+takes-1 >= *argnumber) {
+		return FALSE;
+	}
+	config = otp_conf_create("otptester", 
+			"otp_path", "export_path");
+	if (config == NULL) {
+		printf("Error creating the otp_config!\n");
+		return FALSE;
+	}
+	*argpos=*argpos+takes;
+	return TRUE;	
+}
+
+int destroy_config() {
+	int takes=0;
+	if(*argpos+takes-1 >= *argnumber) {
+		return FALSE;
+	}
+	OtpError syndrome = otp_conf_destroy(config);
+	if (syndrome > OTP_WARN) {
+		printf("Error freeing the otp_config :\t%.8X\n",syndrome);
+		return FALSE;
+	}
+	*argpos=*argpos+takes;
+	return TRUE;	
+}
+
+
+
+
+int genkey() {
 	int takes=4;
 	if(*argpos+takes-1 >= *argnumber) {
 		return FALSE;
@@ -238,24 +290,20 @@ int encrypt() {
 	if(*argpos+takes-1 >= *argnumber) {
 		return FALSE;
 	}
-	printf("Unencrypted message:\t%s\n",*permmessage);
-	//char *stupid = g_strdup(*permmessage); // Timeing problem?
 	
 	if (permmessage == NULL) {
 		printf("No message set!\n");
 		return FALSE;
 	}
 	
-	printf("Unencrypted message:\t%s\n",*permmessage);
 	OtpError syndrome = otp_encrypt(encryptpad, permmessage);
-	//OtpError syndrome=0;
 	if (syndrome > OTP_WARN) {
 		printf("Encrypt failed! %.8X\n",syndrome);
 		return FALSE;
 	}
 	printf("Encrypted message:\t%s\n",*permmessage);
 	if (debuglevel) {
-		printf("* Syndrome:\t%.8X\n",syndrome);
+		printf("* Syndrome:\t\t%.8X\n",syndrome);
 		printf("* Pad:\tPos:\t\t%u\n",encryptpad->position);
 		printf("* Pad:\tentropy:\t%u\n",encryptpad->entropy);
 	}
@@ -284,7 +332,7 @@ int signalencrypt() {
 	printf("Enc. signal message:\t%s\n",*message);	
 	
 	if (debuglevel) {
-		printf("* Syndrome:\t%.8X\n",syndrome);
+		printf("* Syndrome:\t\t%.8X\n",syndrome);
 		printf("* Pad:\tPos:\t\t%u\n",encryptpad->position);
 		printf("* Pad:\tentropy:\t%u\n",encryptpad->entropy);
 	}
@@ -320,7 +368,7 @@ int decrypt() {
 	printf("Decrypted message:\t%s\n",*permmessage);
 	
 	if (debuglevel) {
-		printf("* Syndrome:\t%.8X\n",syndrome);
+		printf("* Syndrome:\t\t%.8X\n",syndrome);
 	}
 	*argpos=*argpos+takes;
 	return TRUE;	
@@ -375,8 +423,8 @@ int main ( int argc , char *argv[] ) {
 			}
 		}	
 
-		if (!strcmp(argv[i],"--create")) {
-			if(create()==FALSE){
+		if (!strcmp(argv[i],"--genkey")) {
+			if(genkey()==FALSE){
 				return 1;
 			}
 		}	
@@ -413,6 +461,24 @@ int main ( int argc , char *argv[] ) {
 		
 		if (!strcmp(argv[i],"--nodebug")) {
 			if(nodebug()==FALSE){
+				return 1;
+			}
+		}
+		
+		if (!strcmp(argv[i],"--something")) {
+			if(something()==FALSE){
+				return 1;
+			}
+		}
+		
+		if (!strcmp(argv[i],"--create_config")) {
+			if(create_config()==FALSE){
+				return 1;
+			}
+		}
+		
+		if (!strcmp(argv[i],"--destroy_config")) {
+			if(destroy_config()==FALSE){
 				return 1;
 			}
 		}
