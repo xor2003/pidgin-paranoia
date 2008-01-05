@@ -232,7 +232,7 @@ static gboolean par_init_key_list()
 	g_dir_close(directoryhandle);
 
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-		"Key list of %i keys generated.\n", par_count_keys());
+		"Key list of %i keys created.\n", par_count_keys());
 
 	return TRUE;
 }
@@ -253,15 +253,12 @@ static void par_free_key_list()
 	return;
 }
 
-static char** par_search_ids(const char* src, const char* dest) 
-/* searches all ids for a src/dest pair in the keylist.
+static char* par_search_ids(const char* src, const char* dest)
+/* searches all ids for a src/dest pair in the keylist (comma separated).
  * Returns NULL if none found.
  * */
 {
-	int maxids = 8;
-	int currid = 0;
-	char** ids = (char **) g_malloc (maxids * sizeof(char*));
-
+	char* ids = NULL;
 	char* src_copy = par_strip_jabber_ressource(src);
 	char* dest_copy = par_strip_jabber_ressource(dest);
 
@@ -269,18 +266,14 @@ static char** par_search_ids(const char* src, const char* dest)
 	
 	while (!(tmp_ptr == NULL)) {
 		if ((strcmp(tmp_ptr->pad->src, src_copy) == 0) 
-				&& (strcmp(tmp_ptr->pad->dest, dest_copy) == 0) 
-						&& currid <= maxids) {
-			/* add the id */
-			ids[currid] = tmp_ptr->pad->id;
-			currid++;
+				&& (strcmp(tmp_ptr->pad->dest, dest_copy) == 0)) {
+			if (ids == NULL) {
+				ids = g_strdup(tmp_ptr->pad->id);
+			} else {
+				ids = g_strconcat(ids, ",", tmp_ptr->pad->id, NULL);
+			}
 		}
 		tmp_ptr = tmp_ptr->next;
-	}
-	
-	if (currid == 0) {
-		g_free(ids);
-		ids = NULL;
 	}
 	g_free(src_copy);
 	g_free(dest_copy);
@@ -379,14 +372,22 @@ static gboolean par_session_check_req(const char* alice, const char* bob,
 {
 	if (strncmp(*message_no_header, PARANOIA_REQUEST, 
 			PARANOIA_REQUEST_LEN) == 0) {
-		/* extract the ID */
+		/* set the ptr to the first id */
 		char* tmp_ptr = *message_no_header + PARANOIA_REQUEST_LEN + 2;
-		char* id = g_strndup(tmp_ptr, OTP_ID_LENGTH);
-		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "REQUEST ID extracted: %s\n", id);
+		struct key* temp_key = NULL;
+		int totlen = strlen(*message_no_header);
 		
-		// NEW: searches for all given IDs
-		struct key* temp_key = par_search_key(alice, bob, id);
+		/* search for all requested IDs */
+		while (*tmp_ptr != ':' && temp_key == NULL && totlen > tmp_ptr - *message_no_header) {
+			char* id = g_strndup(tmp_ptr, OTP_ID_LENGTH);
+			// NEW: search for id with src/dest check
+			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Searching for requested ID: %s\n", id);
+			temp_key = par_search_key(alice, bob, id);
+			g_free(id);
+			tmp_ptr += OTP_ID_LENGTH + 1;
+		}
 		if (temp_key != NULL) {
+			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Found a matching ID: %s\n", temp_key->pad->id);
 			temp_key->conv = conv;
 			if (temp_key->opt->auto_enable && !temp_key->opt->no_entropy) {
 				temp_key->opt->ack_sent = FALSE;
@@ -399,7 +400,6 @@ static gboolean par_session_check_req(const char* alice, const char* bob,
 		} else {
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "REQUEST failed! No key available.\n");
 		}
-		g_free(id);
 		return TRUE;
 	} else {
 		return FALSE;
@@ -474,7 +474,7 @@ static gboolean par_session_check_msg(struct key* used_key,
 		used_key->opt->otp_enabled = FALSE;
 		used_key->opt->no_entropy = TRUE;
 		used_key->opt->auto_enable = FALSE;
-		// TODO: maybe we should destroy our key too. (?)
+		// TODO: maybe we should destroy our key too? No! injection problem.
 		purple_conversation_write(conv, NULL, 
 				"Your converstation partner is out of entropy. "
 				"Encryption disabled (remote).", 
@@ -955,7 +955,9 @@ static void par_im_msg_sending(PurpleAccount *account,
 			}
 			/* add the ID to the request message */
 			// NEW: search for all matching ids and send them
-			char *req_msg = g_strdup_printf(*message, used_key->pad->id, PARANOIA_WEBSITE);
+			char *ids = par_search_ids(my_acc_name, receiver);
+			char *req_msg = g_strdup_printf(*message, ids, PARANOIA_WEBSITE);
+			g_free(ids);
 			g_free(*message);
 			*message = req_msg;
 		}
@@ -1210,7 +1212,7 @@ gboolean plugin_unload(PurplePlugin *plugin)
 	return TRUE;
 }
 
-static void init_plugin(PurplePlugin *plugin)
+static void plugin_init(PurplePlugin *plugin)
 /* gets called when libpurple probes the plugin */
 {
 	return;
@@ -1233,7 +1235,6 @@ static PurplePluginInfo info = {
     PARANOIA_ID,     			/* plugin id */
     "One-Time Pad Encryption",  /* plugin name */
     PARANOIA_VERSION,           /* version */
-
     "Paranoia One-Time Pad Encryption Plugin",   
 							/* This is the summary of your plugin.  It
                                    should be a short little blurb.  The UI
@@ -1247,7 +1248,6 @@ static PurplePluginInfo info = {
                                    how much to display). */
     PARANOIA_AUTHORS,		/* name and e-mail address */
     PARANOIA_WEBSITE,		/* website */
-
     plugin_load,            /* This is a pointer to a function for
                                    libpurple to call when it is loading the
                                    plugin.  It should be of the type:
@@ -1269,7 +1269,6 @@ static PurplePluginInfo info = {
 
                                    void plugin_destroy(PurplePlugin *plugin)
                                  */
-
     NULL,                   /* a pointer to a PidginPluginUiInfo struct */
     NULL,                   /* PurplePluginLoaderInfo or PurplePluginProtocolInfo struct. */
     NULL,                   /* PurplePluginUiInfo struct. */
@@ -1288,4 +1287,4 @@ static PurplePluginInfo info = {
     NULL
 };
 
-PURPLE_INIT_PLUGIN(paranoia, init_plugin, info)
+PURPLE_INIT_PLUGIN(paranoia, plugin_init, info)
