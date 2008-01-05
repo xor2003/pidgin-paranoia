@@ -43,6 +43,11 @@
 #define SHOW_STATUS
 #define CENSORSHIP
 
+//#define USEDESKTOP
+/* Requires GNOMElib 2.14! Bob's
+ * keyfile is placed onto the desktop. If not set, the
+ * file is placed in the home directory.*/
+
 /* ----------------- General Paranoia Stuff ------------------ */
 #define PARANOIA_HEADER "*** Encrypted with the Pidgin-Paranoia plugin: "
 #define PARANOIA_REQUEST "*** Request for conversation with the Pidgin-\
@@ -62,6 +67,7 @@ plugin (%s) to communicate encrypted."
 #define ENTROPY_LIMIT 10000 /* has to be bigger then the message size limit */
 
 char* global_otp_path;
+struct otp_config* otp_conf;
 
 void par_add_header(char** message) 
 /* adds the paranoia header */
@@ -1154,9 +1160,20 @@ static gboolean plugin_load(PurplePlugin *plugin)
 
 	/* set the global key folder */
 	const gchar* home = g_get_home_dir();
+	
+	// FIXME: global path not needed anymore */
 	global_otp_path = g_strconcat(home, PARANOIA_PATH, NULL);
-
-	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Key Path: %s\n", global_otp_path);
+	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Key path: %s\n", global_otp_path);
+	
+#ifdef USEDESKTOP
+	const char *desktoppath = g_get_user_special_dir(G_USER_DIRECTORY_DESKTOP);
+#else
+	const char *desktoppath = g_get_home_dir();
+#endif
+	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Export path: %s\n", desktoppath);
+	
+	/* Create global libotp config */
+	otp_conf = otp_conf_create(PARANOIA_ID, global_otp_path, desktoppath);
 
 	/* get the conversation handle */
 	void *conv_handle;
@@ -1207,6 +1224,9 @@ gboolean plugin_unload(PurplePlugin *plugin)
 
 	/* free the key list */
 	par_free_key_list();
+
+	/* destoy libotp config */
+	otp_conf_destroy(otp_conf);
 
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Plugin unloaded.\n");
 	return TRUE;
