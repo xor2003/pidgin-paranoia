@@ -104,9 +104,9 @@ receives a message the plugin searches for a matching key in the key list.
 --------------------------------------------------------------------------------
 When a conversation starts and a matching key is available, the plugin sends a 
 special request message: "*** Request for conversation with the Pidgin-Paranoia 
-plugin ($ID): I'm paranoid, please download the One-Time Pag plugin (link) to 
+plugin ($ID): I'm paranoid, please download the One-Time Pag plugin to 
 communicate encrypted.". If the receiving user has the plugin and 
-a matching key this message won't be displayed. Instead the plugin 
+a matching key this message won't be displayed entirely. Instead the plugin 
 automatically sends the message "*** Encrypted with the Pidgin-Paranoia plugin: 
 " + "paranoia" (encrypted).
 If the plugin is able to decrypt that message, it activates the encryption for 
