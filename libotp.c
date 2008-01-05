@@ -50,19 +50,19 @@
 
 /*  ------------------- Constants (you can change them) ------------ */
 
-#define PATH_DELI "/"            /* For some reason some strange
+#define PATH_DELI "/"					/* For some reason some strange
 				 * operatingsystems use "\" */
-#define BLOCKSIZE 1000          /* The blocksize used in the keyfile
+#define BLOCKSIZE 1000					/* The blocksize used in the keyfile
 				 * creation function */
-#define ERASEBLOCKSIZE 1024     /* The blocksize used in the key
+#define ERASEBLOCKSIZE 1024				/* The blocksize used in the key
 				 * eraseure function */
-#define REPEATTOL 1E-12         /* If a repeated sequence with less
-				 * probability then this occurs, throw the key away */
-#define NUMBERSIGMA 6           /* (not implemented) If the sum over
-				 * the key is more than this number of sigmas away from the average,
-				 * then reject key (probability:1.9*10^-9) */
-#define RNDLENMAX 30            /* Maximal length of the added
+#define DEFAULT_RNDLENMAX 30			/* Default value: Maximal length of the added
 				 * random-length tail onto the encrypted message */
+#define DEFAULT_IMPROBABILITY 1E-12		/* Default value: If a key with less
+				 * probability then this occurs, throw the key away */
+
+#define REPEATTOL 1E-12				// TODO: Remove, replace by otp_config
+#define RNDLENMAX 30 				// TODO: Remove, replace by otp_config
 
 /*  ------------------- Defines (essential) ------------------------
  * All defines needed for full opt functionality! Regarded
@@ -92,6 +92,17 @@
 //#define DEBUG
                  /* Enables the function otp_printint
 *                and dumps the way of the message and key byte by byte. */
+
+/* ------------------- Private data structures -------------------- */
+struct otp_config {
+	unsigned int is_created;
+	char* client_id;
+	char* path;
+	char* export_path;
+	unsigned int pad_count; /* A counter for the number of associated otp structs (has no effect) */
+	unsigned int random_msg_tail_max_len;
+	double msg_key_improbability_limit;
+};
 
 /*  ----------------- Private Functions of the Library------------ */
 
@@ -687,14 +698,11 @@ struct otp* otp_get_from_file(const char* path, const char* input_filename)
 	pad->filename = g_strconcat(path, input_filename, NULL);
 
 	/* Our source i.e alice@yabber.org */
-	char *src = g_strdup(f_array[0]);
-	pad->src = src;
+	pad->src = g_strdup(f_array[0]);
 	/* Our dest i.e bob@yabber.org */
-	char *dest = g_strdup(f_array[1]);
-	pad->dest = dest;
+	pad->dest = g_strdup(f_array[1]);
 	/* Our ID */
-	char *id = g_strdup(p_array[0]);
-	pad->id = id;
+	pad->id = g_strdup(p_array[0]);
 
 	g_strfreev(p_array);
 	g_strfreev(f_array);
@@ -753,7 +761,6 @@ OtpError otp_encrypt(struct otp* pad, char **message)
 #ifdef DEBUG 
 	otp_printint(*message,strlen(*message), "paranoia: after encrypt");
 #endif
-	printf("syndrome: %.8X\n",syndrome);
 	return syndrome;
 }
 
@@ -778,7 +785,6 @@ OtpError otp_decrypt(struct otp* pad, char **message)
 
 	/* Our position to decrypt in the pad */
 	int decryptpos = (unsigned int)g_ascii_strtoll( strdup(m_array[0]), NULL, 10);
-	printf("%s\n",pad->id);
 	if (strcmp(m_array[1], pad->id) != 0) return OTP_ERR_ID_MISMATCH;
 	char *new_msg = g_strdup(m_array[2]);
 	g_free(*message);
@@ -799,4 +805,157 @@ OtpError otp_decrypt(struct otp* pad, char **message)
 	otp_printint(*message,strlen(*message), "paranoia: after decrypt");
 #endif
 	return syndrome;
+}
+
+/* ------------------ otp_config ------------------------------ */
+
+struct otp_config* otp_conf_create(
+				const char* client_id, 
+				const char* path, 
+				const char* export_path)
+/* Creation of the config stucture of the library, sets some parameters 
+ * Default values: 
+ * Sets msg_key_improbability_limit = DEFAULT_IMPROBABILITY
+ * Sets random_msg_tail_max_len = DEFAULT_RNDLENMAX */
+{
+	if (client_id == NULL || path == NULL || export_path == NULL) return NULL;
+
+	struct otp_config* config;
+	config = (struct otp_config *)g_malloc(sizeof(struct otp_config));
+	config->client_id = g_strdup(client_id);
+	config->path = g_strdup(path);
+	config->export_path = g_strdup(export_path);
+	config->msg_key_improbability_limit = DEFAULT_IMPROBABILITY;
+	config->random_msg_tail_max_len = DEFAULT_RNDLENMAX;
+	config->pad_count = 0; /* Initialize with no associated pads */
+
+#ifdef DEBUG 
+	printf("paranoia: config created with: %s, %s, %s, %e, %i\n", config->client_id,
+			config->path, config->export_path, config->msg_key_improbability_limit,
+			config->random_msg_tail_max_len);
+#endif
+
+return config;
+}
+
+OtpError otp_conf_destroy(struct otp_config* config) 
+{
+/* Freeing of the otp_config struct 
+ * This fails with OTP_ERR_CONFIG_PAD_COUNT if there are any pads open in this config */
+	if (config == NULL) return OTP_ERR_INPUT;
+	if (config->pad_count != 0) return OTP_ERR_CONFIG_PAD_COUNT;
+
+	if (config->client_id != NULL) g_free(config->client_id);
+	if (config->path != NULL) g_free(config->path);
+	if (config->export_path != NULL) g_free(config->export_path);
+	g_free(config);
+
+#ifdef DEBUG 
+	printf("paranoia: config destroyed\n");
+#endif
+	return OTP_OK;
+}
+
+/* ------------------ otp_config get functions ------------------- */
+
+const char* otp_conf_get_path(const struct otp_config* config)
+/* Gets a reference to the path in the config 
+ * Does not need to be freed.  */
+{
+	if (config == NULL) return NULL;
+#ifdef DEBUG 
+	printf("paranoia: read config->path: %s\n",config->path);
+#endif
+	return config->path;
+}
+
+const char* otp_conf_get_export_path(const struct otp_config* config)
+/* Gets a reference to the export path in the config 
+ * Does not need to be freed.  */
+{
+	if (config == NULL) return NULL;
+#ifdef DEBUG 
+	printf("paranoia: read config->export_path: %s\n",config->export_path);
+#endif
+	return config->export_path;
+}
+
+unsigned int otp_conf_get_random_msg_tail_max_len(const struct otp_config* config) 
+/* Gets random_msg_tail_max_len */
+{
+	if (config == NULL) return 0;
+#ifdef DEBUG 
+	printf("paranoia: read config->random_msg_tail_max_len: %u\n",config->random_msg_tail_max_len);
+#endif
+	return config->random_msg_tail_max_len;
+}
+
+double otp_conf_get_msg_key_improbability_limit(const struct otp_config* config)
+/* Gets msg_key_improbability_limit */
+{
+	if (config == NULL) return 0;
+#ifdef DEBUG 
+	printf("paranoia: read config->msg_key_improbability_limit: %e\n",config->msg_key_improbability_limit);
+#endif
+	return config->msg_key_improbability_limit;
+}
+
+/* ------------------ otp_config set functions ------------------- */
+
+OtpError otp_conf_set_path(struct otp_config* config, const char* path)
+/* Sets the path where the .entropy-files are stored */
+{
+	if (config == NULL || path == NULL) return OTP_ERR_INPUT;
+	if (config->path == NULL) return OTP_ERR_INPUT;
+	g_free(config->path);
+	config->path = g_strdup(path);
+#ifdef DEBUG 
+	printf("paranoia: set config->path: %s\n",config->path);
+#endif
+	return OTP_OK;
+}
+
+OtpError otp_conf_set_export_path(struct otp_config* config, const char* export_path)
+/* Sets the export path where the .entropy-files are stored */
+{
+	if (config == NULL || export_path == NULL) return OTP_ERR_INPUT;
+	if (config->export_path == NULL) return OTP_ERR_INPUT;
+	g_free(config->export_path);
+	config->export_path = g_strdup(export_path);
+#ifdef DEBUG 
+	printf("paranoia: set config->export_path: %s\n",config->export_path);
+#endif
+	return OTP_OK;
+}
+
+OtpError otp_conf_set_random_msg_tail_max_len(struct otp_config* config,
+				 unsigned int random_msg_tail_max_len) 
+/* Sets random_msg_tail_max_len:
+ * 					The max length of the randomly added tailing charakters 
+ * 					to prevent 'eve' from knowng the length of the message.
+ * 					Disabled if 0. Default is already set to DEFAULT_RNDLENMAX */
+{
+	if (config == NULL) return OTP_ERR_INPUT;
+	config->random_msg_tail_max_len = random_msg_tail_max_len;
+#ifdef DEBUG 
+	printf("paranoia: set config->random_msg_tail_max_len: %u\n",config->random_msg_tail_max_len);
+#endif
+	return OTP_OK;
+}
+
+OtpError otp_conf_set_msg_key_improbability_limit(struct otp_config* config,
+				 double msg_key_improbability_limit) 
+/* Sets msg_key_improbability_limit: 
+ * 					If the used random entropy shows pattern that are less likely
+ * 					then this limit, the entropy is discarded and an other block of 
+ * 					entropy is used. A warning OTP_WARN_KEY_NOT_RANDOM is given.
+ * 					Disabled if 0.0. Default is already set to DEFAULT_IMPROBABILITY. */
+{
+	if (config == NULL) return OTP_ERR_INPUT;
+	if (msg_key_improbability_limit < 0.0 || msg_key_improbability_limit > 1.0) return OTP_ERR_INPUT;
+	config->msg_key_improbability_limit = msg_key_improbability_limit;
+#ifdef DEBUG 
+	printf("paranoia: set config->msg_key_improbability_limit: %e\n",config->msg_key_improbability_limit);
+#endif
+	return OTP_OK;
 }
