@@ -89,7 +89,7 @@
 /*  ------------------- Defines (for development) ------------------------
  * Useful for Developpers */
 
-//#define DEBUG
+#define DEBUG
                  /* Enables the function otp_printint
 *                and dumps the way of the message and key byte by byte. */
 
@@ -703,7 +703,7 @@ struct otp* otp_get_from_file(const char* path, const char* input_filename)
 	pad->dest = g_strdup(f_array[1]);
 	/* Our ID */
 	pad->id = g_strdup(p_array[0]);
-
+	pad->syndrome = OTP_OK;
 	g_strfreev(p_array);
 	g_strfreev(f_array);
 
@@ -959,3 +959,66 @@ OtpError otp_conf_set_msg_key_improbability_limit(struct otp_config* config,
 #endif
 	return OTP_OK;
 }
+
+/* ------------------ otp_pad get functions ------------------- */
+
+const char* otp_pad_get_src(struct otp* mypad)
+/* gets a reference to the source, i.e alice@jabber.org */
+{
+	if (mypad == NULL) return NULL;
+	return mypad->src;
+}
+
+const char* otp_pad_get_dest(struct otp* mypad)
+/* gets a reference to the destination, i.e bob@jabber.org */
+{
+	if (mypad == NULL) return NULL;
+	return mypad->dest;
+}
+
+
+const char* otp_pad_get_id(struct otp* mypad)
+/* gets a reference to the ID, 8 digits unique random number of the key pair (hex) */
+{
+	if (mypad == NULL) return NULL;
+	return mypad->id;
+}
+
+const char* otp_pad_get_filename(struct otp* mypad)
+/* gets a reference to the full path and the filename defined in the libotp spec */
+{
+	if (mypad == NULL) return NULL;
+	return mypad->filename;
+}
+
+
+unsigned int otp_pad_get_entropy(struct otp* mypad)
+/* gets the size (in bytes) of the entropy left for the sender */
+{
+	if (mypad == NULL) return 0;
+	return mypad->entropy;
+}
+
+unsigned int otp_pad_get_filesize(struct otp* mypad)
+/* gets the size of the file in bytes */
+{
+	if (mypad == NULL) return 0;
+	return mypad->filesize;
+}
+
+unsigned int otp_pad_get_position(struct otp* mypad)
+/* gets the current encrypt-position (in bytes) in the keyfile */
+{
+	if (mypad == NULL) return 0;
+	return mypad->position;
+}
+
+OtpError otp_pad_get_syndrome(struct otp* mypad)
+/* gets an OtpError that contains information about the status of the pad */
+{
+	if (mypad == NULL) return 0;
+	return mypad->syndrome;
+}
+/* gets an the config associated with this pad */
+// TODO
+//struct otp_config* otp_get_conf(struct otp* mypad);

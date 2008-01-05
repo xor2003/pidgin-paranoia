@@ -65,7 +65,7 @@ int usage() {
 --debug\n\
 --nodebug\n\
 \n\
-%s --create_config --openpad \"bob@jabber.org alice@jabber.org 22222222.entropy\" encrypt --openpad \"alice@jabber.org bob@jabber.org 22222222.entropy\" decrypt --setmessage \"test\" --encrypt --decrypt --closepad encrypt --closepad decrypt --destroy_config\n\
+%s --create_config --openpad \"bob@jabber.org alice@jabber.org 22222201.entropy\" encrypt --openpad \"alice@jabber.org bob@jabber.org 22222201.entropy\" decrypt --setmessage \"test\" --encrypt --decrypt --closepad encrypt --closepad decrypt --destroy_config\n\
 ",programname);
 	return TRUE;
 }
@@ -210,13 +210,13 @@ int openpad() {
 		}	
 		if (debuglevel) {
 			printf("* Keyfile '%s' opened!\n",argvalue[*argpos]);
-			printf("* Pad:\tfilename:\t%s\n",encryptpad->filename);
-			printf("* Pad:\tPos:\t\t%u\n",encryptpad->position);
-			printf("* Pad:\tentropy:\t%u\n",encryptpad->entropy);
-			printf("* Pad:\tsrc:\t\t%s\n",encryptpad->src);
-			printf("* Pad:\tdest:\t\t%s\n",encryptpad->dest);
-			printf("* Pad:\tid:\t\t%s\n",encryptpad->id);
-			printf("* Pad:\tfilesize:\t%u\n",encryptpad->filesize);
+			printf("* Pad:\tfilename:\t%s\n",otp_pad_get_filename(encryptpad));
+			printf("* Pad:\tPos:\t\t%u\n",otp_pad_get_position(encryptpad));
+			printf("* Pad:\tentropy:\t%u\n",otp_pad_get_entropy(encryptpad));
+			printf("* Pad:\tsrc:\t\t%s\n",otp_pad_get_src(encryptpad));
+			printf("* Pad:\tdest:\t\t%s\n",otp_pad_get_dest(encryptpad));
+			printf("* Pad:\tid:\t\t%s\n",otp_pad_get_id(encryptpad));
+			printf("* Pad:\tfilesize:\t%u\n",otp_pad_get_filesize(encryptpad));
 		}
 	}
 	if (!strcmp(argvalue[*argpos+1],"decrypt")) {
@@ -227,13 +227,13 @@ int openpad() {
 		}	
 		if (debuglevel) {
 			printf("* Keyfile '%s' opened!\n",argvalue[*argpos]);
-			printf("* Pad:\tfilename:\t%s\n",decryptpad->filename);
-			printf("* Pad:\tPos:\t\t%u\n",decryptpad->position);
-			printf("* Pad:\tentropy:\t%u\n",decryptpad->entropy);
-			printf("* Pad:\tsrc:\t\t%s\n",decryptpad->src);
-			printf("* Pad:\tdest:\t\t%s\n",decryptpad->dest);
-			printf("* Pad:\tid:\t\t%s\n",decryptpad->id);
-			printf("* Pad:\tfilesize:\t%u\n",decryptpad->filesize);
+			printf("* Pad:\tfilename:\t%s\n",otp_pad_get_filename(decryptpad));
+			printf("* Pad:\tPos:\t\t%u\n",otp_pad_get_position(decryptpad));
+			printf("* Pad:\tentropy:\t%u\n",otp_pad_get_entropy(decryptpad));
+			printf("* Pad:\tsrc:\t\t%s\n",otp_pad_get_src(decryptpad));
+			printf("* Pad:\tdest:\t\t%s\n",otp_pad_get_dest(decryptpad));
+			printf("* Pad:\tid:\t\t%s\n",otp_pad_get_id(decryptpad));
+			printf("* Pad:\tfilesize:\t%u\n",otp_pad_get_filesize(decryptpad));
 		}	
 	}
 	
@@ -304,8 +304,8 @@ int encrypt() {
 	printf("Encrypted message:\t%s\n",*permmessage);
 	if (debuglevel) {
 		printf("* Syndrome:\t\t%.8X\n",syndrome);
-		printf("* Pad:\tPos:\t\t%u\n",encryptpad->position);
-		printf("* Pad:\tentropy:\t%u\n",encryptpad->entropy);
+		printf("* Pad:\tPos:\t\t%u\n",otp_pad_get_position(encryptpad));
+		printf("* Pad:\tentropy:\t%u\n",otp_pad_get_entropy(encryptpad));
 	}
 	*argpos=*argpos+takes;
 	return TRUE;	
@@ -333,8 +333,8 @@ int signalencrypt() {
 	
 	if (debuglevel) {
 		printf("* Syndrome:\t\t%.8X\n",syndrome);
-		printf("* Pad:\tPos:\t\t%u\n",encryptpad->position);
-		printf("* Pad:\tentropy:\t%u\n",encryptpad->entropy);
+		printf("* Pad:\tPos:\t\t%u\n",otp_pad_get_position(encryptpad));
+		printf("* Pad:\tentropy:\t%u\n",otp_pad_get_entropy(encryptpad));
 	}
 
 	if (permmessage != NULL) {
