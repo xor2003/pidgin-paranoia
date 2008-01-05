@@ -121,7 +121,7 @@ struct otp {
 	unsigned int entropy; 	/* the size (in bytes) of the entropy left for the sender */
 	unsigned int filesize; 	/* The size of the file in bytes */
 // TODO: Is this the future?
-//	OtpError status;
+	OtpError syndrome;
 //	struct otp_config* config;
 };
 
@@ -130,16 +130,6 @@ OtpError otp_encrypt(struct otp* mypad, char **message);
 
 /* decrypt the message */
 OtpError otp_decrypt(struct otp* mypad, char **message);
-
-/* creates an otp pad with the data from a key file */
-struct otp* otp_get_from_file(const char* path, const char* filename);
-// Request API change to:
-//struct otp* otp_pad_create_from_file(const struct otp_config* myconfig, const char* filename);
-
-/* destroys an otp object */
-void otp_destroy(struct otp* mypad);
-// Request API change to:
-//void otp_pad_destroy(struct otp* mypad);
 
 /* extracts and returns the ID from a given encrypted message. 
    Leaves the message constant. Returns NULL if it fails. */
@@ -165,6 +155,48 @@ OtpError otp_encrypt_warning(struct otp* mypad, char **message, unsigned int pro
 
 /* destroys a keyfile by using up all encryption-entropy */
 OtpError otp_erase_key(struct otp* mypad);
+
+/* ------------------ otp_pad ------------------------------ */
+
+/* creates an otp pad with the data from a key file */
+struct otp* otp_get_from_file(const char* path, const char* filename);
+// Request API change to:
+//struct otp* otp_pad_create_from_file(const struct otp_config* myconfig, const char* filename);
+
+/* destroys an otp object */
+void otp_destroy(struct otp* mypad);
+// Request API change to:
+//void otp_pad_destroy(struct otp* mypad);
+
+/* ------------------ otp_pad get functions ------------------- */
+
+/* gets a reference to the source, i.e alice@jabber.org */
+const char* otp_pad_get_src(struct otp* mypad);
+
+/* gets a reference to the destination, i.e bob@jabber.org */
+const char* otp_pad_get_dest(struct otp* mypad);
+
+/* gets a reference to the ID, 8 digits unique random number of the key pair (hex) */
+const char* otp_pad_get_id(struct otp* mypad);
+
+/* gets a reference to the full path and the filename defined in the libotp spec */
+const char* otp_pad_get_filename(struct otp* mypad);
+
+/* gets the size (in bytes) of the entropy left for the sender */
+unsigned int otp_pad_get_entropy(struct otp* mypad);
+
+/* gets the current encrypt-position (in bytes) in the keyfile */
+unsigned int otp_pad_get_position(struct otp* mypad);
+
+/* gets the size of the file in bytes */
+unsigned int otp_pad_get_filesize(struct otp* mypad);
+
+/* gets an OtpError that contains information about the status of the pad */
+OtpError otp_pad_get_syndrome(struct otp* mypad);
+
+/* gets a reference to the config associated with this pad */
+// TODO
+//struct otp_config* otp_get_conf(struct otp* mypad);
 
 /* CONF operations (No effect ATM) */
 /* ------------------ otp_config ------------------------------ */
