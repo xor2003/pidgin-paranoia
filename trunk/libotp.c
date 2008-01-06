@@ -95,21 +95,20 @@
 
 /* ------------------- Private data structures -------------------- */
 struct otp_config {
-	unsigned int is_created;
 	char* client_id;
 	char* path;
 	char* export_path;
 	unsigned int pad_count; /* A counter for the number of associated otp structs (has no effect) */
-	unsigned int random_msg_tail_max_len;
+	gsize random_msg_tail_max_len;
 	double msg_key_improbability_limit;
 };
 
 /*  ----------------- Private Functions of the Library------------ */
 
-static void otp_xor(char** message, char** key, int len)
+static void otp_xor(char** message, char** key, gsize len)
 /* XOR message and key. This function is the core of the library. */
 {
-	int i;
+	gsize i;
 	for (i = 0; i < (len-1); i++) {
 		(*message)[i] = (*message)[i]^(*key)[i];
 	}
@@ -117,10 +116,10 @@ static void otp_xor(char** message, char** key, int len)
 }
 
 #ifdef DEBUG
-static void otp_printint(char* m, int len, const char* hint)
+static void otp_printint(char* m, gsize len, const char* hint)
 /* Helper function for debugging */
 {
-	int i;
+	gsize i;
 	printf("\t\t%s:\t", hint);
 	for (i = 0; i < len; i++) {
 		printf("%i ", m[i]);
@@ -132,7 +131,7 @@ static void otp_printint(char* m, int len, const char* hint)
 static void otp_calc_entropy(struct otp* pad)
 /* Calculate the free entropy */
 {
-	int entropy = pad->filesize/2-pad->position-OTP_PROTECTED_ENTROPY;
+	gsize entropy = pad->filesize/2-pad->position-OTP_PROTECTED_ENTROPY;
 	if (entropy < 0) {
 		pad->entropy = 0;
 	} else {
@@ -172,10 +171,10 @@ static void otp_close_keyfile(int* fd, char** data, struct otp* pad)
 	close(*fd);
 }
 
-static int otp_seek_pos(const char* data, int filesize)
+static gsize otp_seek_pos(const char* data, gsize filesize)
 /* Seeks the position where the pad can be used for encryption */
 {
-	int pos = 0;
+	gsize pos = 0;
 	while ( ((data+pos)[0] == PAD_EMPTYCHAR) && (pos < filesize) ) {
 		pos++;
 	}
@@ -200,7 +199,7 @@ static OtpError otp_seek_start(struct otp* pad)
 	return syndrome;
 }
 
-static int otp_id_is_valid(const char* id_str)
+static gboolean otp_id_is_valid(const char* id_str)
 /* Check if the ID is valid */
 {
 	if ( strlen(id_str) == OTP_ID_LENGTH * sizeof(char)) {
@@ -210,17 +209,17 @@ static int otp_id_is_valid(const char* id_str)
 	}
 }
 
-static int otp_key_is_random(char** key, int len)
+static gboolean otp_key_is_random(char** key, gsize len)
 /* Checks the key by statistical means
  *
  * */
 {
-	int i, rep = 1;
+	unsigned int i, rep = 1;
 	double repeatprob;
 //	char *c="test1111";
 //	len=strlen(c);
 	char* c = *key;
-	int lastc = 257; /* Startvalue: This is not a char */
+	unsigned int lastc = 257; /* Startvalue: This is not a char */
 	for (i = 0; i < len; i++) {
 		if (c[i] == lastc) {
 			rep++;
@@ -238,16 +237,16 @@ static int otp_key_is_random(char** key, int len)
 	return TRUE;
 }
 
-static OtpError otp_get_encryptkey_from_file(char** key, struct otp* pad, int len)
+static OtpError otp_get_encryptkey_from_file(char** key, struct otp* pad, gsize len)
 /* Gets the key to encrypt from the keyfile */
 {
 	int space1 = 0;
 	int* fd = &space1;
 	char* space2 = "";
 	char** data = &space2;
-	int i = 0;
-	int protected_entropy = OTP_PROTECTED_ENTROPY;
-	int position = pad->position;
+	gsize i = 0;
+	gsize protected_entropy = OTP_PROTECTED_ENTROPY;
+	gsize position = pad->position;
 	OtpError syndrome = OTP_OK;
 
 	if (pad->protected_position != 0) {
@@ -304,14 +303,14 @@ static OtpError otp_get_encryptkey_from_file(char** key, struct otp* pad, int le
 	return syndrome;
 }
 
-static OtpError otp_get_decryptkey_from_file(char** key, struct otp* pad, int len, int decryptpos)
+static OtpError otp_get_decryptkey_from_file(char** key, struct otp* pad, gsize len, gsize decryptpos)
 /* Gets the key to decrypt from the keyfile */
 {
 	int space1 = 0;
 	int* fd = &space1;
 	char* space2 = "";
 	char** data = &space2;
-	int i = 0;
+	gsize i = 0;
 	OtpError syndrome = OTP_OK;
 	if ((decryptpos + (len+1) + pad->filesize/2) > pad->filesize
 			|| decryptpos < 0) {
@@ -352,7 +351,7 @@ static void otp_base64_decode(char **message, gsize* plen)
 	return;
 }
 
-static OtpError otp_udecrypt(char** message, struct otp* pad, int decryptpos)
+static OtpError otp_udecrypt(char** message, struct otp* pad, gsize decryptpos)
 /* Decrypt the message  */
 {
 	gsize len = (strlen(*message)+1)* sizeof(char);
@@ -381,7 +380,7 @@ static OtpError otp_uencrypt(char** message, struct otp* pad)
 	char* space2 = "";
 	char** key = &space2;
 	char* msg;
-	int rnd;
+	unsigned char rnd;
 	OtpError syndrome = OTP_OK;
 
 #ifdef RNDMSGLEN
@@ -439,7 +438,7 @@ OtpError otp_erase_key(struct otp* pad)
 
 OtpError otp_generate_key_pair(const char* alice,
                                    const char* bob, const char* path,
-                                   const char* source, unsigned int size)
+                                   const char* source, gsize size)
 //TODO: v0.2: give the filenames back
 //TODO: v0.2: support loop-keys (alice=bob)
 //unsigned int otp_generate_key_pair(const char* alice,
@@ -469,7 +468,7 @@ OtpError otp_generate_key_pair(const char* alice,
 	}
 
 	/* open entropy source */
-	int rfd = 0;
+	int rfd;
 	if ((rfd = open(source, O_RDONLY)) == -1) {
 		perror("open");
 		return OTP_ERR_FILE_ENTROPY_SOURCE;
@@ -481,7 +480,7 @@ OtpError otp_generate_key_pair(const char* alice,
 		return OTP_ERR_FILE_ENTROPY_SOURCE;
 	}
 
-	unsigned int rfilesize = rfstat.st_size;
+	gsize rfilesize = rfstat.st_size;
 	/* If the source is to small and not a character dev */
 	if ( !( ((rfstat.st_mode|S_IFCHR) == rfstat.st_mode)
 			|| (rfilesize >= size*BLOCKSIZE) ) ) {
@@ -523,7 +522,7 @@ OtpError otp_generate_key_pair(const char* alice,
 	}
 	
 	/* Opening the alice's key file */
-	int afd = 0;
+	int afd;
 	char* space1 = "";
 	char** adata = &space1;
 	if ((afd = open(afilename, O_RDWR)) == -1) {
@@ -547,7 +546,7 @@ OtpError otp_generate_key_pair(const char* alice,
 	
 	/* Source and alice key file is open, copy entropy */
 	char buffer[BLOCKSIZE];
-	int i = 0;
+	gsize i = 0;
 
 	/* Filling the first file */
 	for (i = 0; i < size; i++) {
@@ -587,7 +586,7 @@ OtpError otp_generate_key_pair(const char* alice,
 		g_free(bfilename);
 		return OTP_ERR_FILE;
 	}
-	int afilesize = afstat.st_size;
+	gsize afilesize = afstat.st_size;
 	if ((*adata = mmap((caddr_t)0, afilesize, PROT_READ, MAP_SHARED, afd, 0)) == (caddr_t)(-1)) {
 		perror("mmap");
 		close(afd);
@@ -597,7 +596,7 @@ OtpError otp_generate_key_pair(const char* alice,
 		return OTP_ERR_FILE;
 	}
 	/* Create the reversed second file from Alice's one */
-	int j;
+	gsize j;
 	for (i = afilesize-BLOCKSIZE; i >= 0; i = i-BLOCKSIZE) {
 		for (j = 0; j < BLOCKSIZE; j++) {
 			buffer[BLOCKSIZE-1-j] = *(*adata+i+j);
@@ -613,7 +612,7 @@ OtpError otp_generate_key_pair(const char* alice,
 }
 
 
-OtpError otp_encrypt_warning(struct otp* pad, char** message, unsigned int protected_pos)
+OtpError otp_encrypt_warning(struct otp* pad, char** message, gsize protected_pos)
 /* encrypts a message with the protected entropy.
  * protected_pos is the position in bytes to use. */
 {
@@ -624,7 +623,7 @@ OtpError otp_encrypt_warning(struct otp* pad, char** message, unsigned int prote
 		}
 	}
 	char* old_msg = g_strdup(*message);
-	int oldpos = pad->position;
+	gsize oldpos = pad->position;
 	// TODO v0.2 oldpos is unflexible
 	pad->protected_position = pad->filesize/2-OTP_PROTECTED_ENTROPY-protected_pos;
 #ifdef RNDMSGLEN
@@ -743,7 +742,7 @@ OtpError otp_encrypt(struct otp* pad, char** message)
 #endif
 	if (pad == NULL || message == NULL || *message == NULL) return OTP_ERR_INPUT;
 	pad->protected_position = 0;
-	int oldpos = pad->position;
+	gsize oldpos = pad->position;
 	char* old_msg = g_strdup(*message);
 #ifdef RNDMSGLEN
 	oldpos += 1;
@@ -793,7 +792,7 @@ OtpError otp_decrypt(struct otp* pad, char** message)
 	char* old_msg = g_strdup(*message);
 	
 	/* Our position to decrypt in the pad */
-	int decryptpos = (unsigned int)g_ascii_strtoll( strdup(m_array[0]), NULL, 10);
+	gsize decryptpos = (unsigned int)g_ascii_strtoll( strdup(m_array[0]), NULL, 10);
 	if (strcmp(m_array[1], pad->id) != 0) return OTP_ERR_ID_MISMATCH;
 	char* new_msg = g_strdup(m_array[2]);
 	g_free(*message);
@@ -890,7 +889,7 @@ const char* otp_conf_get_export_path(const struct otp_config* config)
 	return config->export_path;
 }
 
-unsigned int otp_conf_get_random_msg_tail_max_len(const struct otp_config* config) 
+gsize otp_conf_get_random_msg_tail_max_len(const struct otp_config* config) 
 /* Gets random_msg_tail_max_len */
 {
 	if (config == NULL) return 0;
@@ -939,7 +938,7 @@ OtpError otp_conf_set_export_path(struct otp_config* config, const char* export_
 }
 
 OtpError otp_conf_set_random_msg_tail_max_len(struct otp_config* config,
-				 unsigned int random_msg_tail_max_len) 
+				 gsize random_msg_tail_max_len) 
 /* Sets random_msg_tail_max_len:
  * 					The max length of the randomly added tailing charakters 
  * 					to prevent 'eve' from knowng the length of the message.
@@ -1001,22 +1000,21 @@ const char* otp_pad_get_filename(struct otp* mypad)
 	return mypad->filename;
 }
 
-
-unsigned int otp_pad_get_entropy(struct otp* mypad)
+gsize otp_pad_get_entropy(struct otp* mypad)
 /* gets the size (in bytes) of the entropy left for the sender */
 {
 	if (mypad == NULL) return 0;
 	return mypad->entropy;
 }
 
-unsigned int otp_pad_get_filesize(struct otp* mypad)
+gsize otp_pad_get_filesize(struct otp* mypad)
 /* gets the size of the file in bytes */
 {
 	if (mypad == NULL) return 0;
 	return mypad->filesize;
 }
 
-unsigned int otp_pad_get_position(struct otp* mypad)
+gsize otp_pad_get_position(struct otp* mypad)
 /* gets the current encrypt-position (in bytes) in the keyfile */
 {
 	if (mypad == NULL) return 0;
