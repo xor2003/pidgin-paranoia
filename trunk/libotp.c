@@ -90,7 +90,7 @@
 /*  ------------------- Defines (for development) ------------------------
  * Useful for Developpers */
 
-#define DEBUG
+//#define DEBUG
                  /* Enables the function otp_printint
 *                and dumps the way of the message and key byte by byte. */
 
