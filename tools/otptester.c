@@ -65,7 +65,7 @@ int usage() {
 					"--debug\n"
 					"--nodebug\n"
 					"\n"
-					"%s --create_config --openpad \"bob@jabber.org alice@jabber.org 22222201.entropy"
+					"%s --create_config --openpad \"bob@jabber.org alice@jabber.org 22222201.entropy\" "
 					"encrypt --openpad \"alice@jabber.org bob@jabber.org 22222201.entropy\" decrypt "
 					"--setmessage \"test\" --encrypt --decrypt --closepad encrypt --closepad decrypt "
 					"--destroy_config\n"

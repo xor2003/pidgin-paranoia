@@ -19,7 +19,7 @@
 /*  ------------------- Public Constants (don't change) -------------------
  * Changing this makes your one-time-pad incompatible */
 
-#define OTP_ID_LENGTH 8			/* Size of the ID-string */
+#define OTP_ID_LENGTH 8			/* Size of the ID-string. 4 bytes --> 8 bytes base 16*/
 #define OTP_PROTECTED_ENTROPY 100	/* The amount of entropy that is only used for "out of entropy" messages */ 
 
 /* ------------------ Error Syndrome System  ---------------------- */
@@ -148,7 +148,7 @@ OtpError otp_decrypt(struct otp* mypad, char** message);
    Leaves the message constant. Returns NULL if it fails. */
 char* otp_get_id_from_message(char** message);
 // Request API change to:
-//char* otp_id_get_from_message(const struct otp_config* myconfig, char **message);
+//char* otp_id_get_from_message(const struct otp_config* myconfig, const char *msg);
 
 /* generates a new key pair (two files) with the name alice and bob of 'size' bytes. */
 OtpError otp_generate_key_pair(const char* alice, const char* bob, const char* path, const char* source, gsize size);
