@@ -7,7 +7,8 @@ paranoia_la_LDFLAGS = -module -avoid-version
 paranoia_la_SOURCES = \
 	libotp.c \
 	libotp.h \
-	paranoia.c
+	paranoia.c \
+	keygen.c
 
 paranoia_la_CPPFLAGS = \
 	-DVERSION=\"$(VERSION)\" \
@@ -31,9 +32,7 @@ EXTRA_DIST = \
 	INSTALL \
 	NEWS \
 	README \
-	VERSION 
+	VERSION
 
 DISTCLEANFILES= \
 	paranoia_config.h
-
-

@@ -35,6 +35,7 @@
 int generate_keys_from_keygen(char *alice, char *bob, unsigned int size);
 int invert(char *src, char *dest);
 unsigned char bit2char(short buf[8]);
+gpointer start_generation(gpointer data);
 gpointer devrand(gpointer data);
 gpointer audio(gpointer data);
 gpointer stub(gpointer data);
@@ -53,10 +54,12 @@ int main()
 /*
 *	Main function only for testing purposes
 */
+
 {
-	generate_keys_from_keygen("alice@jabber.org","bob@jabber.org",100000);
+	generate_keys_from_keygen("/home/psachs/.paranoia/alice@jabber.org","/home/psachs/bob@jabber.org",10000);
 	return 0;
 }
+
 
 int invert(char *src, char *dest)
 /*
@@ -98,11 +101,6 @@ int generate_keys_from_keygen(char *alice, char *bob, unsigned int size)
 *	Size should be strictly positiv in bytes.
 */
 {
-	GThread *p1, *p2, *p3, *p4;	 	 		// define threads
-#ifdef FAST
-	GThread *p5;
-#endif
-
 // check if the function inputs are correct
 	if(alice == NULL) {
 		g_printerr("Alice file pointer NULL\n");
@@ -114,13 +112,32 @@ int generate_keys_from_keygen(char *alice, char *bob, unsigned int size)
 		return 0;
 	}
 
+// initialize g_thread
+	g_thread_init(NULL);
+
 // set key_data
 	key_data.size = size;
 	key_data.alice = alice;
 	key_data.bob = bob;
+	GThread *key_thread;
 
-// initialize g_thread and create mutex
-	g_thread_init(NULL);
+	if((key_thread = g_thread_create(start_generation, NULL, TRUE, NULL)) != NULL) g_print("keygen started\n");
+	g_thread_join(key_thread);
+	return 0;
+}
+
+gpointer start_generation(gpointer data)
+/*
+*	start threaded generation
+*/
+{
+// define threads
+	GThread *p1, *p2, *p3, *p4;
+#ifdef FAST
+	GThread *p5;
+#endif
+
+// create mutex
 	mutex = g_mutex_new();
 
 // create threads
@@ -131,6 +148,7 @@ int generate_keys_from_keygen(char *alice, char *bob, unsigned int size)
 #ifdef FAST
 	if((p5 = g_thread_create(prg, NULL, TRUE, NULL)) != NULL) g_print("collecting entropy from PRG\n");
 #endif
+
 
 // wait for threads to return
 	g_thread_join (p1);
@@ -145,10 +163,14 @@ int generate_keys_from_keygen(char *alice, char *bob, unsigned int size)
 	g_mutex_free(mutex);
 
 // create the inverted key
-	invert(alice, bob);
+	if(key_data.size != 0) {
+		g_printerr("could not finish writing process\n");
+		return -1;
+	}
+	invert(key_data.alice, key_data.bob);
 
 	return 0;
-} // end main();
+} // end start_generation();
 
 
 
@@ -184,7 +206,7 @@ gpointer devrand(gpointer data)
 		g_printerr("could not open /dev/random \n");
 		return 0;
 	}
-	if((fp_alice = open(key_data.alice,O_RDWR|O_CREAT|O_APPEND,00600)) < 0) {
+	if((fp_alice = open(key_data.alice, O_RDWR|O_CREAT|O_APPEND, 00600)) < 0) {
 		g_printerr("could not open %s \n", key_data.alice);
 		return 0;
 	}
