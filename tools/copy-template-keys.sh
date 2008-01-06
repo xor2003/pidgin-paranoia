@@ -100,8 +100,8 @@ select opt in $OPT; do
 
  	 	if [ "$opt" = "small" ]; then
 			SUFF="-small"
-			IDLOOP="11111100"
-			ID="22222200"
+			IDLOOP="11111150"
+			ID="22222250"
 			makefiles
   		fi
 

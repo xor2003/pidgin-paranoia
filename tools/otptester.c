@@ -34,15 +34,15 @@
 
 #define PARANOIA_PATH "/.paranoia/"		/* TODO: REMOVE */
 
-char *programname;
-int *argnumber;
-int *argpos;
-char **argvalue;
-char *path;
+char* programname;
+int* argnumber;
+int* argpos;
+char** argvalue;
+char* path;
 struct otp* encryptpad;
 struct otp* decryptpad;
 int debuglevel=0;
-char **permmessage;
+char** permmessage;
 int repeatnumber=1;
 struct otp_config* config;
 
@@ -50,28 +50,31 @@ struct otp_config* config;
 /* Usage */
 int usage() {
     printf("%s: Usage: \"%s [OPTIONS] \"\n",programname,programname);
-    printf("\
---setmessage message\n\
---repeat # TODO\n\
---encrypt\n\
---decrypt\n\
---genkey alice bob sourcefile size\n\
---openpad filename encrypt|decrypt\n\
---closepad encrypt|decrypt\n\
---create_config\n\
---destroy_config\n\
---erasekey\n\
---test\n\
---debug\n\
---nodebug\n\
-\n\
-%s --create_config --openpad \"bob@jabber.org alice@jabber.org 22222201.entropy\" encrypt --openpad \"alice@jabber.org bob@jabber.org 22222201.entropy\" decrypt --setmessage \"test\" --encrypt --decrypt --closepad encrypt --closepad decrypt --destroy_config\n\
-",programname);
+    printf(
+					"--setmessage message\n"
+					"--repeat # TODO\n"
+					"--encrypt\n"
+					"--decrypt\n"
+					"--genkey alice bob sourcefile size\n"
+					"--openpad filename encrypt|decrypt\n"
+					"--closepad encrypt|decrypt\n"
+					"--create_config\n"
+					"--destroy_config\n"
+					"--erasekey\n"
+					"--test\n"
+					"--debug\n"
+					"--nodebug\n"
+					"\n"
+					"%s --create_config --openpad \"bob@jabber.org alice@jabber.org 22222201.entropy"
+					"encrypt --openpad \"alice@jabber.org bob@jabber.org 22222201.entropy\" decrypt "
+					"--setmessage \"test\" --encrypt --decrypt --closepad encrypt --closepad decrypt "
+					"--destroy_config\n"
+					,programname);
 	return TRUE;
 }
 
 int something() {
-	int takes=0;
+	int takes = 0;
 	if(*argpos+takes-1 >= *argnumber) {
 		return FALSE;
 	}
@@ -88,7 +91,7 @@ int something() {
 }
 
 int create_config() {
-	int takes=0;
+	int takes = 0;
 	if(*argpos+takes-1 >= *argnumber) {
 		return FALSE;
 	}
@@ -98,12 +101,12 @@ int create_config() {
 		printf("Error creating the otp_config!\n");
 		return FALSE;
 	}
-	*argpos=*argpos+takes;
+	*argpos = *argpos+takes;
 	return TRUE;	
 }
 
 int destroy_config() {
-	int takes=0;
+	int takes = 0;
 	if(*argpos+takes-1 >= *argnumber) {
 		return FALSE;
 	}
@@ -112,7 +115,7 @@ int destroy_config() {
 		printf("Error freeing the otp_config :\t%.8X\n",syndrome);
 		return FALSE;
 	}
-	*argpos=*argpos+takes;
+	*argpos = *argpos+takes;
 	return TRUE;	
 }
 
@@ -120,7 +123,7 @@ int destroy_config() {
 
 
 int genkey() {
-	int takes=4;
+	int takes = 4;
 	if(*argpos+takes-1 >= *argnumber) {
 		return FALSE;
 	}
@@ -144,32 +147,32 @@ int genkey() {
 		printf("* Syndrome:\t%.8X\n",syndrome);
 	}
 	
-	*argpos=*argpos+takes;
+	*argpos = *argpos+takes;
 	return TRUE;	
 }
 
 int test() {
-	int takes=0;
+	int takes = 0;
 	if(*argpos+takes-1 >= *argnumber) {
 		return FALSE;
 	}
 	printf("Test point reached!\n");
-	*argpos=*argpos+takes;
+	*argpos = *argpos+takes;
 	return TRUE;	
 }
 
 int debug() {
-	int takes=0;
+	int takes = 0;
 	if(*argpos+takes-1 >= *argnumber) {
 		return FALSE;
 	}
 	debuglevel=1;
-	*argpos=*argpos+takes;
+	*argpos = *argpos+takes;
 	return TRUE;	
 }
 
 int erasekey() {
-	int takes=0;
+	int takes = 0;
 	if(*argpos+takes-1 >= *argnumber) {
 		return FALSE;
 	}
@@ -181,23 +184,23 @@ int erasekey() {
 	if (debuglevel) {
 		printf("* Syndrome:\t%.8X\n",syndrome);
 	}
-	*argpos=*argpos+takes;
-	return TRUE;	
+	*argpos = *argpos+takes;
+	return TRUE;
 }
 
 int nodebug() {
-	int takes=0;
+	int takes = 0;
 	if(*argpos+takes-1 >= *argnumber) {
 		return FALSE;
 	}
-	debuglevel=0;
-	*argpos=*argpos+takes;
-	return TRUE;	
+	debuglevel = 0;
+	*argpos = *argpos+takes;
+	return TRUE;
 }
 
 
 int openpad() {
-	int takes=2;
+	int takes = 2;
 	if(*argpos+takes-1 >= *argnumber) {
 		return FALSE;
 	}
@@ -238,12 +241,12 @@ int openpad() {
 		}	
 	}
 	
-	*argpos=*argpos+takes;
+	*argpos = *argpos+takes;
 	return TRUE;	
 }
 
 int closepad() {
-	int takes=1;
+	int takes = 1;
 	if(*argpos+takes-1 >= *argnumber) {
 		return FALSE;
 	}
@@ -263,17 +266,17 @@ int closepad() {
 		otp_destroy(encryptpad);
 	}
 	
-	*argpos=*argpos+takes;
+	*argpos = *argpos+takes;
 	return TRUE;	
 }
 	
 int setmessage() {
-	int takes=1;
+	int takes = 1;
 	if(*argpos+takes-1 >= *argnumber) {
 		return FALSE;
 	}
 	
-	if (permmessage!=NULL) {
+	if (permmessage != NULL) {
 		g_free(*permmessage);
 	}
 	permmessage = g_malloc(sizeof(char*));
@@ -282,12 +285,12 @@ int setmessage() {
 		printf("* Message:\t\t%s\n",*permmessage);
 	}
 
-	*argpos=*argpos+takes;
+	*argpos = *argpos+takes;
 	return TRUE;	
 }
 
 int encrypt() {
-	int takes=0;
+	int takes = 0;
 	if(*argpos+takes-1 >= *argnumber) {
 		return FALSE;
 	}
@@ -309,14 +312,14 @@ int encrypt() {
 		printf("* Pad:\tPos:\t\t%u\n",otp_pad_get_position(encryptpad));
 		printf("* Pad:\tentropy:\t%u\n",otp_pad_get_entropy(encryptpad));
 	}
-	*argpos=*argpos+takes;
+	*argpos = *argpos+takes;
 	return TRUE;	
 }
 
 
 		
 int signalencrypt() {
-	int takes=1;
+	int takes = 1;
 	if(*argpos+takes-1 >= *argnumber) {
 		return FALSE;
 	}
@@ -343,15 +346,15 @@ int signalencrypt() {
 	if (permmessage != NULL) {
 		//g_free(**permmessage);
 	}
-	permmessage=message;
+	permmessage = message;
 	
 	
-	*argpos=*argpos+takes;
+	*argpos = *argpos+takes;
 	return TRUE;	
 }
 
 int decrypt() {
-	int takes=0;
+	int takes = 0;
 	if(*argpos+takes-1 >= *argnumber) {
 		return FALSE;
 	}
@@ -374,19 +377,19 @@ int decrypt() {
 	if (debuglevel) {
 		printf("* Syndrome:\t\t%.8X\n",syndrome);
 	}
-	*argpos=*argpos+takes;
+	*argpos = *argpos+takes;
 	return TRUE;	
 }
 
 
 int main ( int argc , char *argv[] ) {
 	printf("--------------------------------------------------------------------------------\n");
-	programname=argv[0];
-	argnumber=&argc;
-	*argnumber=*argnumber-1;
-	argvalue=&argv[1];
-	int i=0;
-	argpos=&i;
+	programname = argv[0];
+	argnumber = &argc;
+	*argnumber = *argnumber-1;
+	argvalue = &argv[1];
+	int i = 0;
+	argpos = &i;
 	
 	const gchar* home = g_get_home_dir();
 	path = (char *) g_malloc((strlen(home) + strlen(PARANOIA_PATH) + 1) * sizeof(char));
@@ -405,84 +408,84 @@ int main ( int argc , char *argv[] ) {
 		//printf("argument:%s\n",argv[i+1]);
 		
 		if (!strcmp(argv[i],"--setmessage")) {
-			if(setmessage()==FALSE){
+			if(setmessage() == FALSE){
 				return 1;
 			}
 		}
 		if (!strcmp(argv[i],"--encrypt")) {
-			if(encrypt()==FALSE){
+			if(encrypt() == FALSE){
 				return 1;
 			}
 		}
 		
 		if (!strcmp(argv[i],"--signalencrypt")) {
-			if(signalencrypt()==FALSE){
+			if(signalencrypt() == FALSE){
 				return 1;
 			}
 		}
 		
 		if (!strcmp(argv[i],"--decrypt")) {
-			if(decrypt()==FALSE){
+			if(decrypt() == FALSE){
 				return 1;
 			}
 		}	
 
 		if (!strcmp(argv[i],"--genkey")) {
-			if(genkey()==FALSE){
+			if(genkey() == FALSE){
 				return 1;
 			}
 		}	
 		
 		if (!strcmp(argv[i],"--openpad")) {
-			if(openpad()==FALSE){
+			if(openpad() == FALSE){
 				return 1;
 			}
 		}
 		
 		if (!strcmp(argv[i],"--closepad")) {
-			if(closepad()==FALSE){
+			if(closepad() == FALSE){
 				return 1;
 			}
 		}
 		
 		if (!strcmp(argv[i],"--erasekey")) {
-			if(erasekey()==FALSE){
+			if(erasekey() == FALSE){
 				return 1;
 			}
 		}
 		
 		if (!strcmp(argv[i],"--test")) {
-			if(test()==FALSE){
+			if(test() == FALSE){
 				return 1;
 			}
 		}
 		
 		if (!strcmp(argv[i],"--debug")) {
-			if(debug()==FALSE){
+			if(debug() == FALSE){
 				return 1;
 			}
 		}
 		
 		if (!strcmp(argv[i],"--nodebug")) {
-			if(nodebug()==FALSE){
+			if(nodebug() == FALSE){
 				return 1;
 			}
 		}
 		
 		if (!strcmp(argv[i],"--something")) {
-			if(something()==FALSE){
+			if(something() == FALSE){
 				return 1;
 			}
 		}
 		
 		if (!strcmp(argv[i],"--create_config")) {
-			if(create_config()==FALSE){
+			if(create_config() == FALSE){
 				return 1;
 			}
 		}
 		
 		if (!strcmp(argv[i],"--destroy_config")) {
-			if(destroy_config()==FALSE){
+			if(destroy_config() == FALSE){
 				return 1;
 			}
 		}

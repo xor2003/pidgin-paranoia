@@ -128,7 +128,7 @@ struct otp {
 /* encrypt the message 
  * if it can't encrypt the message a syndrome > OTP_WARN is returned and
  * the message is left unchanged */
-OtpError otp_encrypt(struct otp* mypad, char **message);
+OtpError otp_encrypt(struct otp* mypad, char** message);
 
 /* encrypts a message with the protected entropy. protected_pos is the position in bytes to use. 
  * The entropy is not consumed by this function. 
@@ -137,16 +137,16 @@ OtpError otp_encrypt(struct otp* mypad, char **message);
  * When only one signal is used, use protected_pos = 0. 
  * if it can't encrypt the message a syndrome > OTP_WARN is returned and
  * the message is left unchanged */
-OtpError otp_encrypt_warning(struct otp* mypad, char **message, unsigned int protected_pos);
+OtpError otp_encrypt_warning(struct otp* mypad, char** message, unsigned int protected_pos);
 
 /* decrypt the message 
  * if it can't decrypt the message a syndrome > OTP_WARN is returned and
  * the message is left unchanged */
-OtpError otp_decrypt(struct otp* mypad, char **message);
+OtpError otp_decrypt(struct otp* mypad, char** message);
 
 /* extracts and returns the ID from a given encrypted message. 
    Leaves the message constant. Returns NULL if it fails. */
-char* otp_get_id_from_message(char **message);
+char* otp_get_id_from_message(char** message);
 // Request API change to:
 //char* otp_id_get_from_message(const struct otp_config* myconfig, char **message);
 
