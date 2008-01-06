@@ -206,6 +206,7 @@ int openpad() {
 		encryptpad = otp_get_from_file(path,argvalue[*argpos]);	
 		if (encryptpad == NULL) {
 			printf("Keyfile '%s' can not be opened!\n",argvalue[*argpos]);
+			printf("* Message:\t\t%s\n",*permmessage);
 		return FALSE;
 		}	
 		if (debuglevel) {
@@ -299,6 +300,7 @@ int encrypt() {
 	OtpError syndrome = otp_encrypt(encryptpad, permmessage);
 	if (syndrome > OTP_WARN) {
 		printf("Encrypt failed! %.8X\n",syndrome);
+		printf("Message:\t\t%s\n",*permmessage);
 		return FALSE;
 	}
 	printf("Encrypted message:\t%s\n",*permmessage);
@@ -327,6 +329,7 @@ int signalencrypt() {
 	OtpError syndrome = otp_encrypt_warning(encryptpad,message,0);
 	if (syndrome > OTP_WARN) {
 		printf("Signalencrypt failed! %.8X\n",syndrome);
+		printf("Message:\t\t%s\n",*permmessage);
 		return FALSE;	
 	}
 	printf("Enc. signal message:\t%s\n",*message);	
@@ -363,6 +366,7 @@ int decrypt() {
 	OtpError syndrome = otp_decrypt(decryptpad,permmessage); 
 	if (syndrome > OTP_WARN) {
 		printf("Decrypt failed! %.8X\n",syndrome);
+		printf("Message:\t\t%s\n",*permmessage);
 		return FALSE;	
 	}
 	printf("Decrypted message:\t%s\n",*permmessage);
