@@ -125,10 +125,23 @@ struct otp {
 //	struct otp_config* config;
 };
 
-/* encrypt the message */
+/* encrypt the message 
+ * if it can't encrypt the message a syndrome > OTP_WARN is returned and
+ * the message is left unchanged */
 OtpError otp_encrypt(struct otp* mypad, char **message);
 
-/* decrypt the message */
+/* encrypts a message with the protected entropy. protected_pos is the position in bytes to use. 
+ * The entropy is not consumed by this function. 
+ * To used the function securely, the signal-messages should not overlap 
+ * and every signal has to stay constant! 
+ * When only one signal is used, use protected_pos = 0. 
+ * if it can't encrypt the message a syndrome > OTP_WARN is returned and
+ * the message is left unchanged */
+OtpError otp_encrypt_warning(struct otp* mypad, char **message, unsigned int protected_pos);
+
+/* decrypt the message 
+ * if it can't decrypt the message a syndrome > OTP_WARN is returned and
+ * the message is left unchanged */
 OtpError otp_decrypt(struct otp* mypad, char **message);
 
 /* extracts and returns the ID from a given encrypted message. 
@@ -144,14 +157,6 @@ OtpError otp_generate_key_pair(const char* alice, const char* bob, const char* p
 //		const char* bob, const char* source, unsigned int size, 
 //		struct otp* alice_pad, struct otp* bob_pad);
 		/* alice and bob is optional. if NULL not created */
-
-
-
-/* encrypts a message with the protected entropy. protected_pos is the position in bytes to use. 
- The entropy is not consumed by this function. 
- To used the function securely, the signal-messages should not overlap and every signal has to stay constant! 
- When only one signal is used, use protected_pos=0. */
-OtpError otp_encrypt_warning(struct otp* mypad, char **message, unsigned int protected_pos);
 
 /* destroys a keyfile by using up all encryption-entropy */
 OtpError otp_erase_key(struct otp* mypad);

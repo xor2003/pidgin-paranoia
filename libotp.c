@@ -89,7 +89,7 @@
 /*  ------------------- Defines (for development) ------------------------
  * Useful for Developpers */
 
-#define DEBUG
+//#define DEBUG
                  /* Enables the function otp_printint
 *                and dumps the way of the message and key byte by byte. */
 
@@ -623,6 +623,7 @@ OtpError otp_encrypt_warning(struct otp* pad, char **message, unsigned int prote
 			return OTP_ERR_INPUT;
 		}
 	}
+	char* old_msg = g_strdup(*message);
 	int oldpos = pad->position;
 	// TODO v0.2 oldpos is unflexible
 	pad->protected_position = pad->filesize/2-OTP_PROTECTED_ENTROPY-protected_pos;
@@ -635,6 +636,8 @@ OtpError otp_encrypt_warning(struct otp* pad, char **message, unsigned int prote
 	if (syndrome > OTP_WARN) {
 		pad->protected_position = 0;
 		printf("syndrome: %.8X\n",syndrome);
+		g_free(*message);
+		*message = old_msg;
 		return syndrome;
 	}
 #endif
@@ -647,6 +650,7 @@ OtpError otp_encrypt_warning(struct otp* pad, char **message, unsigned int prote
 	g_free(pos_str);
 	*message = new_msg;
 	pad->protected_position = 0;
+	g_free(old_msg);
 	return syndrome;
 }
 
@@ -740,6 +744,7 @@ OtpError otp_encrypt(struct otp* pad, char **message)
 	if (pad == NULL || message == NULL || *message == NULL) return OTP_ERR_INPUT;
 	pad->protected_position = 0;
 	int oldpos = pad->position;
+	char* old_msg = g_strdup(*message);
 #ifdef RNDMSGLEN
 	oldpos += 1;
 #endif
@@ -747,6 +752,8 @@ OtpError otp_encrypt(struct otp* pad, char **message)
 	syndrome = otp_uencrypt(message, pad);
 	if (syndrome > OTP_WARN) {
 		printf("syndrome: %.8X\n",syndrome);
+		g_free(*message);
+		*message = old_msg;
 		return syndrome;
 	}
 #endif
@@ -761,6 +768,7 @@ OtpError otp_encrypt(struct otp* pad, char **message)
 #ifdef DEBUG 
 	otp_printint(*message,strlen(*message), "paranoia: after encrypt");
 #endif
+	g_free(old_msg);
 	return syndrome;
 }
 
@@ -782,21 +790,22 @@ OtpError otp_decrypt(struct otp* pad, char **message)
 		g_strfreev(m_array);
 		return OTP_ERR_MSG_FORMAT;
 		}
-
+	char* old_msg = g_strdup(*message);
+	
 	/* Our position to decrypt in the pad */
 	int decryptpos = (unsigned int)g_ascii_strtoll( strdup(m_array[0]), NULL, 10);
 	if (strcmp(m_array[1], pad->id) != 0) return OTP_ERR_ID_MISMATCH;
-	char *new_msg = g_strdup(m_array[2]);
+	char* new_msg = g_strdup(m_array[2]);
 	g_free(*message);
 	*message = new_msg;
 	g_strfreev(m_array);
-	
-
 
 #ifdef UCRYPT
 	syndrome = otp_udecrypt(message, pad, decryptpos);
 	if (syndrome > OTP_WARN) {
 		printf("syndrome: %.8X\n",syndrome);
+		g_free(*message);
+		*message = old_msg;
 		return syndrome;
 	}
 #endif
@@ -804,6 +813,7 @@ OtpError otp_decrypt(struct otp* pad, char **message)
 #ifdef DEBUG 
 	otp_printint(*message,strlen(*message), "paranoia: after decrypt");
 #endif
+	g_free(old_msg);
 	return syndrome;
 }
 
