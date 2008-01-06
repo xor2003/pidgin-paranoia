@@ -116,10 +116,10 @@ struct otp {
 	char* dest; 		/* for pidgin: 'account' like bob@jabber.org */
 	char* id; 		/* 8 digits unique random number of the key pair (hex) */
 	char* filename; 	/* The full path and the filename defined in the libotp spec */
-	unsigned int position; 	/* start positon for the next encryption */
-	unsigned int protected_position;	/* Only used for messages and signals from the protected entropy. Otherwise set to zero */
-	unsigned int entropy; 	/* the size (in bytes) of the entropy left for the sender */
-	unsigned int filesize; 	/* The size of the file in bytes */
+	gsize position; 	/* start positon for the next encryption */
+	gsize protected_position;	/* Only used for messages and signals from the protected entropy. Otherwise set to zero */
+	gsize entropy; 	/* the size (in bytes) of the entropy left for the sender */
+	gsize filesize; 	/* The size of the file in bytes */
 // TODO: Is this the future?
 	OtpError syndrome;
 //	struct otp_config* config;
@@ -137,7 +137,7 @@ OtpError otp_encrypt(struct otp* mypad, char** message);
  * When only one signal is used, use protected_pos = 0. 
  * if it can't encrypt the message a syndrome > OTP_WARN is returned and
  * the message is left unchanged */
-OtpError otp_encrypt_warning(struct otp* mypad, char** message, unsigned int protected_pos);
+OtpError otp_encrypt_warning(struct otp* mypad, char** message, gsize protected_pos);
 
 /* decrypt the message 
  * if it can't decrypt the message a syndrome > OTP_WARN is returned and
@@ -151,10 +151,10 @@ char* otp_get_id_from_message(char** message);
 //char* otp_id_get_from_message(const struct otp_config* myconfig, char **message);
 
 /* generates a new key pair (two files) with the name alice and bob of 'size' bytes. */
-OtpError otp_generate_key_pair(const char* alice, const char* bob, const char* path, const char* source, unsigned int size);
+OtpError otp_generate_key_pair(const char* alice, const char* bob, const char* path, const char* source, gsize size);
 // Request API change to (this will change again later):
 //OtpError otp_generate_key_pair(otp_config* myconfig, const char* alice, 
-//		const char* bob, const char* source, unsigned int size, 
+//		const char* bob, const char* source, gsize size, 
 //		struct otp* alice_pad, struct otp* bob_pad);
 		/* alice and bob is optional. if NULL not created */
 
@@ -188,13 +188,13 @@ const char* otp_pad_get_id(struct otp* mypad);
 const char* otp_pad_get_filename(struct otp* mypad);
 
 /* gets the size (in bytes) of the entropy left for the sender */
-unsigned int otp_pad_get_entropy(struct otp* mypad);
+gsize otp_pad_get_entropy(struct otp* mypad);
 
 /* gets the current encrypt-position (in bytes) in the keyfile */
-unsigned int otp_pad_get_position(struct otp* mypad);
+gsize otp_pad_get_position(struct otp* mypad);
 
 /* gets the size of the file in bytes */
-unsigned int otp_pad_get_filesize(struct otp* mypad);
+gsize otp_pad_get_filesize(struct otp* mypad);
 
 /* gets an OtpError that contains information about the status of the pad */
 OtpError otp_pad_get_syndrome(struct otp* mypad);
@@ -230,7 +230,7 @@ const char* otp_conf_get_path(const struct otp_config* myconfig);
 const char* otp_conf_get_export_path(const struct otp_config* myconfig);
 
 /* Gets random_msg_tail_max_len */
-unsigned int otp_conf_get_random_msg_tail_max_len(const struct otp_config* myconfig);
+gsize otp_conf_get_random_msg_tail_max_len(const struct otp_config* myconfig);
 
 /* Gets msg_key_improbability_limit */
 double otp_conf_get_msg_key_improbability_limit(const struct otp_config* myconfig);
@@ -248,7 +248,7 @@ OtpError otp_conf_set_export_path(struct otp_config* myconfig, const char* expor
  * 					to prevent 'eve' from knowng the length of the message.
  * 					Disabled if 0. Default is already set to DEFAULT_RNDLENMAX */
 OtpError otp_conf_set_random_msg_tail_max_len(struct otp_config* myconfig,
-				 unsigned int random_msg_tail_max_len);
+				 gsize random_msg_tail_max_len);
 
 /* Sets msg_key_improbability_limit: 
  * 					If the used random entropy shows pattern that are less likely
