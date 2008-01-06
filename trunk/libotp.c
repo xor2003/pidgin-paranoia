@@ -47,6 +47,7 @@
 				 * this string to be valid. This string has to be separated by ".". */
 #define NOENTROPY_SIGNAL "*** I'm out of entropy!"       /* The message that
 							 * is send in case the sender is out of entropy */
+#define ID_SIZE		4	/* The size in bytes of the ID. */
 
 /*  ------------------- Constants (you can change them) ------------ */
 
@@ -89,7 +90,7 @@
 /*  ------------------- Defines (for development) ------------------------
  * Useful for Developpers */
 
-//#define DEBUG
+#define DEBUG
                  /* Enables the function otp_printint
 *                and dumps the way of the message and key byte by byte. */
 
@@ -466,7 +467,9 @@ OtpError otp_generate_key_pair(const char* alice,
 	} else {
 		size = size/BLOCKSIZE + 1;
 	}
-
+#ifdef DEBUG 
+	printf("paranoia: otp_genkey initial checks\n");
+#endif
 	/* open entropy source */
 	int rfd;
 	if ((rfd = open(source, O_RDONLY)) == -1) {
@@ -481,17 +484,21 @@ OtpError otp_generate_key_pair(const char* alice,
 	}
 
 	gsize rfilesize = rfstat.st_size;
-	/* If the source is to small and not a character dev */
+	/* If the source is to small and not a character dev 
+	 * The ID (an integer) is also generated from the entropy. */
 	if ( !( ((rfstat.st_mode|S_IFCHR) == rfstat.st_mode)
-			|| (rfilesize >= size*BLOCKSIZE) ) ) {
+			|| (rfilesize >= size*BLOCKSIZE + ID_SIZE) ) ) {
 		close(rfd);
 		return OTP_ERR_FILE_ENTROPY_SOURCE_SIZE;
 	}
+#ifdef DEBUG 
+	printf("paranoia: otp_genkey source open\n");
+#endif
 
 	/* id string from integer */
 	unsigned int id;
 	/* Create ID from entropy source */
-	read(rfd, &id, sizeof(id));
+	read(rfd, &id, ID_SIZE);
 	/* Our ID string */;
 	char* idstr = g_strdup_printf("%.8X", id);
 	
@@ -520,6 +527,9 @@ OtpError otp_generate_key_pair(const char* alice,
 	} else {
 		closedir(dp);
 	}
+#ifdef DEBUG 
+	printf("paranoia: otp_genkey dir checked\n");
+#endif
 	
 	/* Opening the alice's key file */
 	int afd;
@@ -544,9 +554,13 @@ OtpError otp_generate_key_pair(const char* alice,
 		return OTP_ERR_FILE;
 	}
 	
+#ifdef DEBUG 
+	printf("paranoia: otp_genkey afile open\n");
+#endif
+	
 	/* Source and alice key file is open, copy entropy */
 	char buffer[BLOCKSIZE];
-	gsize i = 0;
+	int i = 0;
 
 	/* Filling the first file */
 	for (i = 0; i < size; i++) {
@@ -555,6 +569,10 @@ OtpError otp_generate_key_pair(const char* alice,
 	}
 	/* Close the entropy source */
 	close(rfd);
+	
+#ifdef DEBUG 
+	printf("paranoia: otp_genkey source closed\n");
+#endif
 	
 	/* Alice's file written, opening the Bob's file */
 	int bfd = 0;
@@ -595,14 +613,21 @@ OtpError otp_generate_key_pair(const char* alice,
 		g_free(bfilename);
 		return OTP_ERR_FILE;
 	}
+#ifdef DEBUG 
+	printf("paranoia: otp_genkey afile written\n");
+#endif
+	
 	/* Create the reversed second file from Alice's one */
-	gsize j;
+	int j;
 	for (i = afilesize-BLOCKSIZE; i >= 0; i = i-BLOCKSIZE) {
 		for (j = 0; j < BLOCKSIZE; j++) {
 			buffer[BLOCKSIZE-1-j] = *(*adata+i+j);
 		}
 		write(bfd, buffer, BLOCKSIZE);
 	}
+#ifdef DEBUG 
+	printf("paranoia: otp_genkey bfile written\n");
+#endif
 	munmap(adata, afilesize);
 	close(afd);
 	close(bfd);
