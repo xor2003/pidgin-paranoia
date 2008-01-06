@@ -989,7 +989,7 @@ static void par_im_msg_sending(PurpleAccount *account,
 				// TODO: display the message in the msg too
 				/* delete the remaining entropy */
 				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-						"You have not enought entropy! no_entropy = TRUE\n");
+						"You have not enough entropy! no_entropy = TRUE\n");
 				syndrome = otp_erase_key(used_key->pad);
 				if (syndrome == OTP_OK) {
 					purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
