@@ -22,6 +22,7 @@
 #include <unistd.h>
 #include <sys/resource.h>
 #include <sys/time.h>
+#include <stdio.h>
 
 // buffer which is stores the bytes before they are written into the keyfile
 #define BUFFSIZE 20
@@ -30,7 +31,9 @@
 #define OFFSET 0
 
 
-// Definition for the funcions and global variables. => Has to be moved into the header file later
+// Definition for the funcions and global variables. => Has to be moved into the header fp_alice later
+int generate_keys_from_keygen(char *alice, char *bob, unsigned int size);
+int invert(char *src, char *dest);
 unsigned char bit2char(short buf[8]);
 gpointer devrand(gpointer data);
 gpointer audio(gpointer data);
@@ -40,29 +43,93 @@ gpointer sysstate(gpointer data);
 gpointer prg(gpointer data);
 gpointer mutex = NULL;
 
+//
+struct _key_data {
+	int size;
+	char *alice, *bob;
+} key_data;
 
 int main()
 /*
-*	The main function starts the threads which collect entropie from different sources.
+*	Main function only for testing purposes
+*/
+{
+	generate_keys_from_keygen("alice@jabber.org","bob@jabber.org",100000);
+	return 0;
+}
+
+int invert(char *src, char *dest)
+/*
+*	Write the bytewise inverse of src to dest
+*	src and dest must be a valide filename with correct path
+*/
+{
+	FILE *fpin, *fpout;
+	int c;
+	long file_length;
+
+	if(src == NULL || dest == NULL) {
+		g_printerr("source or destination NULL\n");
+		return -1;
+	}
+
+	fpin = fopen(src, "r");
+	fpout = fopen(dest, "w");
+	fseek(fpin, -1, SEEK_END);
+	file_length = ftell(fpin);
+
+	while(file_length >= 0) {
+		c = fgetc(fpin);
+		fputc(c, fpout);
+		fseek(fpin, -2, SEEK_CUR);
+		file_length--;
+	}
+
+	fclose(fpin);
+	fclose(fpout);
+
+	return 0;
+}
+
+int generate_keys_from_keygen(char *alice, char *bob, unsigned int size)
+/*
+*	generate the key pair for alice and bob
+*	alice and bob must be the correct filenames including the correct absoute path.
+*	Size should be strictly positiv in bytes.
 */
 {
 	GThread *p1, *p2, *p3, *p4;	 	 		// define threads
 #ifdef FAST
 	GThread *p5;
 #endif
-	int number;
 
-	number = 100000;
+// check if the function inputs are correct
+	if(alice == NULL) {
+		g_printerr("Alice file pointer NULL\n");
+		return 0;
+	}
+
+	if(bob == NULL) {
+		g_printerr("Bob file pointer NULL\n");
+		return 0;
+	}
+
+// set key_data
+	key_data.size = size;
+	key_data.alice = alice;
+	key_data.bob = bob;
+
+// initialize g_thread and create mutex
 	g_thread_init(NULL);
-	mutex = g_mutex_new();		// create mutex
+	mutex = g_mutex_new();
 
 // create threads
-	if((p2 = g_thread_create(devrand, &number, TRUE, NULL)) != NULL) g_print("collecting entropy from /dev/random\n");
-	if((p1 = g_thread_create(audio, &number, TRUE, NULL)) != NULL) g_print("collecting entropy from /dev/audio\n");
-	if((p3 = g_thread_create(threads, &number, TRUE, NULL)) != NULL) g_print("collecting entropy from thread timing\n");
-	if((p4 = g_thread_create(sysstate, &number, TRUE, NULL)) != NULL) g_print("collecting entropy from system state\n");
+	if((p2 = g_thread_create(devrand, NULL, TRUE, NULL)) != NULL) g_print("collecting entropy from /dev/random\n");
+	if((p1 = g_thread_create(audio, NULL, TRUE, NULL)) != NULL) g_print("collecting entropy from /dev/audio\n");
+	if((p3 = g_thread_create(threads, NULL, TRUE, NULL)) != NULL) g_print("collecting entropy from thread timing\n");
+	if((p4 = g_thread_create(sysstate, NULL, TRUE, NULL)) != NULL) g_print("collecting entropy from system state\n");
 #ifdef FAST
-	if((p5 = g_thread_create(prg, &number, TRUE, NULL)) != NULL) g_print("collecting entropy from PRG\n");
+	if((p5 = g_thread_create(prg, NULL, TRUE, NULL)) != NULL) g_print("collecting entropy from PRG\n");
 #endif
 
 // wait for threads to return
@@ -76,6 +143,9 @@ int main()
 
 // destroy mutex
 	g_mutex_free(mutex);
+
+// create the inverted key
+	invert(alice, bob);
 
 	return 0;
 } // end main();
@@ -105,23 +175,23 @@ gpointer devrand(gpointer data)
 * devrand() collects entropie from the /dev/random device and writes it into a keyfile
 */
 {
-	int fd1, file;
+	int fp_rand, fp_alice;
 	unsigned char c1;
 	unsigned char buffer[BUFFSIZE];
 	int size;
 
-	if((fd1 = open("/dev/random", O_RDONLY)) < 0) {
+	if((fp_rand = open("/dev/random", O_RDONLY)) < 0) {
 		g_printerr("could not open /dev/random \n");
 		return 0;
 	}
-	if((file = open("keyfile",O_RDWR|O_CREAT|O_APPEND,00644)) < 0) {
-		g_printerr("could not open keyfile \n");
+	if((fp_alice = open(key_data.alice,O_RDWR|O_CREAT|O_APPEND,00600)) < 0) {
+		g_printerr("could not open %s \n", key_data.alice);
 		return 0;
 	}
 
 	size = 0;
 	while(1) {
-		if(read(fd1, &c1, 1) < 0) {
+		if(read(fp_rand, &c1, 1) < 0) {
 			g_print("read error\n");
 		}
 
@@ -130,23 +200,23 @@ gpointer devrand(gpointer data)
 
 		if(size == BUFFSIZE) {
 			g_mutex_lock(mutex);
-			if(*((int *)(data)) < size) {
+			if(key_data.size < size) {
 				g_mutex_unlock(mutex);
 				break;
 			}
-			if(write(file, &buffer, BUFFSIZE) < 0) {
+			if(write(fp_alice, &buffer, BUFFSIZE) < 0) {
 				g_printerr("write error\n");
 				return 0;
 			}
-			*((int *)(data)) -= size;
+			key_data.size -= size;
 			g_mutex_unlock(mutex);
 			size = 0;
 		}
 		usleep(5);
 	}
 
-	close(fd1);
-	close(file);
+	close(fp_rand);
+	close(fp_alice);
 	return 0;
 } // end devrand()
 
@@ -169,11 +239,11 @@ gpointer threads(gpointer data)
 	short i;
 	unsigned char diff;
 	struct timeval start, finish;
-	int file;
+	int fp_alice;
 	GThread *tid;
 
-	if((file = open("keyfile",O_RDWR|O_CREAT|O_APPEND,00644)) < 0) {
-		g_printerr("could not open keyfile \n");
+	if((fp_alice = open(key_data.alice,O_RDWR|O_CREAT|O_APPEND,00600)) < 0) {
+		g_printerr("could not open %s \n", key_data.alice);
 		return 0;
 	}
 
@@ -186,21 +256,21 @@ gpointer threads(gpointer data)
 		diff = (unsigned char)(((finish.tv_usec - start.tv_usec) % CHARSIZE) + OFFSET);
 
 		g_mutex_lock(mutex);
-		if(*((int *)(data)) == 0) {
+		if(key_data.size == 0) {
 			g_mutex_unlock(mutex);
 			break;
 		}
-		if(write(file, &diff, 1) < 0) {
+		if(write(fp_alice, &diff, 1) < 0) {
 			g_printerr("write error\n");
 			return 0;
 		}
-		(*((int *)(data)))--;
+		key_data.size--;
 		g_mutex_unlock(mutex);
 
 		sleep(1);
 	}
 
-	close(file);
+	close(fp_alice);
 	return 0;
 } // end threads()
 
@@ -213,23 +283,23 @@ gpointer audio(gpointer data)
 	and write this to the keyfile
 */
 {
-	int fd, fd1, file;
+	int fp_audio, fp_urand, fp_alice;
 	short i;
 	unsigned char c, d, oldc;
 	short buf[8];
 	unsigned char buffer[BUFFSIZE];
 	int size;
 
-	if((fd = open("/dev/audio", O_RDONLY)) < 0) {
+	if((fp_audio = open("/dev/audio", O_RDONLY)) < 0) {
 		g_printerr("could not open /dev/audio \n");
 		return 0;
 	}
-	if((fd1 = open("/dev/urandom", O_RDONLY)) < 0) {
+	if((fp_urand = open("/dev/urandom", O_RDONLY)) < 0) {
 		g_printerr("could not opne /dev/urandom \n");
 		return 0;
 	}
-	if((file = open("keyfile",O_RDWR|O_CREAT|O_APPEND,00644)) < 0) {
-		g_printerr("could not open keyfile \n");
+	if((fp_alice = open(key_data.alice,O_RDWR|O_CREAT|O_APPEND,00600)) < 0) {
+		g_printerr("could not open %s \n", key_data.alice);
 		return 0;
 	}
 
@@ -237,12 +307,12 @@ gpointer audio(gpointer data)
 	size = 0;
 
 	while(1) {
-		if(read(fd, &c, 1) < 0) return 0;
+		if(read(fp_audio, &c, 1) < 0) return 0;
 		buf[i] = ((unsigned short)c) % 2;
 		i++;
 		if(i == 8) {
 			g_mutex_lock(mutex);
-			if(read(fd1, &d, 1) < 0) {
+			if(read(fp_urand, &d, 1) < 0) {
 				g_printerr("read error\n");
 				g_mutex_unlock(mutex);
 				return 0;
@@ -255,15 +325,15 @@ gpointer audio(gpointer data)
 			size++;
 			if(size == BUFFSIZE) {
 					g_mutex_lock(mutex);
-					if(*((int *)(data)) < size) {
+					if(key_data.size < size) {
 						g_mutex_unlock(mutex);
 						break;
 					}
-					if(write(file, &buffer, BUFFSIZE) < 0) {
+					if(write(fp_alice, &buffer, BUFFSIZE) < 0) {
 						g_printerr("write error\n");
 						return 0;
 					}
-					*((int *)(data)) -= size;
+					key_data.size -= size;
 					g_mutex_unlock(mutex);
 					size = 0;
 			}
@@ -271,9 +341,9 @@ gpointer audio(gpointer data)
 			usleep(5);
 		}
 	}
-	close(fd);
-	close(fd1);
-	close(file);
+	close(fp_audio);
+	close(fp_urand);
+	close(fp_alice);
 	return 0;
 } // end audio()
 
@@ -286,15 +356,15 @@ gpointer sysstate(gpointer data)
 *	from outside.
 */
 {
-	int minflt, fp, who;
+	int minflt, fp_alice, who;
 	double systime, usertime;
 	unsigned int result = 0, old_result = 0;
 	char c;
 	struct rusage usage;
 	who = RUSAGE_SELF;
 
-	if((fp = open("keyfile", O_RDWR|O_CREAT|O_APPEND, 00644)) < 0){
-		g_printerr("could not open keyfile\n");
+	if((fp_alice = open(key_data.alice, O_RDWR|O_CREAT|O_APPEND, 00600)) < 0){
+		g_printerr("could not open %s\n", key_data.alice);
 		return 0;
 	}
 
@@ -311,18 +381,18 @@ gpointer sysstate(gpointer data)
 			c = (char)result;
 			g_mutex_lock(mutex);
 
-			if(*((int *)(data)) == 0) {
+			if(key_data.size == 0) {
 				g_mutex_unlock(mutex);
 				break;
 			}
 
-			write(fp, &c, 1);
-			(*((int *)(data)))--;
+			write(fp_alice, &c, 1);
+			key_data.size--;
 			g_mutex_unlock(mutex);
 		}
 		old_result = result;
 	}
-	close(fp);
+	close(fp_alice);
 	return 0;
 }
 
@@ -332,11 +402,11 @@ gpointer prg(gpointer data)
 *	This function weakens the key, and is only used to fasten the generation process.
 */
 {
-	int fp_file, fp_prg;
+	int fp_alice, fp_prg;
 	unsigned short c;
 
-	if((fp_file = open("keyfile", O_RDWR|O_CREAT|O_APPEND, 00644)) < 0) {
-		g_printerr("could not open keyfile\n");
+	if((fp_alice = open(key_data.alice, O_RDWR|O_CREAT|O_APPEND, 00600)) < 0) {
+		g_printerr("could not open %s\n", key_data.alice);
 		return 0;
 	}
 
@@ -357,23 +427,23 @@ gpointer prg(gpointer data)
 		c = (c % CHARSIZE) + OFFSET;
 
 		g_mutex_lock(mutex);
-		if(*((int *)(data)) == 0) {
+		if(key_data.size == 0) {
 			g_mutex_unlock(mutex);
 			break;
 		}
-		if(write(fp_file, &c, 1) != 1) {
+		if(write(fp_alice, &c, 1) != 1) {
 			g_printerr("write error\n");
 			g_mutex_unlock(mutex);
 			return 0;
 		}
-		(*((int *)(data)))--;
+		key_data.size--;
 		g_mutex_unlock(mutex);
 
 
 		usleep(5);
 	}
 
-	close(fp_file);
+	close(fp_alice);
 	close(fp_prg);
 	return 0;
 }
