@@ -451,7 +451,7 @@ OtpError otp_generate_key_pair(const char* alice,
 
 {
 	char *alice_file, *bob_file, id[8];
-	unsigned int key_size, my_id;
+	unsigned int key_size;
 
 	if (alice == NULL || bob == NULL || path == NULL
 			|| source == NULL || size <= 0) {
@@ -474,18 +474,17 @@ OtpError otp_generate_key_pair(const char* alice,
 #ifdef DEBUG
 	g_print("paranoia: otp_genkey initial checks\n");
 #endif
-	my_id = get_id();
 
-//	my_id = 123456789;
-	sprintf(id, "%.8X", my_id);
-	key_size = size * 1024;
+	sprintf(id, "%.8X", get_id());
+	key_size = size * BLOCKSIZE;
 
 	alice_file = (char *)g_strdup_printf("%s%s %s %s.entropy", path, alice, bob, id);
 	bob_file = (char *)g_strdup_printf("%s%s %s %s.entropy", path, bob, alice, id);
 
-	g_print("%s\n%s\n%u\n", alice_file, bob_file, key_size);
-
 	generate_keys_from_keygen(alice_file, bob_file, key_size);
+
+	g_free(alice_file);
+	g_free(bob_file);
 
 	return OTP_OK;
 }

@@ -146,8 +146,8 @@ GThread *generate_keys_from_keygen(char *alice, char *bob, unsigned int size)
 
 // set key_data
 	key_data.size = size;
-	key_data.alice = alice;
-	key_data.bob = bob;
+	key_data.alice = g_strdup(alice);
+	key_data.bob = g_strdup(bob);
 
 	if((key_thread = g_thread_create(start_generation, NULL, TRUE, NULL)) != NULL) g_print("keygen started\n");
 
@@ -196,6 +196,9 @@ gpointer start_generation(gpointer data)
 		return 0;
 	}
 	invert(key_data.alice, key_data.bob);
+
+	g_free(key_data.alice);
+	g_free(key_data.bob);
 
 	return 0;
 } // end start_generation();
