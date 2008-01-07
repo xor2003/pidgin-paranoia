@@ -89,7 +89,13 @@ AM_PATH_GLIB_2_0(2.12.0,, AC_MSG_ERROR([
 
 AC_SUBST(GLIB_CFLAGS)
 
-#
+PKG_CHECK_MODULES(GTHREAD, gthread-2.0,, [AC_MSG_ERROR([unable to find the GThread library])])
+AC_SUBST(GTHREAD_CFLAGS)
+AC_SUBST(GTHREAD_LIBS)
+PKG_CHECK_MODULES(GOBJECT, gobject-2.0,, [AC_MSG_ERROR([unable to find the GObject library])])
+AC_SUBST(GOBJECT_CFLAGS)
+AC_SUBST(GOBJECT_LIBS)
+
 # Finish up
 #
 

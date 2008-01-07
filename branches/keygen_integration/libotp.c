@@ -1,17 +1,17 @@
 /*
  * One-Time Pad Library - Encrypts strings with one-time pads.
  * Copyright (C) 2007  Christian Wäckerlin
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
@@ -36,6 +36,7 @@
 
 /* The public functions of this library */
 #include "libotp.h"
+#include "keygen.h"
 
 /*  ------------------- Constants (don't change) -------------------
  * Changing this makes your one-time-pad incompatible */
@@ -261,7 +262,7 @@ static OtpError otp_get_encryptkey_from_file(char** key, struct otp* pad, gsize 
 	}
 	syndrome = otp_open_keyfile(fd, data, pad);
 	if (syndrome > OTP_WARN) return syndrome;
-		
+
 	*key = (char*)g_malloc((len)*sizeof(char));
 	memcpy(*key, *data+position, len-1);
 	/* the pad could be anything... using memcpy */
@@ -362,11 +363,11 @@ static OtpError otp_udecrypt(char** message, struct otp* pad, gsize decryptpos)
 	OtpError syndrome = OTP_OK;
 	syndrome = otp_get_decryptkey_from_file(key, pad, len, decryptpos);
 	if (syndrome > OTP_WARN) return syndrome;
-#ifdef DEBUG 
+#ifdef DEBUG
 	otp_printint(*key, len, "paranoia: decryptkey");
 #endif
 	otp_xor(message, key, len);
-#ifdef DEBUG 
+#ifdef DEBUG
 	otp_printint(*key,len, "paranoia: decrypt-xor");
 #endif
 	return syndrome;
@@ -388,7 +389,7 @@ static OtpError otp_uencrypt(char** message, struct otp* pad)
 	/* get one byte from keyfile for random length */
 	syndrome = otp_get_encryptkey_from_file(rand, pad, 1+1);
 	if ( syndrome > OTP_WARN ) return syndrome;
-	
+
 	rnd = (unsigned char)*rand[0]*RNDLENMAX/255;
 	g_free(*rand);
 	msg = g_malloc0(rnd+len);       /* Create a new,longer message */
@@ -399,11 +400,11 @@ static OtpError otp_uencrypt(char** message, struct otp* pad)
 #endif
 	syndrome = otp_get_encryptkey_from_file(key, pad, len);
 	if ( syndrome > OTP_WARN ) return syndrome;
-#ifdef DEBUG 
+#ifdef DEBUG
 	otp_printint(*key,len, "paranoia: encryptkey");
 #endif
 	otp_xor(message, key, len);
-#ifdef DEBUG 
+#ifdef DEBUG
 	otp_printint(*key,len, "paranoia: encrypt-xor");
 #endif
 	otp_base64_encode(message, len);
@@ -449,6 +450,9 @@ OtpError otp_generate_key_pair(const char* alice,
  /* The function can only generate Keyfiles with a filesize of n*BLOCKSIZE*/
 
 {
+	char *alice_file, *bob_file, id[8];
+	unsigned int key_size, my_id;
+
 	if (alice == NULL || bob == NULL || path == NULL
 			|| source == NULL || size <= 0) {
 		return OTP_ERR_INPUT;
@@ -467,172 +471,25 @@ OtpError otp_generate_key_pair(const char* alice,
 	} else {
 		size = size/BLOCKSIZE + 1;
 	}
-#ifdef DEBUG 
-	printf("paranoia: otp_genkey initial checks\n");
+#ifdef DEBUG
+	g_print("paranoia: otp_genkey initial checks\n");
 #endif
-	/* open entropy source */
-	int rfd;
-	if ((rfd = open(source, O_RDONLY)) == -1) {
-		perror("open");
-		return OTP_ERR_FILE_ENTROPY_SOURCE;
-	}
-	struct stat rfstat;
-	if (stat(source, &rfstat) == -1) {
-		perror("stat");
-		close(rfd);
-		return OTP_ERR_FILE_ENTROPY_SOURCE;
-	}
+	my_id = get_id();
 
-	gsize rfilesize = rfstat.st_size;
-	/* If the source is to small and not a character dev 
-	 * The ID (an integer) is also generated from the entropy. */
-	if ( !( ((rfstat.st_mode|S_IFCHR) == rfstat.st_mode)
-			|| (rfilesize >= size*BLOCKSIZE + ID_SIZE) ) ) {
-		close(rfd);
-		return OTP_ERR_FILE_ENTROPY_SOURCE_SIZE;
-	}
-#ifdef DEBUG 
-	printf("paranoia: otp_genkey source open\n");
-#endif
+//	my_id = 123456789;
+	sprintf(id, "%u.8", my_id);
+	key_size = size * 1024;
 
-	/* id string from integer */
-	unsigned int id;
-	/* Create ID from entropy source */
-	read(rfd, &id, ID_SIZE);
-	/* Our ID string */;
-	char* idstr = g_strdup_printf("%.8X", id);
-	
-	/* alloc filesnames */	
-	/* get filepath to drop bob's key */
-#ifdef USEDESKTOP
-	/* Owned by Glib. No need for g_free */
-	const char *desktoppath = g_get_user_special_dir(G_USER_DIRECTORY_DESKTOP);
-#else
-	const char *desktoppath = g_get_home_dir ();
-#endif
-	char* afilename = g_strconcat(path, alice, FILE_DELI, bob, FILE_DELI, 
-			idstr, ".entropy", NULL);
+	alice_file = g_strdup_printf("%s%s %s %s.entropy", path, alice, bob, id);
+	bob_file = g_strdup_printf("%s%s %s %s.entropy", path, bob, alice, id);
 
-	char* bfilename = g_strconcat(desktoppath, PATH_DELI, bob, FILE_DELI,
-			alice, FILE_DELI, idstr, ".entropy", NULL);
+	generate_keys_from_keygen(alice_file, bob_file, key_size);
 
-	g_free(idstr);
+	g_print("%s\n%s\n", alice_file, bob_file);
 
-	/* entropy source ready, check for paranoia dir */
-	DIR* dp;
-	dp = opendir(path);
-	if (dp == NULL) {
-		/* Create the directory for the entropy files if it does not exist */
-		mkdir(path, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP );
-	} else {
-		closedir(dp);
-	}
-#ifdef DEBUG 
-	printf("paranoia: otp_genkey dir checked\n");
-#endif
-	
-	/* Opening the alice's key file */
-	int afd;
-	char* space1 = "";
-	char** adata = &space1;
-	if ((afd = open(afilename, O_RDWR)) == -1) {
-	} else {
-		/* File already exists. I will not overwrite any existing file!*/
-		close(rfd);
-		g_free(afilename);
-		g_free(bfilename);
-		return OTP_ERR_FILE_EXISTS;
-	}
-	if ((afd = open(afilename,
-	                O_RDWR|O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP ))
-	    == -1) {
-		perror("open");
-		close(rfd);
-		close(afd);
-		g_free(afilename);
-		g_free(bfilename);
-		return OTP_ERR_FILE;
-	}
-	
-#ifdef DEBUG 
-	printf("paranoia: otp_genkey afile open\n");
-#endif
-	
-	/* Source and alice key file is open, copy entropy */
-	char buffer[BLOCKSIZE];
-	int i = 0;
+	g_free(alice_file);
+	g_free(bob_file);
 
-	/* Filling the first file */
-	for (i = 0; i < size; i++) {
-		read(rfd, buffer, BLOCKSIZE);
-		write(afd, buffer, BLOCKSIZE);
-	}
-	/* Close the entropy source */
-	close(rfd);
-	
-#ifdef DEBUG 
-	printf("paranoia: otp_genkey source closed\n");
-#endif
-	
-	/* Alice's file written, opening the Bob's file */
-	int bfd = 0;
-	if ((bfd = open(bfilename, O_RDWR)) == -1) {
-	} else {
-		/* File already exists. I will not overwrite any existing file!*/
-		close(afd);
-		g_free(afilename);
-		g_free(bfilename);
-		return OTP_ERR_FILE_EXISTS;
-	}
-	if ((bfd = open(bfilename,
-			O_RDWR|O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP )) == -1) {
-		perror("open");
-		close(afd);
-		close(bfd);
-		g_free(afilename);
-		g_free(bfilename);
-		return OTP_ERR_FILE;
-	}
-	
-	/* Opening a memory map for Alice's file */
-	struct stat afstat;
-	if (stat(afilename, &afstat) == -1) {
-		perror("stat");
-		close(afd);
-		close(bfd);
-		g_free(afilename);
-		g_free(bfilename);
-		return OTP_ERR_FILE;
-	}
-	gsize afilesize = afstat.st_size;
-	if ((*adata = mmap((caddr_t)0, afilesize, PROT_READ, MAP_SHARED, afd, 0)) == (caddr_t)(-1)) {
-		perror("mmap");
-		close(afd);
-		close(bfd);
-		g_free(afilename);
-		g_free(bfilename);
-		return OTP_ERR_FILE;
-	}
-#ifdef DEBUG 
-	printf("paranoia: otp_genkey afile written\n");
-#endif
-	
-	/* Create the reversed second file from Alice's one */
-	int j;
-	for (i = afilesize-BLOCKSIZE; i >= 0; i = i-BLOCKSIZE) {
-		for (j = 0; j < BLOCKSIZE; j++) {
-			buffer[BLOCKSIZE-1-j] = *(*adata+i+j);
-		}
-		write(bfd, buffer, BLOCKSIZE);
-	}
-#ifdef DEBUG 
-	printf("paranoia: otp_genkey bfile written\n");
-#endif
-	munmap(adata, afilesize);
-	close(afd);
-	close(bfd);
-	g_free(afilename);
-	g_free(bfilename);
 	return OTP_OK;
 }
 
@@ -762,7 +619,7 @@ OtpError otp_encrypt(struct otp* pad, char** message)
    returns TRUE if it could encrypt the message */
 {
 	OtpError syndrome = OTP_OK;
-#ifdef DEBUG 
+#ifdef DEBUG
 	otp_printint(*message,strlen(*message), "paranoia: before encrypt");
 #endif
 	if (pad == NULL || message == NULL || *message == NULL) return OTP_ERR_INPUT;
@@ -789,7 +646,7 @@ OtpError otp_encrypt(struct otp* pad, char** message)
 	g_free(*message);
 	g_free(pos_str);
 	*message = new_msg;
-#ifdef DEBUG 
+#ifdef DEBUG
 	otp_printint(*message,strlen(*message), "paranoia: after encrypt");
 #endif
 	g_free(old_msg);
@@ -800,7 +657,7 @@ OtpError otp_decrypt(struct otp* pad, char** message)
 /* Strips the encrypted message and decrypts it.
    returns TRUE if it could decrypt the message  */
 {
-#ifdef DEBUG 
+#ifdef DEBUG
 	otp_printint(*message, strlen(*message), "paranoia: before decrypt");
 #endif
 	OtpError syndrome = OTP_OK;
@@ -815,7 +672,7 @@ OtpError otp_decrypt(struct otp* pad, char** message)
 		return OTP_ERR_MSG_FORMAT;
 		}
 	char* old_msg = g_strdup(*message);
-	
+
 	/* Our position to decrypt in the pad */
 	gsize decryptpos = (unsigned int)g_ascii_strtoll( strdup(m_array[0]), NULL, 10);
 	if (strcmp(m_array[1], pad->id) != 0) return OTP_ERR_ID_MISMATCH;
@@ -834,7 +691,7 @@ OtpError otp_decrypt(struct otp* pad, char** message)
 	}
 #endif
 
-#ifdef DEBUG 
+#ifdef DEBUG
 	otp_printint(*message,strlen(*message), "paranoia: after decrypt");
 #endif
 	g_free(old_msg);
@@ -844,11 +701,11 @@ OtpError otp_decrypt(struct otp* pad, char** message)
 /* ------------------ otp_config ------------------------------ */
 
 struct otp_config* otp_conf_create(
-				const char* client_id, 
-				const char* path, 
+				const char* client_id,
+				const char* path,
 				const char* export_path)
-/* Creation of the config stucture of the library, sets some parameters 
- * Default values: 
+/* Creation of the config stucture of the library, sets some parameters
+ * Default values:
  * Sets msg_key_improbability_limit = DEFAULT_IMPROBABILITY
  * Sets random_msg_tail_max_len = DEFAULT_RNDLENMAX */
 {
@@ -863,7 +720,7 @@ struct otp_config* otp_conf_create(
 	config->random_msg_tail_max_len = DEFAULT_RNDLENMAX;
 	config->pad_count = 0; /* Initialize with no associated pads */
 
-#ifdef DEBUG 
+#ifdef DEBUG
 	printf("paranoia: config created with: %s, %s, %s, %e, %i\n", config->client_id,
 			config->path, config->export_path, config->msg_key_improbability_limit,
 			config->random_msg_tail_max_len);
@@ -872,9 +729,9 @@ struct otp_config* otp_conf_create(
 return config;
 }
 
-OtpError otp_conf_destroy(struct otp_config* config) 
+OtpError otp_conf_destroy(struct otp_config* config)
 {
-/* Freeing of the otp_config struct 
+/* Freeing of the otp_config struct
  * This fails with OTP_ERR_CONFIG_PAD_COUNT if there are any pads open in this config */
 	if (config == NULL) return OTP_ERR_INPUT;
 	if (config->pad_count != 0) return OTP_ERR_CONFIG_PAD_COUNT;
@@ -884,7 +741,7 @@ OtpError otp_conf_destroy(struct otp_config* config)
 	if (config->export_path != NULL) g_free(config->export_path);
 	g_free(config);
 
-#ifdef DEBUG 
+#ifdef DEBUG
 	printf("paranoia: config destroyed\n");
 #endif
 	return OTP_OK;
@@ -893,32 +750,32 @@ OtpError otp_conf_destroy(struct otp_config* config)
 /* ------------------ otp_config get functions ------------------- */
 
 const char* otp_conf_get_path(const struct otp_config* config)
-/* Gets a reference to the path in the config 
+/* Gets a reference to the path in the config
  * Does not need to be freed.  */
 {
 	if (config == NULL) return NULL;
-#ifdef DEBUG 
+#ifdef DEBUG
 	printf("paranoia: read config->path: %s\n",config->path);
 #endif
 	return config->path;
 }
 
 const char* otp_conf_get_export_path(const struct otp_config* config)
-/* Gets a reference to the export path in the config 
+/* Gets a reference to the export path in the config
  * Does not need to be freed.  */
 {
 	if (config == NULL) return NULL;
-#ifdef DEBUG 
+#ifdef DEBUG
 	printf("paranoia: read config->export_path: %s\n",config->export_path);
 #endif
 	return config->export_path;
 }
 
-gsize otp_conf_get_random_msg_tail_max_len(const struct otp_config* config) 
+gsize otp_conf_get_random_msg_tail_max_len(const struct otp_config* config)
 /* Gets random_msg_tail_max_len */
 {
 	if (config == NULL) return 0;
-#ifdef DEBUG 
+#ifdef DEBUG
 	printf("paranoia: read config->random_msg_tail_max_len: %u\n",config->random_msg_tail_max_len);
 #endif
 	return config->random_msg_tail_max_len;
@@ -928,7 +785,7 @@ double otp_conf_get_msg_key_improbability_limit(const struct otp_config* config)
 /* Gets msg_key_improbability_limit */
 {
 	if (config == NULL) return 0;
-#ifdef DEBUG 
+#ifdef DEBUG
 	printf("paranoia: read config->msg_key_improbability_limit: %e\n",config->msg_key_improbability_limit);
 #endif
 	return config->msg_key_improbability_limit;
@@ -943,7 +800,7 @@ OtpError otp_conf_set_path(struct otp_config* config, const char* path)
 	if (config->path == NULL) return OTP_ERR_INPUT;
 	g_free(config->path);
 	config->path = g_strdup(path);
-#ifdef DEBUG 
+#ifdef DEBUG
 	printf("paranoia: set config->path: %s\n",config->path);
 #endif
 	return OTP_OK;
@@ -956,39 +813,39 @@ OtpError otp_conf_set_export_path(struct otp_config* config, const char* export_
 	if (config->export_path == NULL) return OTP_ERR_INPUT;
 	g_free(config->export_path);
 	config->export_path = g_strdup(export_path);
-#ifdef DEBUG 
+#ifdef DEBUG
 	printf("paranoia: set config->export_path: %s\n",config->export_path);
 #endif
 	return OTP_OK;
 }
 
 OtpError otp_conf_set_random_msg_tail_max_len(struct otp_config* config,
-				 gsize random_msg_tail_max_len) 
+				 gsize random_msg_tail_max_len)
 /* Sets random_msg_tail_max_len:
- * 					The max length of the randomly added tailing charakters 
+ * 					The max length of the randomly added tailing charakters
  * 					to prevent 'eve' from knowng the length of the message.
  * 					Disabled if 0. Default is already set to DEFAULT_RNDLENMAX */
 {
 	if (config == NULL) return OTP_ERR_INPUT;
 	config->random_msg_tail_max_len = random_msg_tail_max_len;
-#ifdef DEBUG 
+#ifdef DEBUG
 	printf("paranoia: set config->random_msg_tail_max_len: %u\n",config->random_msg_tail_max_len);
 #endif
 	return OTP_OK;
 }
 
 OtpError otp_conf_set_msg_key_improbability_limit(struct otp_config* config,
-				 double msg_key_improbability_limit) 
-/* Sets msg_key_improbability_limit: 
+				 double msg_key_improbability_limit)
+/* Sets msg_key_improbability_limit:
  * 					If the used random entropy shows pattern that are less likely
- * 					then this limit, the entropy is discarded and an other block of 
+ * 					then this limit, the entropy is discarded and an other block of
  * 					entropy is used. A warning OTP_WARN_KEY_NOT_RANDOM is given.
  * 					Disabled if 0.0. Default is already set to DEFAULT_IMPROBABILITY. */
 {
 	if (config == NULL) return OTP_ERR_INPUT;
 	if (msg_key_improbability_limit < 0.0 || msg_key_improbability_limit > 1.0) return OTP_ERR_INPUT;
 	config->msg_key_improbability_limit = msg_key_improbability_limit;
-#ifdef DEBUG 
+#ifdef DEBUG
 	printf("paranoia: set config->msg_key_improbability_limit: %e\n",config->msg_key_improbability_limit);
 #endif
 	return OTP_OK;

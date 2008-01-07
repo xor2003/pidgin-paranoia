@@ -16,13 +16,15 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-
-#include <glib.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/resource.h>
 #include <sys/time.h>
 #include <stdio.h>
+#include <string.h>
+#include <glib.h>
+
+#include "keygen.h"
 
 // buffer which is stores the bytes before they are written into the keyfile
 #define BUFFSIZE 20
@@ -32,8 +34,9 @@
 
 
 // Definition for the funcions and global variables. => Has to be moved into the header fp_alice later
-int generate_keys_from_keygen(char *alice, char *bob, unsigned int size);
+//GThread *generate_keys_from_keygen(char *alice, char *bob, unsigned int size);
 int invert(char *src, char *dest);
+//unsigned int get_id();
 unsigned char bit2char(short buf[8]);
 gpointer start_generation(gpointer data);
 gpointer devrand(gpointer data);
@@ -50,16 +53,22 @@ struct _key_data {
 	char *alice, *bob;
 } key_data;
 
-int main()
+//int main()
 /*
 *	Main function only for testing purposes
 */
-
+/*
 {
-	generate_keys_from_keygen("/home/psachs/.paranoia/alice@jabber.org","/home/psachs/bob@jabber.org",10000);
+	GThread *my_thread;
+	generate_keys_from_keygen("/home/psachs/.paranoia/alice@jabber.org bob@jabber.org 12345678.entropy",
+								"/home/psachs/bob@jabber.org alice@jabber.org 12345678.entropy",10000);
+	my_thread = generate_keys_from_keygen("alice", "bob", 1000);
+	g_thread_join(my_thread);
+
+
 	return 0;
 }
-
+*/
 
 int invert(char *src, char *dest)
 /*
@@ -76,8 +85,21 @@ int invert(char *src, char *dest)
 		return -1;
 	}
 
-	fpin = fopen(src, "r");
-	fpout = fopen(dest, "w");
+	if(strcmp(src,dest) == 0) {
+		g_printerr("source and destination same file\n");
+		return -1;
+	}
+
+	if((fpin = fopen(src, "r")) == NULL) {
+		g_printerr("couldn't open source\n");
+		return -1;
+	}
+
+	if((fpout = fopen(dest, "w")) == NULL) {
+		g_printerr("couldn't open destination\n");
+		return -1;
+	}
+
 	fseek(fpin, -1, SEEK_END);
 	file_length = ftell(fpin);
 
@@ -94,22 +116,44 @@ int invert(char *src, char *dest)
 	return 0;
 }
 
-int generate_keys_from_keygen(char *alice, char *bob, unsigned int size)
+unsigned int get_id() {
+	int fp_urand;
+	unsigned int id;
+
+
+	if((fp_urand = open("/dev/urandom", O_RDONLY)) < 0 ) {
+		g_printerr("device open error\n");
+		return 0;
+	}
+
+	if(read(fp_urand, &id, sizeof(id)) != sizeof(id)) {
+		g_printerr("read error\n");
+		return 0;
+	}
+
+	close(fp_urand);
+
+	return id;
+}
+
+GThread *generate_keys_from_keygen(char *alice, char *bob, unsigned int size)
 /*
 *	generate the key pair for alice and bob
 *	alice and bob must be the correct filenames including the correct absoute path.
 *	Size should be strictly positiv in bytes.
 */
 {
+	GThread *key_thread;
+
 // check if the function inputs are correct
 	if(alice == NULL) {
 		g_printerr("Alice file pointer NULL\n");
-		return 0;
+		return NULL;
 	}
 
 	if(bob == NULL) {
 		g_printerr("Bob file pointer NULL\n");
-		return 0;
+		return NULL;
 	}
 
 // initialize g_thread
@@ -119,11 +163,10 @@ int generate_keys_from_keygen(char *alice, char *bob, unsigned int size)
 	key_data.size = size;
 	key_data.alice = alice;
 	key_data.bob = bob;
-	GThread *key_thread;
 
 	if((key_thread = g_thread_create(start_generation, NULL, TRUE, NULL)) != NULL) g_print("keygen started\n");
-	g_thread_join(key_thread);
-	return 0;
+
+	return key_thread;
 }
 
 gpointer start_generation(gpointer data)
@@ -165,7 +208,7 @@ gpointer start_generation(gpointer data)
 // create the inverted key
 	if(key_data.size != 0) {
 		g_printerr("could not finish writing process\n");
-		return -1;
+		return 0;
 	}
 	invert(key_data.alice, key_data.bob);
 

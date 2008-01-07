@@ -7,10 +7,12 @@ plugin_LTLIBRARIES = paranoia.la
 paranoia_la_LDFLAGS = -module -avoid-version
 
 paranoia_la_SOURCES = \
-	libotp.c \
+	keygen.h \
+	keygen.c \
 	libotp.h \
-	paranoia.c \
-	keygen.c
+	libotp.c \
+	paranoia.c
+
 
 paranoia_la_CPPFLAGS = \
 	-DVERSION=\"$(VERSION)\" \
