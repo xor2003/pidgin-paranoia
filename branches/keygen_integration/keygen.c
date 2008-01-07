@@ -234,7 +234,7 @@ gpointer devrand(gpointer data)
 		g_printerr("could not open /dev/random \n");
 		return 0;
 	}
-	if((fp_alice = open(key_data.alice, O_RDWR|O_CREAT|O_APPEND, 00600)) < 0) {
+	if((fp_alice = open(key_data.alice, O_RDWR|O_CREAT|O_APPEND, 00644)) < 0) {
 		g_printerr("could not open %s \n", key_data.alice);
 		return 0;
 	}
@@ -292,7 +292,7 @@ gpointer threads(gpointer data)
 	int fp_alice;
 	GThread *tid;
 
-	if((fp_alice = open(key_data.alice,O_RDWR|O_CREAT|O_APPEND,00600)) < 0) {
+	if((fp_alice = open(key_data.alice,O_RDWR|O_CREAT|O_APPEND,00644)) < 0) {
 		g_printerr("could not open %s \n", key_data.alice);
 		return 0;
 	}
@@ -348,7 +348,7 @@ gpointer audio(gpointer data)
 		g_printerr("could not opne /dev/urandom \n");
 		return 0;
 	}
-	if((fp_alice = open(key_data.alice,O_RDWR|O_CREAT|O_APPEND,00600)) < 0) {
+	if((fp_alice = open(key_data.alice,O_RDWR|O_CREAT|O_APPEND,00644)) < 0) {
 		g_printerr("could not open %s \n", key_data.alice);
 		return 0;
 	}
@@ -413,7 +413,7 @@ gpointer sysstate(gpointer data)
 	struct rusage usage;
 	who = RUSAGE_SELF;
 
-	if((fp_alice = open(key_data.alice, O_RDWR|O_CREAT|O_APPEND, 00600)) < 0){
+	if((fp_alice = open(key_data.alice, O_RDWR|O_CREAT|O_APPEND, 00644)) < 0){
 		g_printerr("could not open %s\n", key_data.alice);
 		return 0;
 	}
@@ -455,7 +455,7 @@ gpointer prg(gpointer data)
 	int fp_alice, fp_prg;
 	unsigned short c;
 
-	if((fp_alice = open(key_data.alice, O_RDWR|O_CREAT|O_APPEND, 00600)) < 0) {
+	if((fp_alice = open(key_data.alice, O_RDWR|O_CREAT|O_APPEND, 00644)) < 0) {
 		g_printerr("could not open %s\n", key_data.alice);
 		return 0;
 	}
