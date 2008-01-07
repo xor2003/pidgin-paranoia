@@ -43,6 +43,10 @@
 #define SHOW_STATUS
 #define CENSORSHIP
 
+/* Requires GNOMElib 2.14! Bob's keyfile is placed onto the desktop. 
+ * If not set, the file is placed in the home directory. */
+//#define USEDESKTOP
+
 /* ----------------- General Paranoia Stuff ------------------ */
 #define PARANOIA_HEADER "*** Encrypted with the Pidgin-Paranoia plugin: "
 #define PARANOIA_REQUEST "*** Request for conversation with the Pidgin-\
@@ -62,8 +66,9 @@ plugin (%s) to communicate encrypted."
 #define ENTROPY_LIMIT 10000 /* has to be bigger then the message size limit */
 
 char* global_otp_path;
+struct otp_config* otp_conf;
 
-void par_add_header(char** message) 
+void par_add_header(char** message)
 /* adds the paranoia header */
 {
 	char* new_msg = g_strconcat(PARANOIA_HEADER, *message, NULL);
@@ -127,10 +132,11 @@ static char* par_strip_jabber_ressource(const char* acc)
 /* key options struct */
 struct options {
 	gboolean ack_sent; /* TRUE if a message with ACK was sent */
-	gboolean has_plugin; /* the result of the request */
+	//gboolean has_plugin; /* the result of the request */
 	gboolean otp_enabled; /* otp on/off */
 	gboolean auto_enable; /* false to force disable */
 	gboolean no_entropy; /* all entropy of one user was used up completely */
+	gboolean active; /* an initialised key */
 };
 
 /* paranoia key struct (a linked list) */
@@ -159,9 +165,10 @@ static struct key* par_create_key(const char* filename)
 	static struct options* test_opt;
 	test_opt = (struct options *) g_malloc(sizeof(struct options));
 	test_opt->ack_sent = TRUE;
-	test_opt->has_plugin = FALSE;
+	//test_opt->has_plugin = FALSE;
 	test_opt->otp_enabled = FALSE;
 	test_opt->auto_enable = TRUE;
+	test_opt->active = FALSE;
 	if(test_pad->entropy <= 0) {
 		test_opt->no_entropy = TRUE;
 	} else {
@@ -207,6 +214,7 @@ static gboolean par_init_key_list()
 		// TODO: return?
 	} else {
 		/* loop over global key dir */
+		// TODO: detect dublicate id's? loop keys?
 		while (tmp_filename != NULL) {
 			tmp_path = g_strconcat(global_otp_path, tmp_filename, NULL);
 			
@@ -231,7 +239,7 @@ static gboolean par_init_key_list()
 	g_dir_close(directoryhandle);
 
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-		"Key list of %i keys generated.\n", par_count_keys());
+		"Key list of %i keys created.\n", par_count_keys());
 
 	return TRUE;
 }
@@ -252,7 +260,116 @@ static void par_free_key_list()
 	return;
 }
 
-static struct key* par_search_key(const char* src, const char* dest, 
+static char* par_search_ids(const char* src, const char* dest)
+/* searches all ids for a src/dest pair in the keylist (comma separated).
+ * Returns NULL if none found.
+ * */
+{
+	char* ids = NULL;
+	char* src_copy = par_strip_jabber_ressource(src);
+	char* dest_copy = par_strip_jabber_ressource(dest);
+
+	struct key* tmp_ptr = keylist;
+	
+	while (!(tmp_ptr == NULL)) {
+		if ((strcmp(tmp_ptr->pad->src, src_copy) == 0) 
+				&& (strcmp(tmp_ptr->pad->dest, dest_copy) == 0)) {
+			if (ids == NULL) {
+				ids = g_strdup(tmp_ptr->pad->id);
+			} else {
+				ids = g_strconcat(ids, ",", tmp_ptr->pad->id, NULL);
+			}
+		}
+		tmp_ptr = tmp_ptr->next;
+	}
+	g_free(src_copy);
+	g_free(dest_copy);
+	return ids;
+}
+
+static struct key* par_search_key_by_id(const char* id, const char* src, 
+		const char* dest)
+/* Searches for the first key with a matching id.
+ * Source and destination have to match too.
+ * */
+{
+	char* src_copy = par_strip_jabber_ressource(src);
+	char* dest_copy = par_strip_jabber_ressource(dest);
+
+	struct key* tmp_ptr = keylist;
+
+	while (!(tmp_ptr == NULL)) {
+		if (strcmp(tmp_ptr->pad->id, id) == 0) {
+			if ((strcmp(tmp_ptr->pad->src, src_copy) == 0) 
+					&& (strcmp(tmp_ptr->pad->dest, dest_copy) == 0)) {
+				g_free(src_copy);
+				g_free(dest_copy);
+				return tmp_ptr;
+			}
+		}
+		tmp_ptr = tmp_ptr->next;
+	}
+	g_free(src_copy);
+	g_free(dest_copy);
+	return NULL;
+}
+
+static struct key* par_search_key_enabled(const char* src, const char* dest)
+/* Searches for the first initialised key with matching source and destination.
+ * Returns NULL if none found.
+ * */
+{
+	char* src_copy = par_strip_jabber_ressource(src);
+	char* dest_copy = par_strip_jabber_ressource(dest);
+
+	struct key* tmp_ptr = keylist;
+
+	while (!(tmp_ptr == NULL)) {
+		if ((strcmp(tmp_ptr->pad->src, src_copy) == 0) 
+					&& (strcmp(tmp_ptr->pad->dest, dest_copy) == 0)
+					&& tmp_ptr->opt->active) {
+				g_free(src_copy);
+				g_free(dest_copy);
+				return tmp_ptr;
+			}
+		tmp_ptr = tmp_ptr->next;
+	}
+	g_free(src_copy);
+	g_free(dest_copy);
+	return NULL;
+}
+
+static struct key* par_search_key(const char* src, const char* dest)
+/* searches a matching key in the keylist, preferably an initiliased
+ * */
+{
+	char* src_copy = par_strip_jabber_ressource(src);
+	char* dest_copy = par_strip_jabber_ressource(dest);
+
+	struct key* tmp_ptr = keylist;
+	struct key* good_key = NULL;
+
+	while (!(tmp_ptr == NULL)) {
+		if ((strcmp(tmp_ptr->pad->src, src_copy) == 0) 
+				&& (strcmp(tmp_ptr->pad->dest, dest_copy) == 0)) {
+			if (tmp_ptr->opt->active) {
+				g_free(src_copy);
+				g_free(dest_copy);
+				return tmp_ptr;
+			}
+			if (good_key == NULL) {
+				good_key = tmp_ptr;
+			}
+		}
+		tmp_ptr = tmp_ptr->next;
+	}
+	g_free(src_copy);
+	g_free(dest_copy);
+	return good_key;
+}
+
+// OLD: REMOVE ME
+static struct key* par_search_key_OLD(const char* src, const char* dest, 
 		const char* id)
 /* searches a key in the keylist, the id is optional. If no ID is given
  * it searches for the first src/dest match.
@@ -269,10 +386,14 @@ static struct key* par_search_key(const char* src, const char* dest,
 
 			if (id == NULL) {
 				/* takes the first matching key, any id */
+				g_free(src_copy);
+				g_free(dest_copy);
 				return tmp_ptr;
 			} else {
 				/* takes the exact key */
 				if (strcmp(tmp_ptr->pad->id, id) == 0) {
+					g_free(src_copy);
+					g_free(dest_copy);
 					return tmp_ptr;
 				}
 			}
@@ -286,16 +407,22 @@ static struct key* par_search_key(const char* src, const char* dest,
 
 static struct key* par_search_key_by_conv(PurpleConversation *conv)
 /* searches a key in the keylist by PurpleConversation */
-{
+{	
 	struct key* tmp_ptr = keylist;
+	struct key* good_key = NULL;
 
 	while (!(tmp_ptr == NULL)) {
 		if (tmp_ptr->conv == conv) {
-			return tmp_ptr;
+			if (tmp_ptr->opt->active) {
+				return tmp_ptr;
+			}
+			if (good_key == NULL) {
+				good_key = tmp_ptr;
+			}
 		}
 		tmp_ptr = tmp_ptr->next;
 	}
-	return NULL;
+	return good_key;
 }
 
 /* ----------------- Session Management ------------------ */
@@ -340,17 +467,26 @@ static gboolean par_session_check_req(const char* alice, const char* bob,
 {
 	if (strncmp(*message_no_header, PARANOIA_REQUEST, 
 			PARANOIA_REQUEST_LEN) == 0) {
-		/* extract the ID */
+		/* set the ptr to the first id */
 		char* tmp_ptr = *message_no_header + PARANOIA_REQUEST_LEN + 2;
-		char* id = g_strndup(tmp_ptr, OTP_ID_LENGTH);
-		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "REQUEST ID extracted: %s\n", id);
+		struct key* temp_key = NULL;
+		int totlen = strlen(*message_no_header);
 		
-		struct key* temp_key = par_search_key(alice, bob, id);
+		/* search for all requested IDs */
+		while (*tmp_ptr != ':' && temp_key == NULL && totlen > tmp_ptr - *message_no_header) {
+			char* id = g_strndup(tmp_ptr, OTP_ID_LENGTH);
+			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Searching for requested ID: %s\n", id);
+			temp_key = par_search_key_by_id(id, alice, bob);
+			g_free(id);
+			tmp_ptr += OTP_ID_LENGTH + 1;
+		}
 		if (temp_key != NULL) {
+			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Found a matching ID: %s\n", temp_key->pad->id);
 			temp_key->conv = conv;
 			if (temp_key->opt->auto_enable && !temp_key->opt->no_entropy) {
 				temp_key->opt->ack_sent = FALSE;
 				temp_key->opt->otp_enabled = TRUE;
+				temp_key->opt->active = TRUE;
 				purple_conversation_write(conv, NULL, 
 						"Encryption enabled.", 
 						PURPLE_MESSAGE_NO_LOG, time(NULL));
@@ -359,7 +495,6 @@ static gboolean par_session_check_req(const char* alice, const char* bob,
 		} else {
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "REQUEST failed! No key available.\n");
 		}
-		g_free(id);
 		return TRUE;
 	} else {
 		return FALSE;
@@ -394,7 +529,7 @@ static gboolean par_session_check_msg(struct key* used_key,
 	if (strncmp(*message_decrypted, PARANOIA_EXIT, 
 			strlen(PARANOIA_EXIT)) == 0) {
 		used_key->opt->otp_enabled = FALSE;
-		used_key->opt->has_plugin = FALSE;
+		//used_key->opt->has_plugin = FALSE;
 		purple_conversation_write(conv, NULL, 
 				"Encryption disabled (remote).", 
 				PURPLE_MESSAGE_NO_LOG, time(NULL));
@@ -405,7 +540,7 @@ static gboolean par_session_check_msg(struct key* used_key,
 	if (strncmp(*message_decrypted, PARANOIA_START,
 			strlen(PARANOIA_START)) == 0) {
 		if(used_key->opt->auto_enable) {
-			used_key->opt->has_plugin = TRUE;
+			//used_key->opt->has_plugin = TRUE;
 			used_key->opt->otp_enabled = TRUE;
 			purple_conversation_write(conv, NULL, 
 					"Encryption enabled (remote).", 
@@ -434,7 +569,8 @@ static gboolean par_session_check_msg(struct key* used_key,
 		used_key->opt->otp_enabled = FALSE;
 		used_key->opt->no_entropy = TRUE;
 		used_key->opt->auto_enable = FALSE;
-		// TODO: maybe we should destroy our key too. (?)
+		used_key->opt->active = FALSE;
+		// TODO: maybe we should destroy our key too? No! injection problem.
 		purple_conversation_write(conv, NULL, 
 				"Your converstation partner is out of entropy. "
 				"Encryption disabled (remote).", 
@@ -455,7 +591,7 @@ PurpleCmdId par_cmd_id;
 #define PARANOIA_HELP_STR "Welcome to the One-Time Pad CLI.\n\
 otp help: shows this message \notp genkey &lt;size&gt; &lt;entropy \
 source&gt;: generates a key pair of &lt;size&gt; \
-kB\notp on: tries to start the encryption\notp off: stops the \
+kiB\notp on: tries to start the encryption\notp off: stops the \
 encryption\notp info: shows details about the used key"
 #define PARANOIA_ERROR_STR "Wrong argument(s). Type '/otp help' for help."
 #define PARANOIA_KEYSIZE_ERROR "Your key size is too large."
@@ -474,7 +610,8 @@ static gboolean par_cli_try_enable_enc(PurpleConversation *conv)
 	struct key* used_key = par_search_key_by_conv(conv);
 	if (used_key != NULL) {
 		if (!used_key->opt->no_entropy) {
-			if (used_key->opt->has_plugin == TRUE) {
+			//if (used_key->opt->has_plugin == TRUE) {
+			if (used_key->opt->active == TRUE) {
 				if (!used_key->opt->otp_enabled) {
 					used_key->opt->otp_enabled = TRUE;
 					used_key->opt->ack_sent = FALSE;
@@ -546,14 +683,14 @@ static void par_cli_key_details(PurpleConversation *conv)
 	if(used_key != NULL) {
 		disp_string = g_strdup_printf("Key infos:\nSource:\t\t%s\n"
 				"Destination:\t%s\nID:\t\t\t%s\nSize:\t\t\t%i\nPosition:\t\t%i\n"
-				"Entropy:\t\t%i\nAck sent:\t\t%i\nHas plugin:\t%i\n"
+				"Entropy:\t\t%i\nActive:\t\t%i\nAck sent:\t\t%i\n"
 				"OTP enabled:\t%i\nAuto enable:\t%i\nNo entropy:\t%i",
 				used_key->pad->src, used_key->pad->dest, used_key->pad->id, 
 				used_key->pad->filesize, 
 				used_key->pad->position, used_key->pad->entropy, 
-				used_key->opt->ack_sent, used_key->opt->has_plugin, 
+				used_key->opt->active, used_key->opt->ack_sent,
 				used_key->opt->otp_enabled, used_key->opt->auto_enable, 
-				used_key->opt->no_entropy); // TODO: show protocol?
+				used_key->opt->no_entropy);
 
 	} else {
 		disp_string = g_strdup("There is no key available for this conversation.");
@@ -571,121 +708,143 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 {
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 		"An otp command was received. sweet!\n");
-		
+	OtpError syndrome = OTP_OK;
 	if (args[0] == NULL) {
 		par_cli_set_default_error(error);
 		return PURPLE_CMD_RET_FAILED;
-	} else {
-		if(strcmp("help", *args) == 0) {
-			purple_conversation_write(conv, NULL, 
-					PARANOIA_HELP_STR, 
-					PURPLE_MESSAGE_NO_LOG, time(NULL));
-		}
-		else if (strcmp("on", *args) == 0) {
-			par_cli_try_enable_enc(conv);
-		}
-		else if (strcmp("off", *args) == 0) {
-			par_cli_disable_enc(conv);
-		} 
-		else if (strcmp("info", *args) == 0) {
-			par_cli_key_details(conv);
-		} 
-		else if (strncmp("genkey ", *args, 7) == 0) {
-			gchar** param_array = g_strsplit(*args + 7, " ", 2); /* to skip "genkey " */
-
-			if (param_array[0] == NULL) {
-				g_strfreev(param_array);
-				par_cli_set_default_error(error);
-				return PURPLE_CMD_RET_FAILED;
-			}
-			
-			int size = strtol(param_array[0], NULL, 0);
-         	/* overflow detection */
-			if (size >= INT_MAX || size <= INT_MIN) {
-				purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
-						"The size value caused an integer overflow!\n");
-				g_strfreev(param_array);
-				g_free(*error);
-				*error = g_strdup(PARANOIA_KEYSIZE_ERROR);
-				return PURPLE_CMD_RET_FAILED;
-				
+	}
+	if(strcmp("help", *args) == 0) {
+		purple_conversation_write(conv, NULL, 
+				PARANOIA_HELP_STR, 
+				PURPLE_MESSAGE_NO_LOG, time(NULL));
+	}
+	else if (strcmp("on", *args) == 0) {
+		par_cli_try_enable_enc(conv);
+	}
+	else if (strcmp("off", *args) == 0) {
+		par_cli_disable_enc(conv);
+	}
+	else if (strcmp("drop", *args) == 0) {
+	// REMOVE ME (just for testing!)
+		struct key* used_key = par_search_key_by_conv(conv);
+		if (used_key != NULL) {
+			if (used_key->opt->otp_enabled) {
+				used_key->opt->otp_enabled = FALSE;
+				purple_conversation_write(conv, NULL, 
+						"Encryption disabled. (local and temporal)", 
+						PURPLE_MESSAGE_NO_LOG, time(NULL));
 			} else {
-				if (size <= 0) {
-					purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-							"The size value is not a positive int!\n");
-					g_strfreev(param_array);
-					par_cli_set_default_error(error);
-					return PURPLE_CMD_RET_FAILED;
-				} else {
-					/* found a positive int */
-					// FIXME: additional garbage after the int is just ignored(?)
-					purple_conversation_write(conv, NULL, 
-							"Please wait. Generating keys...", 
-							PURPLE_MESSAGE_NO_LOG, time(NULL));
-					const char* my_acc = par_strip_jabber_ressource(
-							purple_account_get_username(
-							purple_conversation_get_account(conv)));
-					const char* other_acc = par_strip_jabber_ressource(
-							purple_conversation_get_name(conv));
-
-					purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-							"Generate new key: my_acc: %s, other_acc: %s, size: %ikB\n",
-							my_acc, other_acc, size);
-
-					if (param_array[1] == NULL) {
-						/* default entropy source */
-						if (otp_generate_key_pair(my_acc, 
-									other_acc, global_otp_path, 
-									"/dev/urandom", size*1000)) {
-							purple_conversation_write(conv, NULL, 
-									"Key files successfully generated.\n"
-									"Your own key was stored in the directory '~/.paranoia'.\n"
-									"Your buddy's key is stored in your home directory.\n"
-									"Please send this key in a secure way to your partner.\n"
-									"Please reload the plugin to add your key.\n",
-									PURPLE_MESSAGE_NO_LOG, time(NULL));
-							purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-									"Generated two entropy files of %ikB size.\n", 
-									size);
-							// TODO: add key to the list
-						} else {
-							purple_conversation_write(conv, NULL, 
-									"Key files could not be generated.", 
-									PURPLE_MESSAGE_NO_LOG, time(NULL));
-						}
-					} else {
-						if (otp_generate_key_pair(my_acc, other_acc,
-									global_otp_path, g_strstrip(param_array[1]),
-									size*1000)) {
-							purple_conversation_write(conv, NULL, 
-									"Key files successfully generated.\n"
-									"Your own key was stored in the directory '~/.paranoia'.\n"
-									"Your buddy's key is stored in your home directory.\n"
-									"Please send this key in a secure way to your partner.\n"
-									"Please reload the plugin to add your key.\n", 
-									PURPLE_MESSAGE_NO_LOG, time(NULL));
-							purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-									"Generated two entropy files of %ikB size.\n", 
-									size);
-						} else {
-							purple_conversation_write(conv, NULL, 
-									"Key files could not be generated.", 
-									PURPLE_MESSAGE_NO_LOG, time(NULL));
-							purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-									"Key generation failed!\n");
-						}
-					}
-				}
+				purple_conversation_write(conv, NULL, 
+						"Encryption already disabled.", 
+						PURPLE_MESSAGE_NO_LOG, time(NULL));
 			}
-			g_strfreev(param_array);
+		} else {
+			purple_conversation_write(conv, NULL, 
+					"Couldn't drop the encryption. No key available.",
+					PURPLE_MESSAGE_NO_LOG, time(NULL));	
+		} 
+	}
+	else if (strcmp("debug", *args) == 0) {
+		struct key* tmp_ptr = keylist;
+		while (!(tmp_ptr == NULL)) {
+			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "ID: %s, Active: %i, Otp_ena: %i, Conv: %i\n", 
+					tmp_ptr->pad->id, tmp_ptr->opt->active, tmp_ptr->opt->otp_enabled, tmp_ptr->conv);
+			tmp_ptr = tmp_ptr->next;
 		}
-		else {
-			/* unknown arg */
+	} // REMOVE ME end
+	else if (strcmp("info", *args) == 0) {
+		par_cli_key_details(conv);
+	} 
+	else if (strncmp("genkey ", *args, 7) == 0) {
+		gchar** param_array = g_strsplit(*args + 7, " ", 2); /* to skip "genkey " */
+
+		if (param_array[0] == NULL) {
+			g_strfreev(param_array);
 			par_cli_set_default_error(error);
 			return PURPLE_CMD_RET_FAILED;
 		}
-	}
+		
+		int size = strtol(param_array[0], NULL, 0);
+		/* overflow detection */
+		if (size >= INT_MAX || size <= INT_MIN) {
+			purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
+					"The size value caused an integer overflow!\n");
+			g_strfreev(param_array);
+			g_free(*error);
+			*error = g_strdup(PARANOIA_KEYSIZE_ERROR);
+			return PURPLE_CMD_RET_FAILED;
+		}
+		if (size <= 0) {
+			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+					"The size value is not a positive int!\n");
+			g_strfreev(param_array);
+			par_cli_set_default_error(error);
+			return PURPLE_CMD_RET_FAILED;
+		}
+		/* found a positive int */
+		// FIXME: additional garbage after the int is just ignored(?)
+		purple_conversation_write(conv, NULL, 
+				"Please wait. Generating keys...", 
+				PURPLE_MESSAGE_NO_LOG, time(NULL));
+		const char* my_acc = par_strip_jabber_ressource(
+				purple_account_get_username(
+				purple_conversation_get_account(conv)));
+		const char* other_acc = par_strip_jabber_ressource(
+				purple_conversation_get_name(conv));
 
+		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+				"Generate new key: my_acc: %s, other_acc: %s, size: %ikiB\n",
+				my_acc, other_acc, size);
+
+		if (param_array[1] == NULL) {
+			/* default entropy source */
+			syndrome = otp_generate_key_pair(my_acc, 
+						other_acc, global_otp_path, 
+						"/dev/urandom", size*1024);
+		} else {
+			syndrome = otp_generate_key_pair(my_acc, other_acc,
+					global_otp_path, g_strstrip(param_array[1]),
+					size*1024);
+		}
+		if (syndrome > OTP_WARN) {
+			purple_conversation_write(conv, NULL, 
+					"Key files could not be generated!",
+					PURPLE_MESSAGE_NO_LOG, time(NULL));
+					purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+					"Key files could not be generated! %.8X\n", syndrome);
+			// TODO: notify the user
+		} else {
+			if (syndrome == OTP_OK) {
+				purple_conversation_write(conv, NULL, 
+						"Key files successfully generated.\n"
+						"Your own key was stored in the directory '~/.paranoia'.\n"
+						"Your buddy's key is stored in your home directory.\n"
+						"Please send this key in a secure way to your partner.\n"
+						"Please reload the plugin to add your key.\n",
+						PURPLE_MESSAGE_NO_LOG, time(NULL));
+				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+						"Generated two entropy files of %ikiB size.\n", size);
+			} else {
+				purple_conversation_write(conv, NULL, 
+				"Key files successfully generated.\n"
+				"Your own key was stored in the directory '~/.paranoia'.\n"
+				"Your buddy's key is stored in your home directory.\n"
+				"Please send this key in a secure way to your partner.\n"
+				"Please reload the plugin to add your key.\n"
+				"There was a warning issued!\n",
+				PURPLE_MESSAGE_NO_LOG, time(NULL));
+				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+						"Generated two entropy files of %ikiB size with a warning! %.8X\n",
+						size, syndrome);
+			}
+			// TODO: add key to the list	
+		}
+		g_strfreev(param_array);
+	} else { /* checked for 'genkey' */
+		/* unknown arg */
+		par_cli_set_default_error(error);
+		return PURPLE_CMD_RET_FAILED;
+	}
 	return PURPLE_CMD_RET_OK;
 }
 
@@ -705,22 +864,24 @@ void par_conversation_created(PurpleConversation *conv)
 void par_conversation_deleting(PurpleConversation *conv)
 /* signal handler for "deleting-conversation" */
 {
+	// FIXME: reset all pads!
 	struct key* used_key = par_search_key_by_conv(conv);
 	if (used_key != NULL) {
 		
 		/* send an EXIT message */
-		if (used_key->opt->otp_enabled) {
+/*		if (used_key->opt->otp_enabled) {
 			par_session_close(conv);
 		}
-		/* reset the pad */
+*/		/* reset the pad */
 		used_key->conv = NULL;
-		used_key->opt->ack_sent = TRUE;
-		used_key->opt->has_plugin = FALSE;
+/*		used_key->opt->ack_sent = TRUE;
+		//used_key->opt->has_plugin = FALSE;
 		used_key->opt->otp_enabled = FALSE;
+		used_key->opt->active = FALSE;
 		
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 				"Reset conversation in key list. EXIT sent.\n");
-	}
+*/	}
 	
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 			"Conversation deleted.\n");
@@ -737,7 +898,9 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 	if ((message == NULL) || (*message == NULL)) {
 		return TRUE;
 	}
-
+	
+	OtpError syndrome;
+	
 	/* my account name, i.e. alice@jabber.org */
 	const char* my_acc_name = purple_account_get_username(account);
 
@@ -753,8 +916,7 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 	// detect the protcol id:
 	// purple_account_get_protocol_id(account)
 
-
-	char* tmp_message = g_strdup(purple_markup_strip_html(*message));	
+	char* tmp_message = g_strdup(purple_markup_strip_html(*message));
 	char** stripped_message;
 	stripped_message = &tmp_message;
 	
@@ -767,8 +929,8 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 			g_free(*stripped_message);
 			return FALSE;
 		}
-		
-		struct key* used_key = par_search_key(my_acc_name, *sender, NULL);
+		// FIXME: problematic code! Disable all keys?
+		struct key* used_key = par_search_key_enabled(my_acc_name, *sender);
 		if (used_key != NULL) {
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 					"Found a matching key with ID: %s\n", used_key->pad->id);
@@ -796,10 +958,10 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 	g_free(*message);
 	*message = *stripped_message;
 
-	char* recv_id = otp_get_id_from_message(message);
-
 	/* search in key list */
-	struct key* used_key = par_search_key(my_acc_name, *sender, recv_id);
+	char* recv_id = otp_get_id_from_message(message);
+	struct key* used_key = par_search_key_by_id(recv_id, my_acc_name, *sender);
+	g_free(recv_id);
 
 	if (used_key != NULL) {
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
@@ -813,10 +975,16 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 		// DISABLE LIBOTP
 #else
 		// ENABLE LIBOTP
-		if (!otp_decrypt(used_key->pad, message)) {
+		syndrome = otp_decrypt(used_key->pad, message);
+		if (syndrome > OTP_WARN) {
 			purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
-					"Could not decrypt the message! That's a serious error!.\n");
+					"Could not decrypt the message! That's a serious error! %.8X\n", syndrome);
 			// TODO: notify the user
+		} else {
+			if (syndrome != OTP_OK) {
+				purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
+						"Message decrypted but there is a warning! %.8X\n", syndrome);
+			}
 		}
 #endif
 
@@ -826,18 +994,19 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 		}
 
 		// TODO: detect ACK message
-		if (!used_key->opt->has_plugin) {
+		/*if (!used_key->opt->has_plugin) {
 			used_key->opt->has_plugin = TRUE;
 
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Encrypted msg received. Now has_plugin = TRUE.\n");
-		}
+		} */
 
 		// encryption not enabled?
 		if (!used_key->opt->otp_enabled) {
 			//can I activate an encrypted conversation too?
 			if(used_key->opt->auto_enable) {
-				used_key->opt->has_plugin = TRUE;
+				//used_key->opt->has_plugin = TRUE;
 				used_key->opt->otp_enabled = TRUE;
+				used_key->opt->active = TRUE;
 				purple_conversation_write(conv, NULL, 
 						"Encryption enabled.", 
 						PURPLE_MESSAGE_NO_LOG, time(NULL));
@@ -865,6 +1034,7 @@ static void par_im_msg_sending(PurpleAccount *account,
 /* signal handler for "sending-im-msg" */
 {
 	const char* my_acc_name = purple_account_get_username(account);
+	OtpError syndrome;
 
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 			"My account: %s\n", my_acc_name);
@@ -873,15 +1043,14 @@ static void par_im_msg_sending(PurpleAccount *account,
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 			"Original Msg: %s\n", *message);
 
-	/* search in key list */
-	struct key* used_key = par_search_key(my_acc_name, receiver, NULL);
+	/* search in key list for a matching or initialised key */
+	struct key* used_key = par_search_key(my_acc_name, receiver);
 
 	if (used_key != NULL) {
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 				"Found a matching Key with pad ID: %s\n", used_key->pad->id);
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "otp_enabled == %i\n", used_key->opt->otp_enabled);
 
-		/* add the ID to the request message */
 		if (strncmp(*message, PARANOIA_REQUEST, PARANOIA_REQUEST_LEN) == 0) {
 			/* don't send requests if we have no entropy. */
 			if (used_key->opt->no_entropy) {
@@ -891,7 +1060,18 @@ static void par_im_msg_sending(PurpleAccount *account,
 				*message = NULL;
 				return;
 			}
-			char *req_msg = g_strdup_printf(*message, used_key->pad->id, PARANOIA_WEBSITE);
+			if ( FALSE/* used_key->opt->active */) {
+				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+						"Already active. Won't sent REQUEST.\n");
+				g_free(*message);
+				*message = NULL;
+				used_key->opt->ack_sent = TRUE;
+				return;
+			}
+			/* search for all matching ids and add them to the request message */
+			char *ids = par_search_ids(my_acc_name, receiver);
+			char *req_msg = g_strdup_printf(*message, ids, PARANOIA_WEBSITE);
+			g_free(ids);
 			g_free(*message);
 			*message = req_msg;
 		}
@@ -910,6 +1090,7 @@ static void par_im_msg_sending(PurpleAccount *account,
 				used_key->opt->no_entropy = TRUE;
 				used_key->opt->otp_enabled = FALSE;
 				used_key->opt->auto_enable = FALSE;
+				used_key->opt->active = FALSE;
 				purple_conversation_write(used_key->conv, NULL, 
 						"All your entropy has been used. Encryption disabled. "
 						"The last Message could not be sent.", 
@@ -917,18 +1098,35 @@ static void par_im_msg_sending(PurpleAccount *account,
 				// TODO: display the message in the msg too
 				/* delete the remaining entropy */
 				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-						"You have not enought entropy! no_entropy = TRUE\n");
-				if (otp_erase_key(used_key->pad)) {
+						"You have not enough entropy! no_entropy = TRUE\n");
+				syndrome = otp_erase_key(used_key->pad);
+				if (syndrome == OTP_OK) {
 					purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 							"Remaining entropy erased!\n");
+					if (syndrome <= OTP_WARN) {
+						purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+								"Warning erasing entropy! %.8X\n",syndrome);
+					} else {
+						purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+								"Error erasing entropy! %.8X\n",syndrome);
+					}
 				}
 				/* delete message and send no entropy msg */
 				g_free(*message);
 				*message = g_strdup(PARANOIA_NO_ENTROPY);
-				if (!otp_encrypt_warning(used_key->pad, message, 0)) {
+				
+				syndrome = otp_encrypt_warning(used_key->pad, message, 0);
+				if (syndrome > OTP_WARN) {
 					purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
-							"Could not send an entropy warning. That's a serious error!.\n");
+							"Could not send an entropy warning. That's a serious error! %.8X\n",syndrome);
+				// TODO: notify the user
+				} else {
+					if (syndrome != OTP_OK) {
+						purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
+								"Entropy waring sent but there is a warning! %.8X\n",syndrome);
+					}
 				}
+				
 				par_add_header(message);
 				return;
 			} else {
@@ -947,10 +1145,18 @@ static void par_im_msg_sending(PurpleAccount *account,
 #ifdef NO_OTP
 		// DISABLE LIBOTP
 #else
-		// ENABLE LIBOT
-		if (!otp_encrypt(used_key->pad, message)) {
+		// ENABLE LIBOP
+		
+		syndrome = otp_encrypt(used_key->pad, message);
+		if (syndrome > OTP_WARN) {
 			purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
-					"Could not encrypt the message. That's a serious error!.\n");
+					"Could not encrypt the message. That's a serious error! %.8X\n", syndrome);
+			// TODO: notify the user
+		} else {
+			if (syndrome != OTP_OK) {
+				purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
+						"Message encrypted but there is a warning! %.8X\n", syndrome);
+			}
 		}
 #endif
 
@@ -988,7 +1194,8 @@ static gboolean par_im_msg_change_display(PurpleAccount *account,
 
 	/* save the first conv pounter (if libpurple >= 2.2.0) */
 	if (who != NULL) { /* needed to exclude libpurple < 2.2.0 */
-		used_key = par_search_key(purple_account_get_username(account), who, NULL);
+		used_key = par_search_key(purple_account_get_username(account), who);
+		//FIXME: save conv to all keys????
 		if ( used_key != NULL) {
 			if (used_key->conv == NULL) {
 				used_key->conv = conv;
@@ -1063,9 +1270,20 @@ static gboolean plugin_load(PurplePlugin *plugin)
 
 	/* set the global key folder */
 	const gchar* home = g_get_home_dir();
+	
+	// FIXME: global path not needed anymore */
 	global_otp_path = g_strconcat(home, PARANOIA_PATH, NULL);
-
-	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Key Path: %s\n", global_otp_path);
+	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Key path: %s\n", global_otp_path);
+	
+#ifdef USEDESKTOP
+	const char *desktoppath = g_get_user_special_dir(G_USER_DIRECTORY_DESKTOP);
+#else
+	const char *desktoppath = g_get_home_dir();
+#endif
+	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Export path: %s\n", desktoppath);
+	
+	/* Create global libotp config */
+	otp_conf = otp_conf_create(PARANOIA_ID, global_otp_path, desktoppath);
 
 	/* get the conversation handle */
 	void *conv_handle;
@@ -1117,11 +1335,14 @@ gboolean plugin_unload(PurplePlugin *plugin)
 	/* free the key list */
 	par_free_key_list();
 
+	/* destoy libotp config */
+	otp_conf_destroy(otp_conf);
+
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Plugin unloaded.\n");
 	return TRUE;
 }
 
-static void init_plugin(PurplePlugin *plugin)
+static void plugin_init(PurplePlugin *plugin)
 /* gets called when libpurple probes the plugin */
 {
 	return;
@@ -1144,7 +1365,6 @@ static PurplePluginInfo info = {
     PARANOIA_ID,     			/* plugin id */
     "One-Time Pad Encryption",  /* plugin name */
     PARANOIA_VERSION,           /* version */
-
     "Paranoia One-Time Pad Encryption Plugin",   
 							/* This is the summary of your plugin.  It
                                    should be a short little blurb.  The UI
@@ -1158,7 +1378,6 @@ static PurplePluginInfo info = {
                                    how much to display). */
     PARANOIA_AUTHORS,		/* name and e-mail address */
     PARANOIA_WEBSITE,		/* website */
-
     plugin_load,            /* This is a pointer to a function for
                                    libpurple to call when it is loading the
                                    plugin.  It should be of the type:
@@ -1180,7 +1399,6 @@ static PurplePluginInfo info = {
 
                                    void plugin_destroy(PurplePlugin *plugin)
                                  */
-
     NULL,                   /* a pointer to a PidginPluginUiInfo struct */
     NULL,                   /* PurplePluginLoaderInfo or PurplePluginProtocolInfo struct. */
     NULL,                   /* PurplePluginUiInfo struct. */
@@ -1199,4 +1417,4 @@ static PurplePluginInfo info = {
     NULL
 };
 
-PURPLE_INIT_PLUGIN(paranoia, init_plugin, info)
+PURPLE_INIT_PLUGIN(paranoia, plugin_init, info)

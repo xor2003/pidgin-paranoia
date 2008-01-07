@@ -1,3 +1,5 @@
+SUBDIRS = tools
+
 plugindir = $(PURPLE_LIBDIR)/purple-2
 
 plugin_LTLIBRARIES = paranoia.la

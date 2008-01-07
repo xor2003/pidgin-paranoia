@@ -2,6 +2,17 @@
                   Pidgin Paranoia Plugin Change Log
 --------------------------------------------------------------------------------
 
+Version 0.2.0
+--------------------------------------------------------------------------------
+Simon Wenner:
+ * Check libpurple and glib minor version number in configure
+
+Christian Wäckerlin:
+ * Libotp: System of error syndromes (OtpError) implemented
+ * Lipotp: otp_encrypt, otp_decrypt, otp_encrypt_warning are now transactional
+
+
+
 Version 0.1.0
 --------------------------------------------------------------------------------
 Simon Wenner:
