@@ -1,6 +1,6 @@
 /*
  * Pidgin-Paranoia Plug-in - Encrypts your messages with a one-time pad.
- * Copyright (C) 2007  Simon Wenner
+ * Copyright (C) 2007-2008  Simon Wenner
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -291,6 +291,7 @@ static struct key* par_search_key_by_id(const char* id, const char* src,
 		const char* dest)
 /* Searches for the first key with a matching id.
  * Source and destination have to match too.
+ * Returns NULL if none was found
  * */
 {
 	char* src_copy = par_strip_jabber_ressource(src);
@@ -314,9 +315,9 @@ static struct key* par_search_key_by_id(const char* id, const char* src,
 	return NULL;
 }
 
-static struct key* par_search_key_enabled(const char* src, const char* dest)
+static struct key* par_search_key(const char* src, const char* dest)
 /* Searches for the first initialised key with matching source and destination.
- * Returns NULL if none found.
+ * Returns NULL if none was found.
  * */
 {
 	char* src_copy = par_strip_jabber_ressource(src);
@@ -339,8 +340,8 @@ static struct key* par_search_key_enabled(const char* src, const char* dest)
 	return NULL;
 }
 
-static struct key* par_search_key(const char* src, const char* dest)
-/* searches a matching key in the keylist, preferably an initiliased
+static struct key* par_search_key_weak(const char* src, const char* dest)
+/* searches a matching key in the keylist, preferably an active one
  * */
 {
 	char* src_copy = par_strip_jabber_ressource(src);
@@ -352,7 +353,7 @@ static struct key* par_search_key(const char* src, const char* dest)
 	while (!(tmp_ptr == NULL)) {
 		if ((strcmp(tmp_ptr->pad->src, src_copy) == 0) 
 				&& (strcmp(tmp_ptr->pad->dest, dest_copy) == 0)) {
-			if (tmp_ptr->opt->active) {
+			if(tmp_ptr->opt->active) {
 				g_free(src_copy);
 				g_free(dest_copy);
 				return tmp_ptr;
@@ -368,46 +369,9 @@ static struct key* par_search_key(const char* src, const char* dest)
 	return good_key;
 }
 
-// OLD: REMOVE ME
-static struct key* par_search_key_OLD(const char* src, const char* dest, 
-		const char* id)
-/* searches a key in the keylist, the id is optional. If no ID is given
- * it searches for the first src/dest match.
- * */
-{
-	char* src_copy = par_strip_jabber_ressource(src);
-	char* dest_copy = par_strip_jabber_ressource(dest);
-
-	struct key* tmp_ptr = keylist;
-
-	while (!(tmp_ptr == NULL)) {
-		if ((strcmp(tmp_ptr->pad->src, src_copy) == 0) 
-				&& (strcmp(tmp_ptr->pad->dest, dest_copy) == 0)) {
-
-			if (id == NULL) {
-				/* takes the first matching key, any id */
-				g_free(src_copy);
-				g_free(dest_copy);
-				return tmp_ptr;
-			} else {
-				/* takes the exact key */
-				if (strcmp(tmp_ptr->pad->id, id) == 0) {
-					g_free(src_copy);
-					g_free(dest_copy);
-					return tmp_ptr;
-				}
-			}
-		}
-		tmp_ptr = tmp_ptr->next;
-	}
-	g_free(src_copy);
-	g_free(dest_copy);
-	return NULL;
-}
-
-static struct key* par_search_key_by_conv(PurpleConversation *conv)
+//static struct key* par_search_key_by_conv(PurpleConversation *conv)
 /* searches a key in the keylist by PurpleConversation */
-{	
+/* {	
 	struct key* tmp_ptr = keylist;
 	struct key* good_key = NULL;
 
@@ -423,17 +387,27 @@ static struct key* par_search_key_by_conv(PurpleConversation *conv)
 		tmp_ptr = tmp_ptr->next;
 	}
 	return good_key;
-}
+} */
 
 /* ----------------- Session Management ------------------ */
 
-static void par_session_request(PurpleConversation *conv)
+static gboolean par_session_send_request(const char* my_acc_name, 
+			const char* receiver, PurpleConversation *conv)
 /* sends an otp encryption request message */
-{
-	purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), PARANOIA_REQUEST, 
-			PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_RAW); //PURPLE_MESSAGE_SYSTEM
+{		
+	char *ids = par_search_ids(my_acc_name, receiver);
+	if (ids == NULL) {
+		return FALSE;
+	}
+	
+	char *request = g_strdup_printf(PARANOIA_REQUEST, ids, PARANOIA_WEBSITE);
+	g_free(ids);
 
-	return;
+	purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), request, 
+			PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_RAW); //PURPLE_MESSAGE_SYSTEM
+	
+	free(request);
+	return TRUE;
 }
 
 /*
@@ -570,7 +544,7 @@ static gboolean par_session_check_msg(struct key* used_key,
 		used_key->opt->no_entropy = TRUE;
 		used_key->opt->auto_enable = FALSE;
 		used_key->opt->active = FALSE;
-		// TODO: maybe we should destroy our key too? No! injection problem.
+		// We can't destroy our key too due to the msg injection problem.
 		purple_conversation_write(conv, NULL, 
 				"Your converstation partner is out of entropy. "
 				"Encryption disabled (remote).", 
@@ -607,7 +581,11 @@ static void par_cli_set_default_error(gchar **error)
 static gboolean par_cli_try_enable_enc(PurpleConversation *conv)
 /* tries to enable the encryption */
 {
-	struct key* used_key = par_search_key_by_conv(conv);
+	const char* my_acc = purple_account_get_username(
+				purple_conversation_get_account(conv));
+	const char* other_acc = purple_conversation_get_name(conv);
+	
+	struct key* used_key = par_search_key(my_acc, other_acc); // OLD: by_conv
 	if (used_key != NULL) {
 		if (!used_key->opt->no_entropy) {
 			//if (used_key->opt->has_plugin == TRUE) {
@@ -630,7 +608,8 @@ static gboolean par_cli_try_enable_enc(PurpleConversation *conv)
 				purple_conversation_write(conv, NULL, 
 						"Trying to enable encryption.", 
 						PURPLE_MESSAGE_NO_LOG, time(NULL));
-				par_session_request(conv);
+				// FIXME par_session_send_request(conv);
+				// TODO: rewrite this function!!!
 			}
 			used_key->opt->auto_enable = TRUE;
 			return TRUE;
@@ -650,7 +629,11 @@ static gboolean par_cli_try_enable_enc(PurpleConversation *conv)
 static gboolean par_cli_disable_enc(PurpleConversation *conv)
 /* disables the encryption */
 {
-	struct key* used_key = par_search_key_by_conv(conv);
+	const char* my_acc = purple_account_get_username(
+				purple_conversation_get_account(conv));
+	const char* other_acc = purple_conversation_get_name(conv);
+	
+	struct key* used_key = par_search_key(my_acc, other_acc); // OLD: by_conv
 	if (used_key != NULL) {
 		if (used_key->opt->otp_enabled) {
 			purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), 
@@ -678,7 +661,11 @@ static gboolean par_cli_disable_enc(PurpleConversation *conv)
 static void par_cli_key_details(PurpleConversation *conv)
 /* shows all information about a key of a conversation */
 {
-	struct key* used_key = par_search_key_by_conv(conv);
+	const char* my_acc = purple_account_get_username(
+				purple_conversation_get_account(conv));
+	const char* other_acc = purple_conversation_get_name(conv);
+	
+	struct key* used_key = par_search_key(my_acc, other_acc); // OLD: by_conv
 	char* disp_string = NULL;
 	if(used_key != NULL) {
 		disp_string = g_strdup_printf("Key infos:\nSource:\t\t%s\n"
@@ -707,8 +694,13 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 /* checks and executes all otp commads */
 {
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-		"An otp command was received. sweet!\n");
-	OtpError syndrome = OTP_OK;
+			"An otp command was received. sweet!\n");
+	
+	OtpError syndrome = OTP_OK; //????
+	const char* my_acc = purple_account_get_username(
+				purple_conversation_get_account(conv));
+	const char* other_acc = purple_conversation_get_name(conv);
+	
 	if (args[0] == NULL) {
 		par_cli_set_default_error(error);
 		return PURPLE_CMD_RET_FAILED;
@@ -726,7 +718,7 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 	}
 	else if (strcmp("drop", *args) == 0) {
 	// REMOVE ME (just for testing!)
-		struct key* used_key = par_search_key_by_conv(conv);
+		struct key* used_key = par_search_key(my_acc, other_acc); // OLD: by_conv
 		if (used_key != NULL) {
 			if (used_key->opt->otp_enabled) {
 				used_key->opt->otp_enabled = FALSE;
@@ -786,26 +778,27 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 		purple_conversation_write(conv, NULL, 
 				"Please wait. Generating keys...", 
 				PURPLE_MESSAGE_NO_LOG, time(NULL));
-		const char* my_acc = par_strip_jabber_ressource(
-				purple_account_get_username(
-				purple_conversation_get_account(conv)));
-		const char* other_acc = par_strip_jabber_ressource(
-				purple_conversation_get_name(conv));
+		char* my_acc_stp = par_strip_jabber_ressource(my_acc);
+		char* other_acc_stp = par_strip_jabber_ressource(other_acc);
 
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 				"Generate new key: my_acc: %s, other_acc: %s, size: %ikiB\n",
-				my_acc, other_acc, size);
+				my_acc_stp, other_acc_stp, size);
 
 		if (param_array[1] == NULL) {
 			/* default entropy source */
-			syndrome = otp_generate_key_pair(my_acc, 
-						other_acc, global_otp_path, 
+			syndrome = otp_generate_key_pair(my_acc_stp, 
+						other_acc_stp, global_otp_path, 
 						"/dev/urandom", size*1024);
+			
 		} else {
-			syndrome = otp_generate_key_pair(my_acc, other_acc,
+			syndrome = otp_generate_key_pair(my_acc_stp, other_acc_stp,
 					global_otp_path, g_strstrip(param_array[1]),
 					size*1024);
 		}
+		g_free(my_acc_stp);
+		g_free(other_acc_stp);
+		
 		if (syndrome > OTP_WARN) {
 			purple_conversation_write(conv, NULL, 
 					"Key files could not be generated!",
@@ -853,10 +846,31 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 void par_conversation_created(PurpleConversation *conv)
 /* signal handler for "conversation-created" */
 {
-	/* Send a request message (always!). 
-	 * Will be filtered in par_im_msg_sending. */
-	par_session_request(conv);
-
+	const char* my_acc_name = purple_account_get_username(
+				purple_conversation_get_account(conv));
+	const char* receiver = purple_conversation_get_name(conv);
+	
+	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "REQ Debug: my_acc: %s, other_acc: %s\n", my_acc_name, receiver);
+	
+	/* Display a nice message if already active */
+	struct key* active_key = par_search_key(my_acc_name, receiver);
+	if (active_key != NULL) {
+		if (active_key->opt->otp_enabled) {
+			purple_conversation_write(conv, NULL, 
+					"Encryption enabled.", 
+					PURPLE_MESSAGE_NO_LOG, time(NULL));
+		}
+	}
+	
+	/* Send a request message */
+	if(par_session_send_request(my_acc_name, receiver, conv)) {
+		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+				"Matching keys found. REQUEST sent.\n");
+	} else {
+		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+				"Found no matching key. Won't sent REQUEST.\n");
+	}
+	
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 			"Conversation created.\n");
 }
@@ -864,24 +878,12 @@ void par_conversation_created(PurpleConversation *conv)
 void par_conversation_deleting(PurpleConversation *conv)
 /* signal handler for "deleting-conversation" */
 {
-	// FIXME: reset all pads!
-	struct key* used_key = par_search_key_by_conv(conv);
-	if (used_key != NULL) {
-		
-		/* send an EXIT message */
-/*		if (used_key->opt->otp_enabled) {
-			par_session_close(conv);
-		}
-*/		/* reset the pad */
+	/* cleanup all keys with this conversation */
+	/* struct key* used_key = par_search_key_by_conv(conv);
+	while (used_key != NULL) {
 		used_key->conv = NULL;
-/*		used_key->opt->ack_sent = TRUE;
-		//used_key->opt->has_plugin = FALSE;
-		used_key->opt->otp_enabled = FALSE;
-		used_key->opt->active = FALSE;
-		
-		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-				"Reset conversation in key list. EXIT sent.\n");
-*/	}
+		used_key = par_search_key_by_conv(conv);
+	} */
 	
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 			"Conversation deleted.\n");
@@ -930,7 +932,7 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 			return FALSE;
 		}
 		// FIXME: problematic code! Disable all keys?
-		struct key* used_key = par_search_key_enabled(my_acc_name, *sender);
+		struct key* used_key = par_search_key(my_acc_name, *sender);
 		if (used_key != NULL) {
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 					"Found a matching key with ID: %s\n", used_key->pad->id);
@@ -952,7 +954,7 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 		return FALSE;
 	}
 	
-	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Un-Headered message: %s\n", *stripped_message);
+	//purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Un-Headered message: %s\n", *stripped_message);
 
 	/* apply jabber and header changes */
 	g_free(*message);
@@ -1060,20 +1062,20 @@ static void par_im_msg_sending(PurpleAccount *account,
 				*message = NULL;
 				return;
 			}
-			if ( FALSE/* used_key->opt->active */) {
+			/*if ( FALSE ) { //used_key->opt->active
 				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 						"Already active. Won't sent REQUEST.\n");
 				g_free(*message);
 				*message = NULL;
 				used_key->opt->ack_sent = TRUE;
 				return;
-			}
+			} */
 			/* search for all matching ids and add them to the request message */
-			char *ids = par_search_ids(my_acc_name, receiver);
+			/* char *ids = par_search_ids(my_acc_name, receiver);
 			char *req_msg = g_strdup_printf(*message, ids, PARANOIA_WEBSITE);
 			g_free(ids);
 			g_free(*message);
-			*message = req_msg;
+			*message = req_msg; */
 		}
 
 		used_key->opt->ack_sent = TRUE;
@@ -1168,13 +1170,13 @@ static void par_im_msg_sending(PurpleAccount *account,
 
 	} else {
 		/* don't send requests to users with no key. */
-		if(strncmp(*message, PARANOIA_REQUEST, PARANOIA_REQUEST_LEN) == 0) {
+		/*if(strncmp(*message, PARANOIA_REQUEST, PARANOIA_REQUEST_LEN) == 0) {
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 					"Found no matching key. Won't sent REQUEST.\n");
 			g_free(*message);
 			*message = NULL;
 			return;
-		}
+		}*/
 	
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 				"Found no matching key. Won't encrypt.\n");
@@ -1210,7 +1212,7 @@ static gboolean par_im_msg_change_display(PurpleAccount *account,
 
 	/* hide session init messages */
 	if (strncmp(stripped_message, PARANOIA_REQUEST, PARANOIA_REQUEST_LEN) == 0) {
-		if (used_key != NULL) {
+		//if (used_key != NULL) {
 			if (flags & PURPLE_MESSAGE_SEND) { //used_key->opt->has_plugin
 				g_free(stripped_message);
 				return TRUE;
@@ -1221,7 +1223,7 @@ static gboolean par_im_msg_change_display(PurpleAccount *account,
 				g_free(stripped_message);
 				return FALSE;
 			}
-		}
+		//}
 	}
 	g_free(stripped_message);
 	
