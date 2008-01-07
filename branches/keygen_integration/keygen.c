@@ -53,22 +53,6 @@ struct _key_data {
 	char *alice, *bob;
 } key_data;
 
-//int main()
-/*
-*	Main function only for testing purposes
-*/
-/*
-{
-	GThread *my_thread;
-	generate_keys_from_keygen("/home/psachs/.paranoia/alice@jabber.org bob@jabber.org 12345678.entropy",
-								"/home/psachs/bob@jabber.org alice@jabber.org 12345678.entropy",10000);
-	my_thread = generate_keys_from_keygen("alice", "bob", 1000);
-	g_thread_join(my_thread);
-
-
-	return 0;
-}
-*/
 
 int invert(char *src, char *dest)
 /*
@@ -156,8 +140,9 @@ GThread *generate_keys_from_keygen(char *alice, char *bob, unsigned int size)
 		return NULL;
 	}
 
+
 // initialize g_thread
-	g_thread_init(NULL);
+//	g_thread_init(NULL);
 
 // set key_data
 	key_data.size = size;
