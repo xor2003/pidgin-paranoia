@@ -31,7 +31,7 @@
 #define OFFSET 0
 
 
-// Definition for the funcions and global variables. => Has to be moved into the header fp_alice later
+// Definition for the funcions and global variables.
 GThread *generate_keys_from_keygen(char *alice, char *bob, unsigned int size);
 int invert(char *src, char *dest);
 unsigned int get_id();
@@ -42,10 +42,10 @@ gpointer audio(gpointer data);
 gpointer stub(gpointer data);
 gpointer threads(gpointer data);
 gpointer sysstate(gpointer data);
-gpointer prg(gpointer data);
+gpointer prng(gpointer data);
 gpointer mutex = NULL;
 
-//
+// private key data for the threads
 struct _key_data {
 	int size;
 	char *alice, *bob;
@@ -56,6 +56,7 @@ int invert(char *src, char *dest)
 /*
 *	Write the bytewise inverse of src to dest
 *	src and dest must be a valide filename with correct path
+* 	return 0 for success, -1 if a failure occures
 */
 {
 	FILE *fpin, *fpout;
@@ -96,7 +97,7 @@ int invert(char *src, char *dest)
 	fclose(fpout);
 
 	return 0;
-}
+} // end invert()
 
 unsigned int get_id() {
 	int fp_urand;
@@ -116,7 +117,7 @@ unsigned int get_id() {
 	close(fp_urand);
 
 	return id;
-}
+} // end get_id()
 
 GThread *generate_keys_from_keygen(char *alice, char *bob, unsigned int size)
 /*
@@ -155,7 +156,7 @@ GThread *generate_keys_from_keygen(char *alice, char *bob, unsigned int size)
 
 gpointer start_generation(gpointer data)
 /*
-*	start threaded generation
+*	start threaded key generation
 */
 {
 // define threads
@@ -173,7 +174,7 @@ gpointer start_generation(gpointer data)
 	if((p3 = g_thread_create(threads, NULL, TRUE, NULL)) != NULL) g_print("collecting entropy from thread timing\n");
 	if((p4 = g_thread_create(sysstate, NULL, TRUE, NULL)) != NULL) g_print("collecting entropy from system state\n");
 #ifdef FAST
-	if((p5 = g_thread_create(prg, NULL, TRUE, NULL)) != NULL) g_print("collecting entropy from PRG\n");
+	if((p5 = g_thread_create(prng, NULL, TRUE, NULL)) != NULL) g_print("collecting entropy from PRG\n");
 #endif
 
 
@@ -194,6 +195,7 @@ gpointer start_generation(gpointer data)
 		g_printerr("could not finish writing process\n");
 		return 0;
 	}
+
 	invert(key_data.alice, key_data.bob);
 
 	g_free(key_data.alice);
@@ -224,7 +226,7 @@ unsigned char bit2char(short buf[8])
 
 gpointer devrand(gpointer data)
 /*
-* devrand() collects entropie from the /dev/random device and writes it into a keyfile
+* devrand() collects entropie from the /dev/random device and writes it into the alice keyfile
 */
 {
 	int fp_rand, fp_alice;
@@ -285,7 +287,7 @@ gpointer threads(gpointer data)
 /*
 *	threads() collects entropie from thread timing, by just mesuring the time it takes
 *	to open and close the stub() thread. This function takes one sample every second
-* 	and writes the entropie to the keyfile
+* 	and writes the entropie into the alice keyfile
 */
 {
 	short i;
@@ -332,7 +334,7 @@ gpointer audio(gpointer data)
 	audio() collect entropie from /dev/audio and xor it with a value from /dev/urandom to
 	get a better distribution even if no sound is running.
 	This function generates one bit of entropie out of 7 samples, generates an ascii char
-	and write this to the keyfile
+	and write this into the alice keyfile
 */
 {
 	int fp_audio, fp_urand, fp_alice;
@@ -447,15 +449,15 @@ gpointer sysstate(gpointer data)
 	}
 	close(fp_alice);
 	return 0;
-}
+} // end sysstate()
 
-gpointer prg(gpointer data)
+gpointer prng(gpointer data)
 /*
-*	prg collects entropy from the pseudo random generator /dev/urandom. This function is only used if the FAST flag is set.
+*	prng collects entropy from the pseudo random generator /dev/urandom. This function is only used if the FAST flag is set.
 *	This function weakens the key, and is only used to fasten the generation process.
 */
 {
-	int fp_alice, fp_prg;
+	int fp_alice, fp_prng;
 	unsigned short c;
 
 	if((fp_alice = open(key_data.alice, O_RDWR|O_CREAT|O_APPEND, 00644)) < 0) {
@@ -463,14 +465,14 @@ gpointer prg(gpointer data)
 		return 0;
 	}
 
-	if((fp_prg = open("/dev/urandom", O_RDONLY)) < 0) {
+	if((fp_prng = open("/dev/urandom", O_RDONLY)) < 0) {
 		g_printerr("could not open /dev/urandom\n");
 		return 0;
 	}
 
 	while(1) {
 		g_mutex_lock(mutex);
-		if(read(fp_prg, &c, 1) != 1) {
+		if(read(fp_prng, &c, 1) != 1) {
 			g_printerr("read error\n");
 			g_mutex_unlock(mutex);
 			return 0;
@@ -497,6 +499,6 @@ gpointer prg(gpointer data)
 	}
 
 	close(fp_alice);
-	close(fp_prg);
+	close(fp_prng);
 	return 0;
-}
+} // end prng;
