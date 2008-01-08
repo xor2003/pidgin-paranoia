@@ -5,11 +5,11 @@
 1. Aim of the software
 --------------------------------------------------------------------------------
 
-The plug-in allows to use one-time-pads 
-(see: http://de.wikipedia.org/wiki/One-Time-Pad) to encrypt conversations in 
+The plug-in allows to use one-time-pads
+(see: http://de.wikipedia.org/wiki/One-Time-Pad) to encrypt conversations in
 the IM-client Pidgin.
 The plug-in is written in C and released under the GPL (version 3).
-The plug-in aims to give 'perfect' security with a encryption system that is a 
+The plug-in aims to give 'perfect' security with a encryption system that is a
 simple as possible and easy to understand.
 
 Please read the file INFO.
@@ -25,7 +25,7 @@ Please read the file INSTALL.
 Plase note that when not correctly used, many things can go wrong.
 Keeping your keyfiles secret and using good entropy-sources will help!
 Maybe /dev/urandom is not the best choice but /dev/random is way to slow ...
-Read "INFO" for detailed information how the encryption and decryption 
+Read "INFO" for detailed information how the encryption and decryption
 exactly works.
 
 4. Command line interface in pidgin
@@ -43,15 +43,12 @@ The source parameter is optional.
 
 5. Usage of the otptester
 --------------------------------------------------------------------------------
-The program takes any amount of arguments/commands and goes through all of them 
+The program takes any amount of arguments/commands and goes through all of them
 from the beginning to the end.
 Start "otptester --help" for more information.
 
 6. Known bugs, limitations and planned features
 --------------------------------------------------------------------------------
- * we do not support the creation of loop-keys
+
 
 Please read the file TODO
-
-
-
