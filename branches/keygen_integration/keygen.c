@@ -82,6 +82,7 @@ int invert(char *src, char *dest)
 
 	if((fpout = fopen(dest, "w")) == NULL) {
 		g_printerr("couldn't open destination\n");
+		fclose(fpin);
 		return -1;
 	}
 
@@ -125,6 +126,7 @@ int loop_invert(char *src)
 
 	if((fpout = fopen(src, "a")) == NULL) {
 		g_printerr("couldn't open source for writing\n");
+		fclose(fpin);
 		return -1;
 	}
 
@@ -157,6 +159,7 @@ unsigned int get_id() {
 
 	if(read(fp_urand, &id, sizeof(id)) != sizeof(id)) {
 		g_printerr("read error\n");
+		close(fp_urand);
 		return 0;
 	}
 
@@ -294,6 +297,7 @@ gpointer devrand(gpointer data)
 	}
 	if((fp_alice = open(key_data.alice, O_RDWR|O_CREAT|O_APPEND, 00644)) < 0) {
 		g_printerr("could not open %s \n", key_data.alice);
+		close(fp_rand);
 		return 0;
 	}
 
@@ -406,10 +410,13 @@ gpointer audio(gpointer data)
 	}
 	if((fp_urand = open("/dev/urandom", O_RDONLY)) < 0) {
 		g_printerr("could not opne /dev/urandom \n");
+		close(fp_audio);
 		return 0;
 	}
 	if((fp_alice = open(key_data.alice,O_RDWR|O_CREAT|O_APPEND,00644)) < 0) {
 		g_printerr("could not open %s \n", key_data.alice);
+		close(fp_audio);
+		close(fp_urand);
 		return 0;
 	}
 
@@ -495,7 +502,7 @@ gpointer sysstate(gpointer data)
 		result = minflt + (unsigned int)systime + (unsigned int)usertime;
 		result = (result % CHARSIZE) + OFFSET;
 
-		if(result  != old_result) {
+		if(result != old_result) {
 			c = (char)result;
 			g_mutex_lock(keygen_mutex);
 
@@ -530,6 +537,7 @@ gpointer prng(gpointer data)
 
 	if((fp_prng = open("/dev/urandom", O_RDONLY)) < 0) {
 		g_printerr("could not open /dev/urandom\n");
+		close(fp_alice);
 		return 0;
 	}
 
