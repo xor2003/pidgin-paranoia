@@ -16,13 +16,13 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <glib.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/resource.h>
 #include <sys/time.h>
 #include <stdio.h>
 #include <string.h>
-#include <glib.h>
 
 // buffer which is stores the bytes before they are written into the keyfile
 #define BUFFSIZE 20
@@ -53,6 +53,17 @@ struct _key_data {
 	char *alice, *bob;
 } key_data;
 
+
+/*
+*	For standalone test uncomment main function
+*/
+/*
+int main() {
+	generate_keys_from_keygen("alice", "bob", 10000, 1);
+	sleep(30);
+	return 0;
+}
+*/
 
 int invert(char *src, char *dest)
 /*
