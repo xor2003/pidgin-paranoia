@@ -268,10 +268,10 @@ unsigned int otp_get_id();
 *				invert writes the bytewise inverse of the src file into the dest
 *				file. src and dest must be valid file names
 *				this function returns 0 for success, -1 if a failure occures. */
-int otp_invert(char *src, char *dest);
+//int otp_invert(char *src, char *dest);
 
 /* loop-invert:
 *				append the bytewise inverse of src to src
 *				src must be a valide filename with valide path
 *				returns 0 for success, -1 if a failure occures */
-int otp_loop_invert(char *src);
+//int otp_loop_invert(char *src);
