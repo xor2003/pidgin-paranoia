@@ -212,7 +212,7 @@ static gboolean par_init_key_list()
 		// TODO: return?
 	} else {
 		/* loop over global key dir */
-		// TODO: detect dublicate id's? loop keys?
+		// TODO: detect dublicate id's?
 		while (tmp_filename != NULL) {
 			tmp_path = g_strconcat(global_otp_path, tmp_filename, NULL);
 			
@@ -367,29 +367,6 @@ static struct key* par_search_key_weak(const char* src, const char* dest)
 	return good_key;
 }
 
-static struct key* par_search_key_by_conv(PurpleConversation *conv)
-// FIXME: REMOVE ME
-/* searches a key in the keylist by PurpleConversation */
-{	
-	struct key* tmp_ptr = keylist;
-	struct key* good_key = NULL;
-
-	while (!(tmp_ptr == NULL)) {
-		if (tmp_ptr->conv == conv) {
-			if (tmp_ptr->opt->active) {
-				return tmp_ptr;
-			}
-			if (good_key == NULL) {
-				good_key = tmp_ptr;
-			}
-		}
-		tmp_ptr = tmp_ptr->next;
-	}
-	return good_key;
-}
-
-
-
 /* ----------------- Session Management ------------------ */
 
 static gboolean par_session_send_request(const char* my_acc_name, 
@@ -507,7 +484,6 @@ static gboolean par_session_check_msg(struct key* used_key,
 	if (strncmp(*message_decrypted, PARANOIA_EXIT, 
 			strlen(PARANOIA_EXIT)) == 0) {
 		used_key->opt->otp_enabled = FALSE;
-		//used_key->opt->has_plugin = FALSE;
 		purple_conversation_write(conv, NULL, 
 				"Encryption disabled (remote).", 
 				PURPLE_MESSAGE_NO_LOG, time(NULL));
@@ -518,7 +494,6 @@ static gboolean par_session_check_msg(struct key* used_key,
 	if (strncmp(*message_decrypted, PARANOIA_START,
 			strlen(PARANOIA_START)) == 0) {
 		if(used_key->opt->auto_enable) {
-			//used_key->opt->has_plugin = TRUE;
 			used_key->opt->otp_enabled = TRUE;
 			purple_conversation_write(conv, NULL, 
 					"Encryption enabled (remote).", 
@@ -548,7 +523,7 @@ static gboolean par_session_check_msg(struct key* used_key,
 		used_key->opt->no_entropy = TRUE;
 		used_key->opt->auto_enable = FALSE;
 		used_key->opt->active = FALSE;
-		// We can't destroy our key too due to the msg injection problem.
+		/* We can't destroy our key too due to the msg injection problem. */
 		purple_conversation_write(conv, NULL, 
 				"Your converstation partner is out of entropy. "
 				"Encryption disabled (remote).", 
@@ -559,6 +534,19 @@ static gboolean par_session_check_msg(struct key* used_key,
 	}
 	else {
 		return FALSE;
+	}
+}
+
+static void par_session_reset_conv(PurpleConversation *conv)
+/* searches all pointer to conf and resets them to NULL */
+{	
+	struct key* tmp_ptr = keylist;
+
+	while (!(tmp_ptr == NULL)) {
+		if (tmp_ptr->conv == conv) {
+			tmp_ptr->conv = NULL;
+		}
+		tmp_ptr = tmp_ptr->next;
 	}
 }
 
@@ -590,6 +578,7 @@ static gboolean par_cli_try_enable_enc(PurpleConversation *conv)
 	const char* other_acc = purple_conversation_get_name(conv);
 	
 	struct key* used_key = par_search_key(my_acc, other_acc); // OLD: by_conv
+	// TODO: rewrite this function!!!
 	if (used_key != NULL) {
 		if (!used_key->opt->no_entropy) {
 			if (used_key->opt->active == TRUE) {
@@ -608,11 +597,16 @@ static gboolean par_cli_try_enable_enc(PurpleConversation *conv)
 							PURPLE_MESSAGE_NO_LOG, time(NULL));
 				}
 			} else {
-				purple_conversation_write(conv, NULL, 
-						"Trying to enable encryption.", 
-						PURPLE_MESSAGE_NO_LOG, time(NULL));
-				// FIXME par_session_send_request(conv);
-				// TODO: rewrite this function!!!
+				if (par_session_send_request(my_acc, other_acc, conv)) {
+					purple_conversation_write(conv, NULL, 
+							"Trying to enable encryption.", 
+							PURPLE_MESSAGE_NO_LOG, time(NULL));
+				} else {
+					// TODO: not possible?!
+					purple_conversation_write(conv, NULL, 
+							"Couldn't enable the encryption. No key available.",
+							PURPLE_MESSAGE_NO_LOG, time(NULL));
+				}
 			}
 			used_key->opt->auto_enable = TRUE;
 			return TRUE;
@@ -855,7 +849,7 @@ void par_conversation_created(PurpleConversation *conv)
 	
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "REQ Debug: my_acc: %s, other_acc: %s\n", my_acc_name, receiver);
 	
-	/* Display a nice message if already active */
+	/* display a nice message if already active */
 	struct key* active_key = par_search_key(my_acc_name, receiver);
 	if (active_key != NULL) {
 		if (active_key->opt->otp_enabled) {
@@ -865,7 +859,7 @@ void par_conversation_created(PurpleConversation *conv)
 		}
 	}
 	
-	/* Send a request message */
+	/* send a request message */
 	if(par_session_send_request(my_acc_name, receiver, conv)) {
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 				"Matching keys found. REQUEST sent.\n");
@@ -882,12 +876,7 @@ void par_conversation_deleting(PurpleConversation *conv)
 /* signal handler for "deleting-conversation" */
 {
 	/* cleanup all keys with this conversation */
-	// FIXME: write a function reset_all_conv, remove search fn.
-	struct key* used_key = par_search_key_by_conv(conv);
-	while (used_key != NULL) {
-		used_key->conv = NULL;
-		used_key = par_search_key_by_conv(conv);
-	}
+	par_session_reset_conv(conv);
 	
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 			"Conversation deleted.\n");
@@ -960,8 +949,6 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 				"This is not a paranoia message.\n");
 		return FALSE;
 	}
-	
-	//purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Un-Headered message: %s\n", *stripped_message);
 
 	/* apply jabber and header changes */
 	g_free(*message);
@@ -1066,7 +1053,7 @@ static void par_im_msg_sending(PurpleAccount *account,
 				*message = NULL;
 				return;
 			}
-			/*if ( FALSE ) { //used_key->opt->active
+			/*if (used_key->opt->active) {
 				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 						"Already active. Won't sent REQUEST.\n");
 				g_free(*message);
@@ -1074,12 +1061,6 @@ static void par_im_msg_sending(PurpleAccount *account,
 				used_key->opt->waiting_for_ack = FALSE;
 				return;
 			} */
-			/* search for all matching ids and add them to the request message */
-			/* char *ids = par_search_ids(my_acc_name, receiver);
-			char *req_msg = g_strdup_printf(*message, ids, PARANOIA_WEBSITE);
-			g_free(ids);
-			g_free(*message);
-			*message = req_msg; */
 		}
 
 		//used_key->opt->waiting_for_ack = FALSE;
@@ -1207,18 +1188,16 @@ static gboolean par_im_msg_change_display(PurpleAccount *account,
 
 	/* hide session init messages */
 	if (strncmp(stripped_message, PARANOIA_REQUEST, PARANOIA_REQUEST_LEN) == 0) {
-		//if (used_key != NULL) {
-			if (flags & PURPLE_MESSAGE_SEND) {
-				g_free(stripped_message);
-				return TRUE;
-			} else {
-				/* cosmetics */
-				g_free(*message);
-				*message = g_strndup(stripped_message, PARANOIA_REQUEST_LEN);
-				g_free(stripped_message);
-				return FALSE;
-			}
-		//}
+		if (flags & PURPLE_MESSAGE_SEND) {
+			g_free(stripped_message);
+			return TRUE;
+		} else {
+			/* cosmetics */
+			g_free(*message);
+			*message = g_strndup(stripped_message, PARANOIA_REQUEST_LEN);
+			g_free(stripped_message);
+			return FALSE;
+		}
 	}
 	g_free(stripped_message);
 	
