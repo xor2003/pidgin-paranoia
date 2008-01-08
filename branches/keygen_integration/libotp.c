@@ -475,7 +475,7 @@ OtpError otp_generate_key_pair(const char* alice,
 	g_print("paranoia: otp_genkey initial checks\n");
 #endif
 
-	sprintf(id, "%.8X", get_id());
+	sprintf(id, "%.8X", otp_get_id());
 	key_size = size * BLOCKSIZE;
 	home_path = (char *)g_getenv ("HOME");
 	if(!home_path) home_path = (char *)g_get_home_dir();

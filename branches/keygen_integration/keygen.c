@@ -33,9 +33,9 @@
 
 // Definition for the funcions and global variables.
 GThread *generate_keys_from_keygen(char *alice, char *bob, unsigned int size, int loop);
-int invert(char *src, char *dest);
-int loop_invert(char *src);
-unsigned int get_id();
+int otp_invert(char *src, char *dest);
+int otp_loop_invert(char *src);
+unsigned int otp_get_id();
 unsigned char bit2char(short buf[8]);
 gpointer start_generation(gpointer data);
 gpointer devrand(gpointer data);
@@ -65,7 +65,7 @@ int main() {
 }
 */
 
-int invert(char *src, char *dest)
+int otp_invert(char *src, char *dest)
 /*
 *	Write the bytewise inverse of src to dest
 *	src and dest must be a valide filename with correct path
@@ -114,7 +114,7 @@ int invert(char *src, char *dest)
 } // end invert()
 
 
-int loop_invert(char *src)
+int otp_loop_invert(char *src)
 /*
 *	append inverse of src to src.
 *	src must be a valide filename with correct path.
@@ -158,7 +158,7 @@ int loop_invert(char *src)
 } // end loop_invert()
 
 
-unsigned int get_id() {
+unsigned int otp_get_id() {
 	int fp_urand;
 	unsigned int id;
 
@@ -261,9 +261,9 @@ gpointer start_generation(gpointer data)
 	}
 
 	if(key_data.loop != 0) {
-		invert(key_data.alice, key_data.bob);
+		otp_invert(key_data.alice, key_data.bob);
 	} else {
-		loop_invert(key_data.alice);
+		otp_loop_invert(key_data.alice);
 	}
 
 	g_free(key_data.alice);
