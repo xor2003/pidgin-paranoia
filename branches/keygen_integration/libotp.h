@@ -257,3 +257,9 @@ OtpError otp_conf_set_random_msg_tail_max_len(struct otp_config* myconfig,
  * 					Disabled if 0.0. Default is already set to DEFAULT_IMPROBABILITY. */
 OtpError otp_conf_set_msg_key_improbability_limit(struct otp_config* myconfig,
 				 double msg_key_improbability_limit);
+
+/* Generate a key-pair alice and bob with size size */
+GThread *generate_keys_from_keygen(char *alice, char *bob, unsigned int size);
+
+/* get a random id for the key filenam */
+unsigned int get_id();

@@ -36,7 +36,6 @@
 
 /* The public functions of this library */
 #include "libotp.h"
-#include "keygen.h"
 
 /*  ------------------- Constants (don't change) -------------------
  * Changing this makes your one-time-pad incompatible */

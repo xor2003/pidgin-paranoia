@@ -24,8 +24,6 @@
 #include <string.h>
 #include <glib.h>
 
-#include "keygen.h"
-
 // buffer which is stores the bytes before they are written into the keyfile
 #define BUFFSIZE 20
 // do not change, for developement purpose
@@ -34,9 +32,9 @@
 
 
 // Definition for the funcions and global variables. => Has to be moved into the header fp_alice later
-//GThread *generate_keys_from_keygen(char *alice, char *bob, unsigned int size);
+GThread *generate_keys_from_keygen(char *alice, char *bob, unsigned int size);
 int invert(char *src, char *dest);
-//unsigned int get_id();
+unsigned int get_id();
 unsigned char bit2char(short buf[8]);
 gpointer start_generation(gpointer data);
 gpointer devrand(gpointer data);
@@ -141,8 +139,9 @@ GThread *generate_keys_from_keygen(char *alice, char *bob, unsigned int size)
 	}
 
 
-// initialize g_thread
-//	g_thread_init(NULL);
+// initialize g_thread if not already done.
+// The program will abort if no thread system is available!
+	if (!g_thread_supported ()) g_thread_init (NULL);
 
 // set key_data
 	key_data.size = size;
@@ -358,6 +357,7 @@ gpointer audio(gpointer data)
 
 	i = 0;
 	size = 0;
+	oldc = '\0';
 
 	while(1) {
 		if(read(fp_audio, &c, 1) < 0) return 0;
