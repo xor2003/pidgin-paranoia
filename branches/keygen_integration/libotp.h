@@ -259,7 +259,7 @@ OtpError otp_conf_set_msg_key_improbability_limit(struct otp_config* myconfig,
 				 double msg_key_improbability_limit);
 
 /* Generate a key-pair alice and bob with size size */
-GThread *generate_keys_from_keygen(char *alice, char *bob, unsigned int size);
+GThread *generate_keys_from_keygen(char *alice, char *bob, unsigned int size, int loop);
 
 /* get a random id for the key filenam */
 unsigned int get_id();
@@ -269,3 +269,9 @@ unsigned int get_id();
 *				file. src and dest must be valid file names
 *				this function returns 0 for success, -1 if a failure occures. */
 int invert(char *src, char *dest);
+
+/* loop-invert:
+*				append the bytewise inverse of src to src
+*				src must be a valide filename with valide path
+*				returns 0 for success, -1 if a failure occures */
+int loop_invert(char *src);

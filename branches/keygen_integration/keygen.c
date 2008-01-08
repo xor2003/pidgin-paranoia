@@ -32,8 +32,9 @@
 
 
 // Definition for the funcions and global variables.
-GThread *generate_keys_from_keygen(char *alice, char *bob, unsigned int size);
+GThread *generate_keys_from_keygen(char *alice, char *bob, unsigned int size, int loop);
 int invert(char *src, char *dest);
+int loop_invert(char *src);
 unsigned int get_id();
 unsigned char bit2char(short buf[8]);
 gpointer start_generation(gpointer data);
@@ -48,6 +49,7 @@ gpointer mutex = NULL;
 // private key data for the threads
 struct _key_data {
 	int size;
+	int loop;
 	char *alice, *bob;
 } key_data;
 
@@ -99,6 +101,48 @@ int invert(char *src, char *dest)
 	return 0;
 } // end invert()
 
+int loop_invert(char *src)
+/*
+*	append inverse of src to src.
+*	src must be a valide filename with correct path.
+* 	return 0 for success, -1 if a failure occures
+*/
+{
+	FILE *fpin, *fpout;
+	int c;
+	long file_length;
+
+	if(src == NULL) {
+		g_printerr("source NULL\n");
+		return -1;
+	}
+
+	if((fpin = fopen(src, "r")) == NULL) {
+		g_printerr("couldn't open source\n");
+		return -1;
+	}
+
+	if((fpout = fopen(src, "a")) == NULL) {
+		g_printerr("couldn't open source for writing\n");
+		return -1;
+	}
+
+	fseek(fpin, -1, SEEK_END);
+	file_length = ftell(fpin);
+
+	while(file_length >= 0) {
+		c = fgetc(fpin);
+		fputc(c, fpout);
+		fseek(fpin, -2, SEEK_CUR);
+		file_length--;
+	}
+
+	fclose(fpin);
+	fclose(fpout);
+
+	return 0;
+} // end loop_invert()
+
 unsigned int get_id() {
 	int fp_urand;
 	unsigned int id;
@@ -119,7 +163,7 @@ unsigned int get_id() {
 	return id;
 } // end get_id()
 
-GThread *generate_keys_from_keygen(char *alice, char *bob, unsigned int size)
+GThread *generate_keys_from_keygen(char *alice, char *bob, unsigned int size, int loop)
 /*
 *	generate the key pair for alice and bob
 *	alice and bob must be the correct filenames including the correct absoute path.
@@ -145,7 +189,10 @@ GThread *generate_keys_from_keygen(char *alice, char *bob, unsigned int size)
 	if (!g_thread_supported ()) g_thread_init (NULL);
 
 // set key_data
-	key_data.size = size;
+	if(loop == 0) {
+		key_data.size = size/2;
+	} else key_data.size = size;
+	key_data.loop = loop;
 	key_data.alice = g_strdup(alice);
 	key_data.bob = g_strdup(bob);
 
@@ -196,7 +243,11 @@ gpointer start_generation(gpointer data)
 		return 0;
 	}
 
-	invert(key_data.alice, key_data.bob);
+	if(key_data.loop != 0) {
+		invert(key_data.alice, key_data.bob);
+	} else {
+		loop_invert(key_data.alice);
+	}
 
 	g_free(key_data.alice);
 	g_free(key_data.bob);

@@ -450,6 +450,7 @@ OtpError otp_generate_key_pair(const char* alice,
 
 {
 	char *alice_file, *bob_file, id[8];
+	char *home_path;
 	unsigned int key_size;
 
 	if (alice == NULL || bob == NULL || path == NULL
@@ -462,7 +463,7 @@ OtpError otp_generate_key_pair(const char* alice,
 		return OTP_ERR_INPUT;
 	}
 	/* Loop-Keys not supported */
-	if (strcmp(alice, bob) == 0) return OTP_ERR_LOOP_KEY;
+//	if (strcmp(alice, bob) == 0) return OTP_ERR_LOOP_KEY;
 
 
 	if ( size/BLOCKSIZE == (float)size/BLOCKSIZE ) {
@@ -476,11 +477,13 @@ OtpError otp_generate_key_pair(const char* alice,
 
 	sprintf(id, "%.8X", get_id());
 	key_size = size * BLOCKSIZE;
+	home_path = (char *)g_getenv ("HOME");
+	if(!home_path) home_path = (char *)g_get_home_dir();
 
 	alice_file = (char *)g_strdup_printf("%s%s %s %s.entropy", path, alice, bob, id);
-	bob_file = (char *)g_strdup_printf("%s%s %s %s.entropy", path, bob, alice, id);
+	bob_file = (char *)g_strdup_printf("%s%s%s %s %s.entropy",home_path, PATH_DELI,bob, alice, id);
 
-	generate_keys_from_keygen(alice_file, bob_file, key_size);
+	generate_keys_from_keygen(alice_file, bob_file, key_size, strcmp(alice, bob));
 
 	g_free(alice_file);
 	g_free(bob_file);
