@@ -314,7 +314,8 @@ gpointer devrand(gpointer data)
 			}
 			if(write(fp_alice, &buffer, BUFFSIZE) < 0) {
 				g_printerr("write error\n");
-				return 0;
+				g_mutex_unlock(keygen_mutex);
+				break;
 			}
 			key_data.size -= size;
 			g_mutex_unlock(keygen_mutex);
@@ -370,7 +371,8 @@ gpointer threads(gpointer data)
 		}
 		if(write(fp_alice, &diff, 1) < 0) {
 			g_printerr("write error\n");
-			return 0;
+			g_mutex_unlock(keygen_mutex);
+			break;
 		}
 		key_data.size--;
 		g_mutex_unlock(keygen_mutex);
@@ -416,7 +418,10 @@ gpointer audio(gpointer data)
 	oldc = '\0';
 
 	while(1) {
-		if(read(fp_audio, &c, 1) < 0) return 0;
+		if(read(fp_audio, &c, 1) < 0) {
+			g_printerr("error while reading /dev/audio, exiting thread\n");
+			break;
+		}
 		buf[i] = ((unsigned short)c) % 2;
 		i++;
 		if(i == 8) {
@@ -424,7 +429,7 @@ gpointer audio(gpointer data)
 			if(read(fp_urand, &d, 1) < 0) {
 				g_printerr("read error\n");
 				g_mutex_unlock(keygen_mutex);
-				return 0;
+				break;
 			}
 			g_mutex_unlock(keygen_mutex);
 			c = bit2char(buf);
@@ -440,7 +445,8 @@ gpointer audio(gpointer data)
 					}
 					if(write(fp_alice, &buffer, BUFFSIZE) < 0) {
 						g_printerr("write error\n");
-						return 0;
+						g_mutex_unlock(keygen_mutex);
+						break;
 					}
 					key_data.size -= size;
 					g_mutex_unlock(keygen_mutex);
@@ -532,7 +538,7 @@ gpointer prng(gpointer data)
 		if(read(fp_prng, &c, 1) != 1) {
 			g_printerr("read error\n");
 			g_mutex_unlock(keygen_mutex);
-			return 0;
+			break;
 		}
 		g_mutex_unlock(keygen_mutex);
 
@@ -546,7 +552,7 @@ gpointer prng(gpointer data)
 		if(write(fp_alice, &c, 1) != 1) {
 			g_printerr("write error\n");
 			g_mutex_unlock(keygen_mutex);
-			return 0;
+			break;
 		}
 		key_data.size--;
 		g_mutex_unlock(keygen_mutex);
