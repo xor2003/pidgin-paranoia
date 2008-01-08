@@ -478,7 +478,10 @@ gpointer sysstate(gpointer data)
 	}
 
 	while (1) {
-		getrusage(who, &usage);
+		if(getrusage(who, &usage) < 0) {
+			g_printerr("resurce usage not supported, exit thread\n");
+			break;
+		}
 		usleep(500);
 		minflt = usage.ru_minflt;
 		systime = usage.ru_stime.tv_sec*1000000+usage.ru_stime.tv_usec;
