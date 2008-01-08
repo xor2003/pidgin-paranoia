@@ -44,7 +44,7 @@ gpointer stub(gpointer data);
 gpointer threads(gpointer data);
 gpointer sysstate(gpointer data);
 gpointer prng(gpointer data);
-gpointer mutex = NULL;
+gpointer keygen_mutex = NULL;
 
 // private key data for the threads
 struct _key_data {
@@ -101,6 +101,7 @@ int invert(char *src, char *dest)
 	return 0;
 } // end invert()
 
+
 int loop_invert(char *src)
 /*
 *	append inverse of src to src.
@@ -143,6 +144,7 @@ int loop_invert(char *src)
 	return 0;
 } // end loop_invert()
 
+
 unsigned int get_id() {
 	int fp_urand;
 	unsigned int id;
@@ -162,6 +164,7 @@ unsigned int get_id() {
 
 	return id;
 } // end get_id()
+
 
 GThread *generate_keys_from_keygen(char *alice, char *bob, unsigned int size, int loop)
 /*
@@ -186,7 +189,7 @@ GThread *generate_keys_from_keygen(char *alice, char *bob, unsigned int size, in
 
 // initialize g_thread if not already done.
 // The program will abort if no thread system is available!
-	if (!g_thread_supported ()) g_thread_init (NULL);
+	if (!g_thread_supported()) g_thread_init (NULL);
 
 // set key_data
 	if(loop == 0) {
@@ -213,7 +216,7 @@ gpointer start_generation(gpointer data)
 #endif
 
 // create mutex
-	mutex = g_mutex_new();
+	keygen_mutex = g_mutex_new();
 
 // create threads
 	if((p2 = g_thread_create(devrand, NULL, TRUE, NULL)) != NULL) g_print("collecting entropy from /dev/random\n");
@@ -235,7 +238,7 @@ gpointer start_generation(gpointer data)
 #endif
 
 // destroy mutex
-	g_mutex_free(mutex);
+	g_mutex_free(keygen_mutex);
 
 // create the inverted key
 	if(key_data.size != 0) {
@@ -304,9 +307,9 @@ gpointer devrand(gpointer data)
 		size++;
 
 		if(size == BUFFSIZE) {
-			g_mutex_lock(mutex);
+			g_mutex_lock(keygen_mutex);
 			if(key_data.size < size) {
-				g_mutex_unlock(mutex);
+				g_mutex_unlock(keygen_mutex);
 				break;
 			}
 			if(write(fp_alice, &buffer, BUFFSIZE) < 0) {
@@ -314,7 +317,7 @@ gpointer devrand(gpointer data)
 				return 0;
 			}
 			key_data.size -= size;
-			g_mutex_unlock(mutex);
+			g_mutex_unlock(keygen_mutex);
 			size = 0;
 		}
 		usleep(5);
@@ -360,9 +363,9 @@ gpointer threads(gpointer data)
 		gettimeofday(&finish, NULL);
 		diff = (unsigned char)(((finish.tv_usec - start.tv_usec) % CHARSIZE) + OFFSET);
 
-		g_mutex_lock(mutex);
+		g_mutex_lock(keygen_mutex);
 		if(key_data.size == 0) {
-			g_mutex_unlock(mutex);
+			g_mutex_unlock(keygen_mutex);
 			break;
 		}
 		if(write(fp_alice, &diff, 1) < 0) {
@@ -370,7 +373,7 @@ gpointer threads(gpointer data)
 			return 0;
 		}
 		key_data.size--;
-		g_mutex_unlock(mutex);
+		g_mutex_unlock(keygen_mutex);
 
 		sleep(1);
 	}
@@ -417,22 +420,22 @@ gpointer audio(gpointer data)
 		buf[i] = ((unsigned short)c) % 2;
 		i++;
 		if(i == 8) {
-			g_mutex_lock(mutex);
+			g_mutex_lock(keygen_mutex);
 			if(read(fp_urand, &d, 1) < 0) {
 				g_printerr("read error\n");
-				g_mutex_unlock(mutex);
+				g_mutex_unlock(keygen_mutex);
 				return 0;
 			}
-			g_mutex_unlock(mutex);
+			g_mutex_unlock(keygen_mutex);
 			c = bit2char(buf);
 			if(c == oldc) usleep(500);
 			oldc = c;
 			buffer[size] = (unsigned char)(((d  ^ c) % CHARSIZE) + OFFSET);
 			size++;
 			if(size == BUFFSIZE) {
-					g_mutex_lock(mutex);
+					g_mutex_lock(keygen_mutex);
 					if(key_data.size < size) {
-						g_mutex_unlock(mutex);
+						g_mutex_unlock(keygen_mutex);
 						break;
 					}
 					if(write(fp_alice, &buffer, BUFFSIZE) < 0) {
@@ -440,7 +443,7 @@ gpointer audio(gpointer data)
 						return 0;
 					}
 					key_data.size -= size;
-					g_mutex_unlock(mutex);
+					g_mutex_unlock(keygen_mutex);
 					size = 0;
 			}
 			i = 0;
@@ -485,16 +488,16 @@ gpointer sysstate(gpointer data)
 
 		if(result  != old_result) {
 			c = (char)result;
-			g_mutex_lock(mutex);
+			g_mutex_lock(keygen_mutex);
 
 			if(key_data.size == 0) {
-				g_mutex_unlock(mutex);
+				g_mutex_unlock(keygen_mutex);
 				break;
 			}
 
 			write(fp_alice, &c, 1);
 			key_data.size--;
-			g_mutex_unlock(mutex);
+			g_mutex_unlock(keygen_mutex);
 		}
 		old_result = result;
 	}
@@ -522,28 +525,28 @@ gpointer prng(gpointer data)
 	}
 
 	while(1) {
-		g_mutex_lock(mutex);
+		g_mutex_lock(keygen_mutex);
 		if(read(fp_prng, &c, 1) != 1) {
 			g_printerr("read error\n");
-			g_mutex_unlock(mutex);
+			g_mutex_unlock(keygen_mutex);
 			return 0;
 		}
-		g_mutex_unlock(mutex);
+		g_mutex_unlock(keygen_mutex);
 
 		c = (c % CHARSIZE) + OFFSET;
 
-		g_mutex_lock(mutex);
+		g_mutex_lock(keygen_mutex);
 		if(key_data.size == 0) {
-			g_mutex_unlock(mutex);
+			g_mutex_unlock(keygen_mutex);
 			break;
 		}
 		if(write(fp_alice, &c, 1) != 1) {
 			g_printerr("write error\n");
-			g_mutex_unlock(mutex);
+			g_mutex_unlock(keygen_mutex);
 			return 0;
 		}
 		key_data.size--;
-		g_mutex_unlock(mutex);
+		g_mutex_unlock(keygen_mutex);
 
 
 		usleep(5);
