@@ -66,11 +66,21 @@ int usage() {
 					"--debug\n"
 					"--nodebug\n"
 					"\n"
+					"This tester is meant as an instrument to test differerent setups.\n"
+					"\n"
+					"Some Hints: \n"
+					" * The arguments are parsed in order\n"
+					" * Start with --create_config\n"
+					" * You can use --debug at any position\n"
+					" * A full encryption/decryption cycle:\n"
 					"%s --create_config --openpad \"bob@jabber.org alice@jabber.org 22222201.entropy\" "
 					"encrypt --openpad \"alice@jabber.org bob@jabber.org 22222201.entropy\" decrypt "
 					"--setmessage \"test\" --encrypt --decrypt --closepad encrypt --closepad decrypt "
 					"--destroy_config\n"
-					,programname);
+					"\n"
+					" * To create keys: (write 'NULL' as source to use the keygen)\n"
+					"%s --create_config --genkey alice bob /dev/urandom 100000\n"
+					,programname, programname);
 	return TRUE;
 }
 
@@ -137,9 +147,16 @@ int genkey() {
 		printf("* Keypath:\t%s\n",path);
 		printf("* Keysize:\t%u\n",size);
 	}
-	OtpError syndrome = otp_generate_key_pair(
-			argvalue[*argpos],argvalue[*argpos+1],
-			path, argvalue[*argpos+2],size);
+	OtpError syndrome;
+	if (strcmp(argvalue[*argpos+2],"NULL") == 0) {
+		syndrome = otp_generate_key_pair(config,
+				argvalue[*argpos], argvalue[*argpos+1],
+				NULL, size);
+	} else {
+		syndrome = otp_generate_key_pair(config,
+				argvalue[*argpos], argvalue[*argpos+1],
+				argvalue[*argpos+2], size);
+	}
 	if (syndrome > OTP_WARN) {
 		printf("Error creating keys %.8X\n",syndrome);
 		return FALSE;
@@ -207,7 +224,7 @@ int openpad() {
 	}
 	
 	if (!strcmp(argvalue[*argpos+1],"encrypt")) {
-		encryptpad = otp_get_from_file(path,argvalue[*argpos]);	
+		encryptpad = otp_pad_create_from_file(config, argvalue[*argpos]);
 		if (encryptpad == NULL) {
 			//printf("Keyfile '%s' can not be opened!\n",argvalue[*argpos]);
 			return FALSE;
@@ -224,7 +241,7 @@ int openpad() {
 		}
 	}
 	if (!strcmp(argvalue[*argpos+1],"decrypt")) {
-		decryptpad = otp_get_from_file(path,argvalue[*argpos]);	
+		decryptpad = otp_pad_create_from_file(config, argvalue[*argpos]);
 		if (decryptpad == NULL) {
 			printf("Keyfile '%s' can not be opened!\n",argvalue[*argpos]);
 		return FALSE;
@@ -255,7 +272,7 @@ int closepad() {
 			printf("Can not destroy a pad that does not exist!\n");
 			return FALSE;
 		}
-		otp_destroy(decryptpad);
+		otp_pad_destroy(decryptpad);
 	}
 	
 	if (!strcmp(argvalue[*argpos],"encrypt")) {
@@ -263,7 +280,7 @@ int closepad() {
 			printf("Can not destroy a pad that does not exist!\n");
 			return FALSE;
 		}
-		otp_destroy(encryptpad);
+		otp_pad_destroy(encryptpad);
 	}
 	
 	*argpos = *argpos+takes;

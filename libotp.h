@@ -144,34 +144,10 @@ OtpError otp_encrypt_warning(struct otp* mypad, char** message, gsize protected_
  * the message is left unchanged */
 OtpError otp_decrypt(struct otp* mypad, char** message);
 
-/* extracts and returns the ID from a given encrypted message. 
-   Leaves the message constant. Returns NULL if it fails. */
-char* otp_get_id_from_message(char** message);
-// Request API change to:
-//char* otp_id_get_from_message(const struct otp_config* myconfig, const char *msg);
-
-/* generates a new key pair (two files) with the name alice and bob of 'size' bytes. */
-OtpError otp_generate_key_pair(const char* alice, const char* bob, const char* path, const char* source, gsize size);
-// Request API change to (this will change again later):
-//OtpError otp_generate_key_pair(otp_config* myconfig, const char* alice, 
-//		const char* bob, const char* source, gsize size, 
-//		struct otp* alice_pad, struct otp* bob_pad);
-		/* alice and bob is optional. if NULL not created */
-
 /* destroys a keyfile by using up all encryption-entropy */
 OtpError otp_erase_key(struct otp* mypad);
 
 /* ------------------ otp_pad ------------------------------ */
-
-/* creates an otp pad with the data from a key file */
-struct otp* otp_get_from_file(const char* path, const char* filename);
-// Request API change to:
-//struct otp* otp_pad_create_from_file(const struct otp_config* myconfig, const char* filename);
-
-/* destroys an otp object */
-void otp_destroy(struct otp* mypad);
-// Request API change to:
-//void otp_pad_destroy(struct otp* mypad);
 
 /* ------------------ otp_pad get functions ------------------- */
 
@@ -257,7 +233,23 @@ OtpError otp_conf_set_random_msg_tail_max_len(struct otp_config* myconfig,
  * 					Disabled if 0.0. Default is already set to DEFAULT_IMPROBABILITY. */
 OtpError otp_conf_set_msg_key_improbability_limit(struct otp_config* myconfig,
 				 double msg_key_improbability_limit);
+				 
+/* extracts and returns the ID from a given encrypted message. 
+   Leaves the message constant. Returns NULL if it fails. */
+char* otp_id_get_from_message(const struct otp_config* myconfig, const char *msg);
 
+/* creates an otp pad with the data from a key file */
+struct otp* otp_pad_create_from_file(const struct otp_config* myconfig, const char* filename);
 
+/* destroys an otp object */
+void otp_pad_destroy(struct otp* mypad);
 
+/* generates a new key pair (two files) with the name alice and bob of 'size' bytes. 
+ * TODO: if source is NULL (suggested as default), generate with keygen */
+// TODO:		struct otp* alice_pad, struct otp* bob_pad
+// Note: Giving back bob_pad makes no sense since it has no use for alice.
+		/* alice and bob is optional. if NULL not created */
+OtpError otp_generate_key_pair(struct otp_config* myconfig, 
+			const char* alice, const char* bob, 
+			const char* source, gsize size);
 
