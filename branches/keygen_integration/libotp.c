@@ -452,6 +452,7 @@ OtpError otp_generate_key_pair(const char* alice,
 	char *alice_file, *bob_file, id[8];
 	char *home_path;
 	unsigned int key_size;
+	GThread *my_thread;
 
 	if (alice == NULL || bob == NULL || path == NULL
 			|| source == NULL || size <= 0) {
@@ -483,10 +484,12 @@ OtpError otp_generate_key_pair(const char* alice,
 	alice_file = (char *)g_strdup_printf("%s%s %s %s.entropy", path, alice, bob, id);
 	bob_file = (char *)g_strdup_printf("%s%s%s %s %s.entropy",home_path, PATH_DELI,bob, alice, id);
 
-	generate_keys_from_keygen(alice_file, bob_file, key_size, strcmp(alice, bob));
+	my_thread = generate_keys_from_keygen(alice_file, bob_file, key_size, strcmp(alice, bob));
 
 	g_free(alice_file);
 	g_free(bob_file);
+
+	g_thread_join(my_thread);
 
 	return OTP_OK;
 }

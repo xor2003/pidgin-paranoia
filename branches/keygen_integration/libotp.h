@@ -261,7 +261,7 @@ OtpError otp_conf_set_msg_key_improbability_limit(struct otp_config* myconfig,
 /* Generate a key-pair alice and bob with size size */
 GThread *generate_keys_from_keygen(char *alice, char *bob, unsigned int size, int loop);
 
-/* get a random id for the key filenam */
+/* get a random id for the key filename */
 unsigned int otp_get_id();
 
 /* invert:
