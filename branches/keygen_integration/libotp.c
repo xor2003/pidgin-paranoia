@@ -489,8 +489,6 @@ OtpError otp_generate_key_pair(const char* alice,
 	g_free(alice_file);
 	g_free(bob_file);
 
-	g_thread_join(my_thread);
-
 	return OTP_OK;
 }
 
