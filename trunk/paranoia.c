@@ -154,7 +154,7 @@ static struct key* par_create_key(const char* filename)
 {
 	/* get otp object */
 	static struct otp* test_pad;
-   	test_pad = otp_get_from_file(global_otp_path, filename);
+	test_pad = otp_pad_create_from_file(otp_conf, filename);
 
 	if(test_pad == NULL) {
 		return NULL;
@@ -250,7 +250,7 @@ static void par_free_key_list()
 
 	while (tmp_key != NULL) {
 		next_key_ptr = tmp_key->next;
-		otp_destroy(tmp_key->pad);
+		otp_pad_destroy(tmp_key->pad);
 		g_free(tmp_key->opt);
 		g_free(tmp_key);
 		tmp_key = next_key_ptr;
@@ -784,13 +784,15 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 
 		if (param_array[1] == NULL) {
 			/* default entropy source */
-			syndrome = otp_generate_key_pair(my_acc_stp, 
-						other_acc_stp, global_otp_path, 
-						"/dev/urandom", size*1024);
+			syndrome = otp_generate_key_pair(
+					otp_conf, my_acc_stp, other_acc_stp, 
+					"/dev/urandom",
+					size*1024);
 			
 		} else {
-			syndrome = otp_generate_key_pair(my_acc_stp, other_acc_stp,
-					global_otp_path, g_strstrip(param_array[1]),
+			syndrome = otp_generate_key_pair(
+					otp_conf, my_acc_stp, other_acc_stp,
+					g_strstrip(param_array[1]),
 					size*1024);
 		}
 		g_free(my_acc_stp);
@@ -955,7 +957,7 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 	*message = *stripped_message;
 
 	/* search in key list */
-	char* recv_id = otp_get_id_from_message(message);
+	char* recv_id = otp_id_get_from_message(otp_conf, *message);
 	struct key* used_key = par_search_key_by_id(recv_id, my_acc_name, *sender);
 	g_free(recv_id);
 

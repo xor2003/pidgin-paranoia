@@ -434,19 +434,14 @@ OtpError otp_erase_key(struct otp* pad)
 	return syndrome;
 }
 
-OtpError otp_generate_key_pair(const char* alice,
-                                   const char* bob, const char* path,
-                                   const char* source, gsize size)
+OtpError otp_generate_key_pair(struct otp_config *myconfig, 
+		const char* alice, const char* bob, 
+		const char* source, gsize size)
 //TODO: v0.2: give the filenames back
 //TODO: v0.2: support loop-keys (alice=bob)
-//unsigned int otp_generate_key_pair(const char* alice,
-//                                   const char* bob, const char* path,
-//                                   const char* source, unsigned int size
-//                                   char** filenames[])
- /* The function can only generate Keyfiles with a filesize of n*BLOCKSIZE*/
-
+ /* The function can only generate Keyfiles with a filesize of n*BLOCKSIZE */
 {
-	if (alice == NULL || bob == NULL || path == NULL
+	if (alice == NULL || bob == NULL || myconfig == NULL
 			|| source == NULL || size <= 0) {
 		return OTP_ERR_INPUT;
 	}
@@ -507,7 +502,7 @@ OtpError otp_generate_key_pair(const char* alice,
 #else
 	const char *desktoppath = g_get_home_dir ();
 #endif
-	char* afilename = g_strconcat(path, alice, FILE_DELI, bob, FILE_DELI, 
+	char* afilename = g_strconcat(myconfig->path, alice, FILE_DELI, bob, FILE_DELI, 
 			idstr, ".entropy", NULL);
 
 	char* bfilename = g_strconcat(desktoppath, PATH_DELI, bob, FILE_DELI,
@@ -517,10 +512,10 @@ OtpError otp_generate_key_pair(const char* alice,
 
 	/* entropy source ready, check for paranoia dir */
 	DIR* dp;
-	dp = opendir(path);
+	dp = opendir(myconfig->path);
 	if (dp == NULL) {
 		/* Create the directory for the entropy files if it does not exist */
-		mkdir(path, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP );
+		mkdir(myconfig->path, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP );
 	} else {
 		closedir(dp);
 	}
@@ -675,12 +670,12 @@ OtpError otp_encrypt_warning(struct otp* pad, char** message, gsize protected_po
 	return syndrome;
 }
 
-char* otp_get_id_from_message(char** message)
+char* otp_id_get_from_message(const struct otp_config* myconfig, const char *msg)
 /* extracts and returns the ID from a given encrypted message.
  * Leaves the message constant. Returns NULL if it fails.*/
 {
-	if (message == NULL || *message == NULL) return NULL;
-	gchar** m_array = g_strsplit(*message, MSG_DELI, 3);
+	if (msg == NULL || myconfig == NULL) return NULL;
+	gchar** m_array = g_strsplit(msg, MSG_DELI, 3);
 	if ( (m_array[0] == NULL) || (m_array[1] == NULL) ) {
 		g_strfreev(m_array);
 		return NULL;
@@ -695,13 +690,14 @@ char* otp_get_id_from_message(char** message)
 	}
 }
 
-struct otp* otp_get_from_file(const char* path, const char* input_filename)
+struct otp* otp_pad_create_from_file(
+				const struct otp_config* myconfig, const char* filename)
 /* Creates an otp struct, returns NULL if the filename is incorrect,
  * or if the file is missing */
 {
-	if (input_filename == NULL || path == NULL ) return NULL;
+	if (filename == NULL || myconfig == NULL ) return NULL;
 
-	gchar** f_array = g_strsplit(input_filename, FILE_DELI, 3);
+	gchar** f_array = g_strsplit(filename, FILE_DELI, 3);
 
 	if ( (f_array[0] == NULL) || (f_array[1] == NULL)
 				|| (f_array[2] == NULL) ) {
@@ -720,7 +716,7 @@ struct otp* otp_get_from_file(const char* path, const char* input_filename)
 	struct otp* pad;
 	pad = (struct otp *)g_malloc(sizeof(struct otp));
 	pad->protected_position = 0;
-	pad->filename = g_strconcat(path, input_filename, NULL);
+	pad->filename = g_strconcat(myconfig->path, filename, NULL);
 
 	/* Our source i.e alice@yabber.org */
 	pad->src = g_strdup(f_array[0]);
@@ -736,13 +732,13 @@ struct otp* otp_get_from_file(const char* path, const char* input_filename)
 
 	OtpError syndrome = otp_seek_start(pad);
 	if (syndrome > OTP_WARN) {
-		otp_destroy(pad);
+		otp_pad_destroy(pad);
 		return NULL;
 	}
 	return pad;
 }
 
-void otp_destroy(struct otp* pad)
+void otp_pad_destroy(struct otp* pad)
 /* destroys an otp object */
 {
 	if (pad != NULL) {
