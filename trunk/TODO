@@ -8,8 +8,10 @@ Version 0.2
  	 * detailed error-numbers instead of return FALSE (Done)
 	 * integrate the threaded key-generator
 	 * setter/getter API
-	 * en/decryption gives **messages back if it fails
+	 * otp_config infrastructure (Done)
+	 * en/decryption gives **messages back if it fails (Done)
 	 * keyfile entropy really checked for patterns
+	 * keyfile locking
  	
  	paranoia.c
 	 * add generated key to keylist
