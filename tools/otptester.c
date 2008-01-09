@@ -62,6 +62,7 @@ int usage() {
 					"--destroy_config\n"
 					"--erasekey\n"
 					"--test\n"
+					"--signalencrypt\n"
 					"--debug\n"
 					"--nodebug\n"
 					"\n"
@@ -208,9 +209,8 @@ int openpad() {
 	if (!strcmp(argvalue[*argpos+1],"encrypt")) {
 		encryptpad = otp_get_from_file(path,argvalue[*argpos]);	
 		if (encryptpad == NULL) {
-			printf("Keyfile '%s' can not be opened!\n",argvalue[*argpos]);
-			printf("* Message:\t\t%s\n",*permmessage);
-		return FALSE;
+			//printf("Keyfile '%s' can not be opened!\n",argvalue[*argpos]);
+			return FALSE;
 		}	
 		if (debuglevel) {
 			printf("* Keyfile '%s' opened!\n",argvalue[*argpos]);
@@ -319,23 +319,24 @@ int encrypt() {
 
 		
 int signalencrypt() {
-	int takes = 1;
+	int takes = 0;
 	if(*argpos+takes-1 >= *argnumber) {
 		return FALSE;
 	}
 	
-	char *vmessage = g_strdup(argvalue[*argpos]);
-	char **message = &vmessage;
-	if (debuglevel) {
-		printf("* Message:\t%s\n",*message);
+	if (permmessage == NULL) {
+		printf("No message set!\n");
+		return FALSE;
 	}
-	OtpError syndrome = otp_encrypt_warning(encryptpad,message,0);
+	if (debuglevel) {
+		printf("* Message:\t%s\n",*permmessage);
+	}
+	OtpError syndrome = otp_encrypt_warning(encryptpad, permmessage,0);
 	if (syndrome > OTP_WARN) {
 		printf("Signalencrypt failed! %.8X\n",syndrome);
-		printf("Message:\t\t%s\n",*permmessage);
 		return FALSE;	
 	}
-	printf("Enc. signal message:\t%s\n",*message);	
+	printf("Enc. signal message:\t%s\n",*permmessage);	
 	
 	if (debuglevel) {
 		printf("* Syndrome:\t\t%.8X\n",syndrome);
@@ -346,7 +347,6 @@ int signalencrypt() {
 	if (permmessage != NULL) {
 		//g_free(**permmessage);
 	}
-	permmessage = message;
 	
 	
 	*argpos = *argpos+takes;

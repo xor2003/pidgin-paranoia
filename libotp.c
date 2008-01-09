@@ -148,7 +148,6 @@ static OtpError otp_open_keyfile(int* fd, char** data, struct otp* pad)
 		perror("open");
 		return OTP_ERR_FILE;
 	}
-
 	if (stat(pad->filename, &fstat) == -1) {
 		perror("stat");
 		close(*fd);
@@ -194,8 +193,6 @@ static OtpError otp_seek_start(struct otp* pad)
 		pad->position = otp_seek_pos(*data, pad->filesize);
 		otp_calc_entropy(pad);
 		otp_close_keyfile(fd, data, pad);
-	} else {
-		return syndrome;
 	}
 	return syndrome;
 }
@@ -642,7 +639,7 @@ OtpError otp_encrypt_warning(struct otp* pad, char** message, gsize protected_po
  * protected_pos is the position in bytes to use. */
 {
 	OtpError syndrome = OTP_OK;
-	if (pad == NULL || message == NULL || *message == NULL || protected_pos <= 0) {
+	if (pad == NULL || message == NULL || *message == NULL || protected_pos < 0) {
 		if (protected_pos <= OTP_PROTECTED_ENTROPY - strlen(*message)) {
 			return OTP_ERR_INPUT;
 		}
