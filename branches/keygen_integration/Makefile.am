@@ -1,10 +1,12 @@
 SUBDIRS = tools
 
-plugindir = $(PURPLE_LIBDIR)/purple-2
+paranoia_LTLIBRARIES = paranoia.la
 
-plugin_LTLIBRARIES = paranoia.la
+paranoiadir = $(PURPLE_LIBDIR)/purple-2
 
 paranoia_la_LDFLAGS = -module -avoid-version
+
+paranoia_la_LIBADD = $(GLIB_LIBS)
 
 paranoia_la_SOURCES = \
 	keygen.h \
@@ -13,14 +15,13 @@ paranoia_la_SOURCES = \
 	libotp.c \
 	paranoia.c
 
-
 paranoia_la_CPPFLAGS = \
+	$(GLIB_CFLAGS) \
+	$(PURPLE_CFLAGS) \
 	-DVERSION=\"$(VERSION)\" \
 	-DLIBDIR=\"$(PURPLE_LIBDIR)/purple-2/\" \
 	-DDATADIR=\"$(PURPLE_DATADIR)\" \
-	-DLOCALEDIR=\"$(PURPLE_DATADIR)/locale\" \
-	$(DEBUG_CFLAGS) \
-	$(PURPLE_CFLAGS)
+	-DLOCALEDIR=\"$(PURPLE_DATADIR)/locale\"
 
 BUILT_SOURCES = paranoia_config.h
 

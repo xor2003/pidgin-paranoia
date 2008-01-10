@@ -15,27 +15,20 @@ AM_CONFIG_HEADER(pre_config.h)
 #
 AM_INIT_AUTOMAKE(AC_PACKAGE_NAME, AC_PACKAGE_VERSION, 'no-define')
 
-AC_PREREQ([2.50])
+AC_PREREQ([2.57])
 
 AC_PATH_PROG(sedpath, sed)
 AC_DISABLE_STATIC
 
 #
-# Setup libtool
-#
-
-AM_PROG_LIBTOOL
-LIBTOOL="$LIBTOOL --silent"
-
-#
-# Additional paranoia_config.h entires
+# Additional paranoia_config.h entries
 #
 
 AC_DEFINE_UNQUOTED(PARANOIA_WEBSITE, "http://pidgin-paranoia.sourceforge.net/", [Pidgin-Paranoia's Website])
 AC_DEFINE_UNQUOTED(PARANOIA_AUTHORS, "Simon Wenner <simon@wenner.ch> Christian Wäckerlin <christian@waeckerlin.com>", [Pidgin-Paranoia's Authors])
 AC_DEFINE_UNQUOTED(PARANOIA_ID, "core-paranoia", [Pidgin-Paranoia Plugin ID])
 
-# Swich for realotp support:
+# Switch for realotp support:
 # See: http://sourceware.org/autobook/autobook/autobook_283.html#SEC283
 AC_MSG_CHECKING(for realotp support)
 AC_ARG_ENABLE(otp,
@@ -69,7 +62,7 @@ PKG_CHECK_MODULES(PURPLE, purple >= 2.2.0,, AC_MSG_ERROR([
 # Maybe a better solution in the future:
 #AM_PATH_PURPLE(2.2.0,, AC_MSG_ERROR([
 #*** LibPurple is required to build pidgin-paranoia.
-#*** It's available at http://www.pidgin.im/.]))
+#*** Available at http://www.pidgin.im/.]))
 #AC_SUBST(PURPLE_CFLAGS)
 
 AC_SUBST(PURPLE)
@@ -83,19 +76,25 @@ AC_SUBST(PURPLE_DATADIR)
 #
 
 AM_PATH_GLIB_2_0(2.12.0,, AC_MSG_ERROR([
-*** GLib 2.0 is required to build pidgin-paranoia; please make sure you have the.
-*** GLib development headers installed. The latest version of GLib is always
-*** available at http://www.gtk.org/.]))
+*** GLib 2.12.0 is required to build pidgin-paranoia;  The latest version of 
+*** GLib is always available at http://www.gtk.org/.]))
 
-AC_SUBST(GLIB_CFLAGS)
+#AC_SUBST(GLIB_CFLAGS)
 
 PKG_CHECK_MODULES(GTHREAD, gthread-2.0,, [AC_MSG_ERROR([unable to find the GThread library])])
-AC_SUBST(GTHREAD_CFLAGS)
-AC_SUBST(GTHREAD_LIBS)
 PKG_CHECK_MODULES(GOBJECT, gobject-2.0,, [AC_MSG_ERROR([unable to find the GObject library])])
-AC_SUBST(GOBJECT_CFLAGS)
-AC_SUBST(GOBJECT_LIBS)
 
+GLIB_LIBS+="`pkg-config --libs gthread-2.0 gobject-2.0`"
+GLIB_CFLAGS+="`pkg-config --cflags gthread-2.0 gobject-2.0`"
+
+#
+# Setup libtool
+#
+
+AM_PROG_LIBTOOL
+LIBTOOL="$LIBTOOL --silent"
+
+#
 # Finish up
 #
 
@@ -103,7 +102,7 @@ AC_OUTPUT([
 	Makefile
 	VERSION
 	tools/Makefile
-	  ])
+	])
 
 echo;
 echo Configuration complete
