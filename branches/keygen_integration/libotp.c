@@ -449,9 +449,9 @@ OtpError otp_generate_key_pair(const char* alice,
  /* The function can only generate Keyfiles with a filesize of n*BLOCKSIZE*/
 
 {
-	char *alice_file, *bob_file, id[9];
+	char *alice_file, *bob_file;
 	char *home_path;
-	unsigned int key_size;
+	unsigned int key_size, id;
 	GThread *my_thread;
 
 	if (alice == NULL || bob == NULL || path == NULL
@@ -476,13 +476,13 @@ OtpError otp_generate_key_pair(const char* alice,
 	g_print("paranoia: otp_genkey initial checks\n");
 #endif
 
-	sprintf(id, "%.8X\0", otp_get_id());
+	id = otp_get_id();
 	key_size = size * BLOCKSIZE;
 	home_path = (char *)g_getenv ("HOME");
 	if(!home_path) home_path = (char *)g_get_home_dir();
 
-	alice_file = (char *)g_strdup_printf("%s%s %s %s.entropy", path, alice, bob, id);
-	bob_file = (char *)g_strdup_printf("%s%s%s %s %s.entropy",home_path, PATH_DELI, bob, alice, id);
+	alice_file = (char *)g_strdup_printf("%s%s %s %.8X.entropy", path, alice, bob, id);
+	bob_file = (char *)g_strdup_printf("%s%s%s %s %.8X.entropy",home_path, PATH_DELI, bob, alice, id);
 
 	my_thread = generate_keys_from_keygen(alice_file, bob_file, key_size, strcmp(alice, bob));
 
