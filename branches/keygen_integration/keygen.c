@@ -257,6 +257,7 @@ gpointer start_generation(gpointer data)
 // create the inverted key
 	if(key_data.size != 0) {
 		g_printerr("could not finish writing process\n");
+		key_data.size = 0;
 		return 0;
 	}
 
