@@ -7,11 +7,12 @@ Version 0.2
  	libotp.c
  	 * detailed error-numbers instead of return FALSE (Done)
 	 * integrate the threaded key-generator
-	 * setter/getter API
+	 * setter/getter API (Partly done)
 	 * otp_config infrastructure (Done)
 	 * en/decryption gives **messages back if it fails (Done)
 	 * keyfile entropy really checked for patterns
 	 * keyfile locking
+	 * keeping filehandles and mmaps open to save CPU
  	
  	paranoia.c
 	 * add generated key to keylist

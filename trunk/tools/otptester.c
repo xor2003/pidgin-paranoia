@@ -32,7 +32,7 @@
 /* great stuff */
 #include "../libotp.h"
 
-#define PARANOIA_PATH "/.paranoia/"		/* TODO: REMOVE */
+#define PARANOIA_PATH "/.paranoia/"
 
 char* programname;
 int* argnumber;
@@ -106,8 +106,16 @@ int create_config() {
 	if(*argpos+takes-1 >= *argnumber) {
 		return FALSE;
 	}
+	
+	const gchar* home = g_get_home_dir();
+	char* path = g_strconcat(home, PARANOIA_PATH, NULL);
+#ifdef USEDESKTOP
+	const char *desktoppath = g_get_user_special_dir(G_USER_DIRECTORY_DESKTOP);
+#else
+	const char *desktoppath = g_get_home_dir();
+#endif
 	config = otp_conf_create("otptester", 
-			"otp_path", "export_path");
+		path, desktoppath);
 	if (config == NULL) {
 		printf("Error creating the otp_config!\n");
 		return FALSE;

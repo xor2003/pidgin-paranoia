@@ -45,7 +45,8 @@
 
 /* Requires GNOMElib 2.14! Bob's keyfile is placed onto the desktop. 
  * If not set, the file is placed in the home directory. */
-//#define USEDESKTOP
+// boognu: I moved this to libotp.h
+////#define USEDESKTOP
 
 /* ----------------- General Paranoia Stuff ------------------ */
 #define PARANOIA_HEADER "*** Encrypted with the Pidgin-Paranoia plugin: "
