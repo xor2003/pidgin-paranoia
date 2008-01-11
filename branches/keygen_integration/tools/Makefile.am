@@ -12,5 +12,3 @@ otptester_SOURCES = \
 otptester_CPPFLAGS = $(GLIB_CFLAGS)
 
 otptester_LDADD = $(GLIB_LIBS)
-
-otptester_LDFLAGS = -lm
