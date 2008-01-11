@@ -22,6 +22,14 @@
 #define OTP_ID_LENGTH 8			/* Size of the ID-string. 4 bytes --> 8 bytes base 16*/
 #define OTP_PROTECTED_ENTROPY 100	/* The amount of entropy that is only used for "out of entropy" messages */ 
 
+
+/* -------------------- Public Defines ------------------------------*/
+
+//#define USEDESKTOP
+/* Requires GNOMElib 2.14! Bob's
+ * keyfile is placed onto the desktop. If not set, the
+ * file is placed in the home directory.*/
+
 /* ------------------ Error Syndrome System  ---------------------- */
 
 typedef enum {
@@ -109,20 +117,30 @@ typedef enum {
 	OTP_WARN		= 0x0000FFFF,
 } OtpError;
 
-
 // TODO: This will become private
+struct otp_config {
+	char* client_id;			/* Choose the ID of your client, i.e. for debug messages */
+	char* path;					/* The absolute path were the keyfiles are stored */
+	char* export_path;			/* The absolute path were to export bob's newly created keys */
+	unsigned int pad_count; 	/* A counter for the number of associated otp structs */
+	gsize random_msg_tail_max_len;		/* max. padding added onto every message */
+	double msg_key_improbability_limit;	/* entropy for message encryption with 
+ * less probable content will be rejected */ 
+};
+
 struct otp {
- 	char* src; 		/* for pidgin: 'account' like alice@jabber.org */
-	char* dest; 		/* for pidgin: 'account' like bob@jabber.org */
-	char* id; 		/* 8 digits unique random number of the key pair (hex) */
-	char* filename; 	/* The full path and the filename defined in the libotp spec */
-	gsize position; 	/* start positon for the next encryption */
-	gsize protected_position;	/* Only used for messages and signals from the protected entropy. Otherwise set to zero */
-	gsize entropy; 	/* the size (in bytes) of the entropy left for the sender */
-	gsize filesize; 	/* The size of the file in bytes */
-// TODO: Is this the future?
-	OtpError syndrome;
-//	struct otp_config* config;
+ 	char* src; 					/* for pidgin: 'account' like alice@jabber.org */
+	char* dest; 				/* for pidgin: 'account' like bob@jabber.org */
+	char* id; 					/* 8 digits unique random number of the key pair (hex) */
+	char* filename; 			/* The full path and the filename defined in the libotp spec */
+	gsize position; 			/* start positon for the next encryption */
+	gsize protected_position;	/* Only used for messages and signals 
+ * from the protected entropy. Otherwise set to zero */
+	gsize entropy; 				/* the size (in bytes) of the entropy left for the sender */
+	gsize filesize; 			/* The size of the file in bytes */
+	OtpError syndrome;			/* contains the status of this otp pad, if this
+ * is relvant for the future, i.e. OTP_WARN_KEY_NOT_RANDOM */
+	struct otp_config* config;	/* The settings associated with this pad. */
 };
 
 /* encrypt the message 
@@ -171,6 +189,13 @@ gsize otp_pad_get_position(struct otp* mypad);
 
 /* gets the size of the file in bytes */
 gsize otp_pad_get_filesize(struct otp* mypad);
+
+
+/* closes the filehandle and the memory map. 
+ * You can do this any time you want, it will just save memory 
+ * (This function is a stub ATM)*/
+// TODO: Please implement in paranoia.c
+void otp_pad_use_less_memory(struct otp* mypad);
 
 /* gets an OtpError that contains information about the status of the pad */
 OtpError otp_pad_get_syndrome(struct otp* mypad);
@@ -239,7 +264,7 @@ OtpError otp_conf_set_msg_key_improbability_limit(struct otp_config* myconfig,
 char* otp_id_get_from_message(const struct otp_config* myconfig, const char *msg);
 
 /* creates an otp pad with the data from a key file */
-struct otp* otp_pad_create_from_file(const struct otp_config* myconfig, const char* filename);
+struct otp* otp_pad_create_from_file(struct otp_config* myconfig, const char* filename);
 
 /* destroys an otp object */
 void otp_pad_destroy(struct otp* mypad);
@@ -249,7 +274,7 @@ void otp_pad_destroy(struct otp* mypad);
 // TODO:		struct otp* alice_pad, struct otp* bob_pad
 // Note: Giving back bob_pad makes no sense since it has no use for alice.
 		/* alice and bob is optional. if NULL not created */
-OtpError otp_generate_key_pair(struct otp_config* myconfig, 
+OtpError otp_generate_key_pair(const struct otp_config* myconfig, 
 			const char* alice, const char* bob, 
 			const char* source, gsize size);
 

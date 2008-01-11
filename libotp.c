@@ -16,27 +16,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
 
-/*  -------------------------- Includes ---------------------------- */
-
-/* GNUlibc includes */
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <math.h>
-/* to manipulate files */
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <sys/mman.h>
-#include <unistd.h>
-/* to create directories */
-#include <dirent.h>
-
-/* GNOMElib */
-#include <glib.h>
-
-/* The public functions of this library */
-#include "libotp.h"
-
 /*  ------------------- Constants (don't change) -------------------
  * Changing this makes your one-time-pad incompatible */
 
@@ -62,9 +41,6 @@
 #define DEFAULT_IMPROBABILITY 1E-12		/* Default value: If a key with less
 				 * probability then this occurs, throw the key away */
 
-#define REPEATTOL 1E-12				// TODO: Remove, replace by otp_config
-#define RNDLENMAX 30 				// TODO: Remove, replace by otp_config
-
 /*  ------------------- Defines (essential) ------------------------
  * All defines needed for full opt functionality! Regarded
  * as stable. The encryption is worthless without those! */
@@ -77,32 +53,54 @@
 
 #define RNDMSGLEN               /* Add a random-length string onto the message */
 
+#define PRINT_ERRORS
+/* Print errors to the terminal if enabled (Recommanded)*/
+
 /*  ------------------- Defines (in development) ------------------------
  * In development. Regraded as unstable. Those functions are nice
  * but not critical. */
 
-//#define USEDESKTOP
-/* Requires GNOMElib 2.14! Bob's
- * keyfile is placed onto the desktop. If not set, the
- * file is placed in the home directory.*/
 #define CHECKKEY                /* Histogram/repeat checking of the key (Needs testing) */
 
 /*  ------------------- Defines (for development) ------------------------
  * Useful for Developpers */
 
 //#define DEBUG
-                 /* Enables the function otp_printint
-*                and dumps the way of the message and key byte by byte. */
+/* Produces lots of output
+ * Enables the function otp_printint and dumps the way of the 
+ * message and key byte by byte. */
+
+/* -------------------- Includes -----------------------------------*/
+/*  -------------------------- Includes ---------------------------- */
+
+/* GNUlibc includes */
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+/* to manipulate files */
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <unistd.h>
+/* to create directories */
+#include <dirent.h>
+
+/* GNOMElib */
+#include <glib.h>
+
+/* The public functions of this library */
+#include "libotp.h"
+
+#ifdef DEBUG 
+#include <stdio.h>
+#endif
+
+#ifdef PRINT_ERRORS
+#include <stdio.h>
+#endif
+
 
 /* ------------------- Private data structures -------------------- */
-struct otp_config {
-	char* client_id;
-	char* path;
-	char* export_path;
-	unsigned int pad_count; /* A counter for the number of associated otp structs (has no effect) */
-	gsize random_msg_tail_max_len;
-	double msg_key_improbability_limit;
-};
 
 /*  ----------------- Private Functions of the Library------------ */
 
@@ -117,11 +115,11 @@ static void otp_xor(char** message, char** key, gsize len)
 }
 
 #ifdef DEBUG
-static void otp_printint(char* m, gsize len, const char* hint)
+static void otp_printint(char* m, gsize len, const char* hint, const struct otp_config* config)
 /* Helper function for debugging */
 {
 	gsize i;
-	printf("\t\t%s:\t", hint);
+	printf("%s:\t%s:\t", config->client_id, hint);
 	for (i = 0; i < len; i++) {
 		printf("%i ", m[i]);
 	}
@@ -145,11 +143,15 @@ static OtpError otp_open_keyfile(int* fd, char** data, struct otp* pad)
 {
 	struct stat fstat;
 	if ((*fd = open(pad->filename, O_RDWR)) == -1) {
+#ifdef PRINT_ERRORSS
 		perror("open");
+#endif
 		return OTP_ERR_FILE;
 	}
 	if (stat(pad->filename, &fstat) == -1) {
+#ifdef PRINT_ERRORSS
 		perror("stat");
+#endif
 		close(*fd);
 		return OTP_ERR_FILE;
 	}
@@ -157,7 +159,9 @@ static OtpError otp_open_keyfile(int* fd, char** data, struct otp* pad)
 
 	if ((*data = mmap((caddr_t)0, pad->filesize, PROT_READ | PROT_WRITE,
 			MAP_SHARED, *fd, 0)) == (caddr_t)(-1)) {
+#ifdef PRINT_ERRORSS
 		perror("mmap");
+#endif
 		close(*fd);
 		return OTP_ERR_FILE;
 	}
@@ -171,11 +175,11 @@ static void otp_close_keyfile(int* fd, char** data, struct otp* pad)
 	close(*fd);
 }
 
-static gsize otp_seek_pos(const char* data, gsize filesize)
+static gsize otp_seek_pos(const char* data, const struct otp* pad)
 /* Seeks the position where the pad can be used for encryption */
 {
 	gsize pos = 0;
-	while ( ((data+pos)[0] == PAD_EMPTYCHAR) && (pos < filesize) ) {
+	while ( ((data+pos)[0] == PAD_EMPTYCHAR) && (pos < pad->filesize) ) {
 		pos++;
 	}
 	return pos;
@@ -190,7 +194,7 @@ static OtpError otp_seek_start(struct otp* pad)
 	char** data = &space2;
 	OtpError syndrome = otp_open_keyfile(fd, data, pad);
 	if (syndrome == OTP_OK) {
-		pad->position = otp_seek_pos(*data, pad->filesize);
+		pad->position = otp_seek_pos(*data, pad);
 		otp_calc_entropy(pad);
 		otp_close_keyfile(fd, data, pad);
 	}
@@ -207,7 +211,8 @@ static gboolean otp_id_is_valid(const char* id_str)
 	}
 }
 
-static gboolean otp_key_is_random(char** key, gsize len)
+static gboolean otp_key_is_random(char** key, gsize len, 
+		const struct otp_config* config)
 /* Checks the key by statistical means
  *
  * */
@@ -227,15 +232,18 @@ static gboolean otp_key_is_random(char** key, gsize len)
 	}
 	/* Probability for a repeat of len*/
 	repeatprob = 1.0; // TODO v.0.2: Formula needed
-	if (repeatprob < REPEATTOL) {
+	if (repeatprob < config->msg_key_improbability_limit) {
 		/* Fail if the probability for a random key to have a repeat is smaller than the tolerance. */
-		printf("core-paranoia: Probability for a repeat of len %i: %e\n", rep, repeatprob);
+#ifdef PRINT_ERRORS
+		printf("%s: Probability for a repeat of len %i: %e\n", config->client_id, rep, repeatprob);
+#endif
 		return FALSE;
 	}
 	return TRUE;
 }
 
-static OtpError otp_get_encryptkey_from_file(char** key, struct otp* pad, gsize len)
+static OtpError otp_get_encryptkey_from_file(char** key, struct otp* pad, 
+			gsize len, struct otp_config* config)
 /* Gets the key to encrypt from the keyfile */
 {
 	int space1 = 0;
@@ -267,7 +275,7 @@ static OtpError otp_get_encryptkey_from_file(char** key, struct otp* pad, gsize 
 #ifdef CHECKKEY
 	/* TODO v0.2: What should i do if the key is rejected?
 	 * ATM it just fails and destroys the keyblock.*/
-	if (otp_key_is_random(key, len-1) == FALSE) {
+	if (otp_key_is_random(key, len-1, config) == FALSE) {
 #ifdef KEYOVERWRITE
 		if (pad->protected_position == 0) {
 			syndrome = syndrome | OTP_WARN_KEY_NOT_RANDOM;
@@ -301,7 +309,8 @@ static OtpError otp_get_encryptkey_from_file(char** key, struct otp* pad, gsize 
 	return syndrome;
 }
 
-static OtpError otp_get_decryptkey_from_file(char** key, struct otp* pad, gsize len, gsize decryptpos)
+static OtpError otp_get_decryptkey_from_file(char** key, struct otp* pad, 
+			gsize len, gsize decryptpos)
 /* Gets the key to decrypt from the keyfile */
 {
 	int space1 = 0;
@@ -360,11 +369,11 @@ static OtpError otp_udecrypt(char** message, struct otp* pad, gsize decryptpos)
 	syndrome = otp_get_decryptkey_from_file(key, pad, len, decryptpos);
 	if (syndrome > OTP_WARN) return syndrome;
 #ifdef DEBUG 
-	otp_printint(*key, len, "paranoia: decryptkey");
+	otp_printint(*key, len, "decryptkey", pad->config);
 #endif
 	otp_xor(message, key, len);
 #ifdef DEBUG 
-	otp_printint(*key,len, "paranoia: decrypt-xor");
+	otp_printint(*key,len, "decrypt-xor", pad->config);
 #endif
 	return syndrome;
 }
@@ -383,10 +392,10 @@ static OtpError otp_uencrypt(char** message, struct otp* pad)
 
 #ifdef RNDMSGLEN
 	/* get one byte from keyfile for random length */
-	syndrome = otp_get_encryptkey_from_file(rand, pad, 1+1);
+	syndrome = otp_get_encryptkey_from_file(rand, pad, 1+1, pad->config);
 	if ( syndrome > OTP_WARN ) return syndrome;
 	
-	rnd = (unsigned char)*rand[0]*RNDLENMAX/255;
+	rnd = (unsigned char)*rand[0]*pad->config->random_msg_tail_max_len/255;
 	g_free(*rand);
 	msg = g_malloc0(rnd+len);       /* Create a new,longer message */
 	memcpy(msg, *message, len-1);
@@ -394,14 +403,14 @@ static OtpError otp_uencrypt(char** message, struct otp* pad)
 	*message = msg;
 	len += rnd;
 #endif
-	syndrome = otp_get_encryptkey_from_file(key, pad, len);
+	syndrome = otp_get_encryptkey_from_file(key, pad, len, pad->config);
 	if ( syndrome > OTP_WARN ) return syndrome;
 #ifdef DEBUG 
-	otp_printint(*key,len, "paranoia: encryptkey");
+	otp_printint(*key,len, "encryptkey", pad->config);
 #endif
 	otp_xor(message, key, len);
 #ifdef DEBUG 
-	otp_printint(*key,len, "paranoia: encrypt-xor");
+	otp_printint(*key,len, "encrypt-xor", pad->config);
 #endif
 	otp_base64_encode(message, len);
 	return syndrome;
@@ -423,25 +432,25 @@ OtpError otp_erase_key(struct otp* pad)
 	/* Using up all entropy */
 	OtpError syndrome = OTP_OK;
 	while (syndrome <= OTP_WARN ) {
-		syndrome = otp_get_encryptkey_from_file(key, pad, len);
+		syndrome = otp_get_encryptkey_from_file(key, pad, len, pad->config);
 	}
 	syndrome = OTP_OK;
 	len = 1+1;
 	while (syndrome <= OTP_WARN) {
-		syndrome = otp_get_encryptkey_from_file(key, pad, len);
+		syndrome = otp_get_encryptkey_from_file(key, pad, len, pad->config);
 	}
 	if (syndrome == OTP_ERR_KEY_EMPTY) syndrome = OTP_OK;
 	return syndrome;
 }
 
-OtpError otp_generate_key_pair(struct otp_config *myconfig, 
+OtpError otp_generate_key_pair(const struct otp_config *config, 
 		const char* alice, const char* bob, 
 		const char* source, gsize size)
 //TODO: v0.2: give the filenames back
 //TODO: v0.2: support loop-keys (alice=bob)
  /* The function can only generate Keyfiles with a filesize of n*BLOCKSIZE */
 {
-	if (alice == NULL || bob == NULL || myconfig == NULL
+	if (alice == NULL || bob == NULL || config == NULL
 			|| source == NULL || size <= 0) {
 		return OTP_ERR_INPUT;
 	}
@@ -460,17 +469,21 @@ OtpError otp_generate_key_pair(struct otp_config *myconfig,
 		size = size/BLOCKSIZE + 1;
 	}
 #ifdef DEBUG 
-	printf("paranoia: otp_genkey initial checks\n");
+	printf("%s: otp_genkey initial checks\n", config->client_id);
 #endif
 	/* open entropy source */
 	int rfd;
 	if ((rfd = open(source, O_RDONLY)) == -1) {
+#ifdef PRINT_ERRORS
 		perror("open");
+#endif
 		return OTP_ERR_FILE_ENTROPY_SOURCE;
 	}
 	struct stat rfstat;
 	if (stat(source, &rfstat) == -1) {
+#ifdef PRINT_ERRORS
 		perror("stat");
+#endif
 		close(rfd);
 		return OTP_ERR_FILE_ENTROPY_SOURCE;
 	}
@@ -484,7 +497,7 @@ OtpError otp_generate_key_pair(struct otp_config *myconfig,
 		return OTP_ERR_FILE_ENTROPY_SOURCE_SIZE;
 	}
 #ifdef DEBUG 
-	printf("paranoia: otp_genkey source open\n");
+	printf("%s: otp_genkey source open\n", config->client_id);
 #endif
 
 	/* id string from integer */
@@ -502,7 +515,7 @@ OtpError otp_generate_key_pair(struct otp_config *myconfig,
 #else
 	const char *desktoppath = g_get_home_dir ();
 #endif
-	char* afilename = g_strconcat(myconfig->path, alice, FILE_DELI, bob, FILE_DELI, 
+	char* afilename = g_strconcat(config->path, alice, FILE_DELI, bob, FILE_DELI, 
 			idstr, ".entropy", NULL);
 
 	char* bfilename = g_strconcat(desktoppath, PATH_DELI, bob, FILE_DELI,
@@ -510,17 +523,17 @@ OtpError otp_generate_key_pair(struct otp_config *myconfig,
 
 	g_free(idstr);
 
-	/* entropy source ready, check for paranoia dir */
+	/* entropy source ready, check for directory with the keyfiles*/
 	DIR* dp;
-	dp = opendir(myconfig->path);
+	dp = opendir(config->path);
 	if (dp == NULL) {
 		/* Create the directory for the entropy files if it does not exist */
-		mkdir(myconfig->path, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP );
+		mkdir(config->path, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP );
 	} else {
 		closedir(dp);
 	}
 #ifdef DEBUG 
-	printf("paranoia: otp_genkey dir checked\n");
+	printf("%s: otp_genkey dir checked\n", config->client_id);
 #endif
 	
 	/* Opening the alice's key file */
@@ -538,7 +551,9 @@ OtpError otp_generate_key_pair(struct otp_config *myconfig,
 	if ((afd = open(afilename,
 	                O_RDWR|O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP ))
 	    == -1) {
+#ifdef PRINT_ERRORS
 		perror("open");
+#endif
 		close(rfd);
 		close(afd);
 		g_free(afilename);
@@ -547,7 +562,7 @@ OtpError otp_generate_key_pair(struct otp_config *myconfig,
 	}
 	
 #ifdef DEBUG 
-	printf("paranoia: otp_genkey afile open\n");
+	printf("%s: otp_genkey afile open\n", config->client_id);
 #endif
 	
 	/* Source and alice key file is open, copy entropy */
@@ -563,7 +578,7 @@ OtpError otp_generate_key_pair(struct otp_config *myconfig,
 	close(rfd);
 	
 #ifdef DEBUG 
-	printf("paranoia: otp_genkey source closed\n");
+	printf("%s: otp_genkey source closed\n", config->client_id);
 #endif
 	
 	/* Alice's file written, opening the Bob's file */
@@ -578,7 +593,9 @@ OtpError otp_generate_key_pair(struct otp_config *myconfig,
 	}
 	if ((bfd = open(bfilename,
 			O_RDWR|O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP )) == -1) {
+#ifdef PRINT_ERRORS
 		perror("open");
+#endif
 		close(afd);
 		close(bfd);
 		g_free(afilename);
@@ -589,7 +606,9 @@ OtpError otp_generate_key_pair(struct otp_config *myconfig,
 	/* Opening a memory map for Alice's file */
 	struct stat afstat;
 	if (stat(afilename, &afstat) == -1) {
+#ifdef PRINT_ERRORS
 		perror("stat");
+#endif
 		close(afd);
 		close(bfd);
 		g_free(afilename);
@@ -598,7 +617,9 @@ OtpError otp_generate_key_pair(struct otp_config *myconfig,
 	}
 	gsize afilesize = afstat.st_size;
 	if ((*adata = mmap((caddr_t)0, afilesize, PROT_READ, MAP_SHARED, afd, 0)) == (caddr_t)(-1)) {
+#ifdef PRINT_ERRORS
 		perror("mmap");
+#endif
 		close(afd);
 		close(bfd);
 		g_free(afilename);
@@ -606,7 +627,7 @@ OtpError otp_generate_key_pair(struct otp_config *myconfig,
 		return OTP_ERR_FILE;
 	}
 #ifdef DEBUG 
-	printf("paranoia: otp_genkey afile written\n");
+	printf("%s: otp_genkey afile written\n", config->client_id);
 #endif
 	
 	/* Create the reversed second file from Alice's one */
@@ -618,7 +639,7 @@ OtpError otp_generate_key_pair(struct otp_config *myconfig,
 		write(bfd, buffer, BLOCKSIZE);
 	}
 #ifdef DEBUG 
-	printf("paranoia: otp_genkey bfile written\n");
+	printf("%s: otp_genkey bfile written\n", config->client_id);
 #endif
 	munmap(adata, afilesize);
 	close(afd);
@@ -651,7 +672,9 @@ OtpError otp_encrypt_warning(struct otp* pad, char** message, gsize protected_po
 	syndrome = otp_uencrypt(message, pad);
 	if (syndrome > OTP_WARN) {
 		pad->protected_position = 0;
-		printf("syndrome: %.8X\n",syndrome);
+#ifdef PRINT_ERRORS
+		printf("%s: encrypt warning failed: %.8X\n",pad->config->client_id, syndrome);
+#endif
 		g_free(*message);
 		*message = old_msg;
 		return syndrome;
@@ -670,11 +693,11 @@ OtpError otp_encrypt_warning(struct otp* pad, char** message, gsize protected_po
 	return syndrome;
 }
 
-char* otp_id_get_from_message(const struct otp_config* myconfig, const char *msg)
+char* otp_id_get_from_message(const struct otp_config* config, const char *msg)
 /* extracts and returns the ID from a given encrypted message.
  * Leaves the message constant. Returns NULL if it fails.*/
 {
-	if (msg == NULL || myconfig == NULL) return NULL;
+	if (msg == NULL || config == NULL) return NULL;
 	gchar** m_array = g_strsplit(msg, MSG_DELI, 3);
 	if ( (m_array[0] == NULL) || (m_array[1] == NULL) ) {
 		g_strfreev(m_array);
@@ -691,11 +714,11 @@ char* otp_id_get_from_message(const struct otp_config* myconfig, const char *msg
 }
 
 struct otp* otp_pad_create_from_file(
-				const struct otp_config* myconfig, const char* filename)
+				struct otp_config* config, const char* filename)
 /* Creates an otp struct, returns NULL if the filename is incorrect,
  * or if the file is missing */
 {
-	if (filename == NULL || myconfig == NULL ) return NULL;
+	if (filename == NULL || config == NULL ) return NULL;
 
 	gchar** f_array = g_strsplit(filename, FILE_DELI, 3);
 
@@ -716,7 +739,9 @@ struct otp* otp_pad_create_from_file(
 	struct otp* pad;
 	pad = (struct otp *)g_malloc(sizeof(struct otp));
 	pad->protected_position = 0;
-	pad->filename = g_strconcat(myconfig->path, filename, NULL);
+	pad->filename = g_strconcat(config->path, filename, NULL);
+	pad->config = config;
+	config->pad_count++;
 
 	/* Our source i.e alice@yabber.org */
 	pad->src = g_strdup(f_array[0]);
@@ -735,6 +760,10 @@ struct otp* otp_pad_create_from_file(
 		otp_pad_destroy(pad);
 		return NULL;
 	}
+	
+#ifdef DEBUG 
+	printf("%s: pad created: %i pads open.\n", config->client_id, config->pad_count);
+#endif
 	return pad;
 }
 
@@ -742,6 +771,10 @@ void otp_pad_destroy(struct otp* pad)
 /* destroys an otp object */
 {
 	if (pad != NULL) {
+		pad->config->pad_count--;
+#ifdef DEBUG 
+		printf("%s: pad destroyed: %i pads open.\n", pad->config->client_id, pad->config->pad_count);
+#endif
 		if (pad->src != NULL) g_free(pad->src);
 		if (pad->dest != NULL) g_free(pad->dest);
 		if (pad->id != NULL) g_free(pad->id);
@@ -756,7 +789,7 @@ OtpError otp_encrypt(struct otp* pad, char** message)
 {
 	OtpError syndrome = OTP_OK;
 #ifdef DEBUG 
-	otp_printint(*message,strlen(*message), "paranoia: before encrypt");
+	otp_printint(*message,strlen(*message), "before encrypt", pad->config);
 #endif
 	if (pad == NULL || message == NULL || *message == NULL) return OTP_ERR_INPUT;
 	pad->protected_position = 0;
@@ -768,7 +801,9 @@ OtpError otp_encrypt(struct otp* pad, char** message)
 #ifdef UCRYPT
 	syndrome = otp_uencrypt(message, pad);
 	if (syndrome > OTP_WARN) {
-		printf("syndrome: %.8X\n",syndrome);
+#ifdef PRINT_ERRORS
+		printf("%s: encrypt failed: %.8X\n",pad->config->client_id, syndrome);
+#endif
 		g_free(*message);
 		*message = old_msg;
 		return syndrome;
@@ -783,7 +818,7 @@ OtpError otp_encrypt(struct otp* pad, char** message)
 	g_free(pos_str);
 	*message = new_msg;
 #ifdef DEBUG 
-	otp_printint(*message,strlen(*message), "paranoia: after encrypt");
+	otp_printint(*message,strlen(*message), "after encrypt", pad->config);
 #endif
 	g_free(old_msg);
 	return syndrome;
@@ -794,7 +829,7 @@ OtpError otp_decrypt(struct otp* pad, char** message)
    returns TRUE if it could decrypt the message  */
 {
 #ifdef DEBUG 
-	otp_printint(*message, strlen(*message), "paranoia: before decrypt");
+	otp_printint(*message, strlen(*message), "before decrypt", pad->config);
 #endif
 	OtpError syndrome = OTP_OK;
 	if (pad == NULL) return OTP_ERR_INPUT;
@@ -820,7 +855,9 @@ OtpError otp_decrypt(struct otp* pad, char** message)
 #ifdef UCRYPT
 	syndrome = otp_udecrypt(message, pad, decryptpos);
 	if (syndrome > OTP_WARN) {
-		printf("syndrome: %.8X\n",syndrome);
+#ifdef PRINT_ERRORS
+		printf("%s: decrypt failed: %.8X\n",pad->config->client_id, syndrome);
+#endif
 		g_free(*message);
 		*message = old_msg;
 		return syndrome;
@@ -828,7 +865,7 @@ OtpError otp_decrypt(struct otp* pad, char** message)
 #endif
 
 #ifdef DEBUG 
-	otp_printint(*message,strlen(*message), "paranoia: after decrypt");
+	otp_printint(*message,strlen(*message), "after decrypt", pad->config);
 #endif
 	g_free(old_msg);
 	return syndrome;
@@ -857,7 +894,7 @@ struct otp_config* otp_conf_create(
 	config->pad_count = 0; /* Initialize with no associated pads */
 
 #ifdef DEBUG 
-	printf("paranoia: config created with: %s, %s, %s, %e, %i\n", config->client_id,
+	printf("%s: config created with: %s, %s, %s, %e, %i\n", config->client_id, config->client_id,
 			config->path, config->export_path, config->msg_key_improbability_limit,
 			config->random_msg_tail_max_len);
 #endif
@@ -870,16 +907,20 @@ OtpError otp_conf_destroy(struct otp_config* config)
 /* Freeing of the otp_config struct 
  * This fails with OTP_ERR_CONFIG_PAD_COUNT if there are any pads open in this config */
 	if (config == NULL) return OTP_ERR_INPUT;
-	if (config->pad_count != 0) return OTP_ERR_CONFIG_PAD_COUNT;
-
+	if (config->pad_count != 0) {
+#ifdef DEBUG 
+		printf("%s: config can not be destroyed: %i pads open!\n", 
+				config->client_id, config->pad_count);
+#endif
+		return OTP_ERR_CONFIG_PAD_COUNT;
+	}
+#ifdef DEBUG 
+	printf("%s: config destroyed\n", config->client_id);
+#endif
 	if (config->client_id != NULL) g_free(config->client_id);
 	if (config->path != NULL) g_free(config->path);
 	if (config->export_path != NULL) g_free(config->export_path);
 	g_free(config);
-
-#ifdef DEBUG 
-	printf("paranoia: config destroyed\n");
-#endif
 	return OTP_OK;
 }
 
@@ -891,7 +932,7 @@ const char* otp_conf_get_path(const struct otp_config* config)
 {
 	if (config == NULL) return NULL;
 #ifdef DEBUG 
-	printf("paranoia: read config->path: %s\n",config->path);
+	printf("%s: read config->path: %s\n",config->client_id, config->path);
 #endif
 	return config->path;
 }
@@ -902,7 +943,7 @@ const char* otp_conf_get_export_path(const struct otp_config* config)
 {
 	if (config == NULL) return NULL;
 #ifdef DEBUG 
-	printf("paranoia: read config->export_path: %s\n",config->export_path);
+	printf("%s: read config->export_path: %s\n",config->client_id, config->export_path);
 #endif
 	return config->export_path;
 }
@@ -912,7 +953,7 @@ gsize otp_conf_get_random_msg_tail_max_len(const struct otp_config* config)
 {
 	if (config == NULL) return 0;
 #ifdef DEBUG 
-	printf("paranoia: read config->random_msg_tail_max_len: %u\n",config->random_msg_tail_max_len);
+	printf("%s: read config->random_msg_tail_max_len: %u\n",config->client_id, config->random_msg_tail_max_len);
 #endif
 	return config->random_msg_tail_max_len;
 }
@@ -922,7 +963,7 @@ double otp_conf_get_msg_key_improbability_limit(const struct otp_config* config)
 {
 	if (config == NULL) return 0;
 #ifdef DEBUG 
-	printf("paranoia: read config->msg_key_improbability_limit: %e\n",config->msg_key_improbability_limit);
+	printf("%s: read config->msg_key_improbability_limit: %e\n",config->client_id, config->msg_key_improbability_limit);
 #endif
 	return config->msg_key_improbability_limit;
 }
@@ -937,7 +978,7 @@ OtpError otp_conf_set_path(struct otp_config* config, const char* path)
 	g_free(config->path);
 	config->path = g_strdup(path);
 #ifdef DEBUG 
-	printf("paranoia: set config->path: %s\n",config->path);
+	printf("%s: set config->path: %s\n",config->client_id, config->path);
 #endif
 	return OTP_OK;
 }
@@ -950,7 +991,7 @@ OtpError otp_conf_set_export_path(struct otp_config* config, const char* export_
 	g_free(config->export_path);
 	config->export_path = g_strdup(export_path);
 #ifdef DEBUG 
-	printf("paranoia: set config->export_path: %s\n",config->export_path);
+	printf("%s: set config->export_path: %s\n",config->client_id, config->export_path);
 #endif
 	return OTP_OK;
 }
@@ -965,7 +1006,7 @@ OtpError otp_conf_set_random_msg_tail_max_len(struct otp_config* config,
 	if (config == NULL) return OTP_ERR_INPUT;
 	config->random_msg_tail_max_len = random_msg_tail_max_len;
 #ifdef DEBUG 
-	printf("paranoia: set config->random_msg_tail_max_len: %u\n",config->random_msg_tail_max_len);
+	printf("%s: set config->random_msg_tail_max_len: %u\n",config->client_id, config->random_msg_tail_max_len);
 #endif
 	return OTP_OK;
 }
@@ -982,7 +1023,7 @@ OtpError otp_conf_set_msg_key_improbability_limit(struct otp_config* config,
 	if (msg_key_improbability_limit < 0.0 || msg_key_improbability_limit > 1.0) return OTP_ERR_INPUT;
 	config->msg_key_improbability_limit = msg_key_improbability_limit;
 #ifdef DEBUG 
-	printf("paranoia: set config->msg_key_improbability_limit: %e\n",config->msg_key_improbability_limit);
+	printf("%s: set config->msg_key_improbability_limit: %e\n",config->client_id, config->msg_key_improbability_limit);
 #endif
 	return OTP_OK;
 }
@@ -1048,3 +1089,11 @@ OtpError otp_pad_get_syndrome(struct otp* mypad)
 /* gets an the config associated with this pad */
 // TODO
 //struct otp_config* otp_get_conf(struct otp* mypad);
+
+/* closes the filehandle and the memory map. 
+ * You can do this any time you want, it will just save memory */
+void otp_pad_use_less_memory(struct otp* pad) {
+#ifdef PRINT_ERRORS
+	printf("%s: 0 byes of memory saved because this function is a stub!\n", pad->config->client_id);
+#endif
+}
