@@ -102,6 +102,31 @@
 
 /* ------------------- Private data structures -------------------- */
 
+struct otp_config {
+	char* client_id;			/* Choose the ID of your client, i.e. for debug messages */
+	char* path;					/* The absolute path were the keyfiles are stored */
+	char* export_path;			/* The absolute path were to export bob's newly created keys */
+	unsigned int pad_count; 	/* A counter for the number of associated otp structs */
+	gsize random_msg_tail_max_len;		/* max. padding added onto every message */
+	double msg_key_improbability_limit;	/* entropy for message encryption with 
+ * less probable content will be rejected */ 
+};
+
+struct otp {
+ 	char* src; 					/* for pidgin: 'account' like alice@jabber.org */
+	char* dest; 				/* for pidgin: 'account' like bob@jabber.org */
+	char* id; 					/* 8 digits unique random number of the key pair (hex) */
+	char* filename; 			/* The full path and the filename defined in the libotp spec */
+	gsize position; 			/* start positon for the next encryption */
+	gsize protected_position;	/* Only used for messages and signals 
+ * from the protected entropy. Otherwise set to zero */
+	gsize entropy; 				/* the size (in bytes) of the entropy left for the sender */
+	gsize filesize; 			/* The size of the file in bytes */
+	OtpError syndrome;			/* contains the status of this otp pad, if this
+ * is relvant for the future, i.e. OTP_WARN_KEY_NOT_RANDOM */
+	struct otp_config* config;	/* The settings associated with this pad. */
+};
+
 /*  ----------------- Private Functions of the Library------------ */
 
 static void otp_xor(char** message, char** key, gsize len)
