@@ -63,7 +63,7 @@
 #define CHECKKEY                /* Histogram/repeat checking of the key (Needs testing) */
 
 //#ifdef IMMED_CLOSE_FILES		
-/* This enforces the old behaviour were the 
+/* This enforces the old behaviour where the 
  * keyfiles were closed immediatly after usage */
 
 /*  ------------------- Defines (for development) ------------------------
@@ -779,7 +779,7 @@ struct otp* otp_pad_create_from_file(
 			return NULL;
 	}
 
-	static struct otp* pad;
+	struct otp* pad;
 	pad = (struct otp *)g_malloc(sizeof(struct otp));
 	pad->protected_position = 0;
 	pad->filename = g_strconcat(config->path, filename, NULL);
@@ -933,7 +933,7 @@ struct otp_config* otp_conf_create(
 {
 	if (client_id == NULL || path == NULL || export_path == NULL) return NULL;
 
-	static struct otp_config* config;
+	struct otp_config* config;
 	config = (struct otp_config *)g_malloc(sizeof(struct otp_config));
 	config->client_id = g_strdup(client_id);
 	config->path = g_strdup(path);
