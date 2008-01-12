@@ -66,7 +66,6 @@ plugin (%s) to communicate encrypted."
 #define PARANOIA_PATH "/.paranoia/"
 #define ENTROPY_LIMIT 10000 /* has to be bigger then the message size limit */
 
-char* global_otp_path;
 struct otp_config* otp_conf;
 
 void par_add_header(char** message)
@@ -168,7 +167,7 @@ static struct key* par_create_key(const char* filename)
 	test_opt->otp_enabled = FALSE;
 	test_opt->auto_enable = TRUE;
 	test_opt->active = FALSE;
-	if(test_pad->entropy <= 0) {
+	if(otp_pad_get_entropy(test_pad) <= 0) {
 		test_opt->no_entropy = TRUE;
 	} else {
 		test_opt->no_entropy = FALSE;
@@ -201,21 +200,21 @@ static gboolean par_init_key_list()
 	struct key* prev_key = NULL;
 	struct key* tmp_key = NULL;
 	GError* error = NULL;
-	GDir* directoryhandle = g_dir_open(global_otp_path, 0, &error);
+	GDir* directoryhandle = g_dir_open(otp_conf_get_path(otp_conf), 0, &error);
 	const gchar* tmp_filename = g_dir_read_name(directoryhandle);
 	char* tmp_path = NULL;
 	
 	if (error) {
 		purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
 				"Opening \"%s\" failed! %s\n", 
-				global_otp_path, error->message);
+				otp_conf_get_path(otp_conf), error->message);
 		g_error_free(error);
 		// TODO: return?
 	} else {
 		/* loop over global key dir */
 		// TODO: detect dublicate id's?
 		while (tmp_filename != NULL) {
-			tmp_path = g_strconcat(global_otp_path, tmp_filename, NULL);
+			tmp_path = g_strconcat(otp_conf_get_path(otp_conf), tmp_filename, NULL);
 			
 			if (g_file_test(tmp_path, G_FILE_TEST_IS_REGULAR)) {
 				tmp_key = par_create_key(tmp_filename);
@@ -271,12 +270,12 @@ static char* par_search_ids(const char* src, const char* dest)
 	struct key* tmp_ptr = keylist;
 	
 	while (!(tmp_ptr == NULL)) {
-		if ((strcmp(tmp_ptr->pad->src, src_copy) == 0) 
-				&& (strcmp(tmp_ptr->pad->dest, dest_copy) == 0)) {
+		if ((strcmp(otp_pad_get_src(tmp_ptr->pad), src_copy) == 0) 
+				&& (strcmp(otp_pad_get_dest(tmp_ptr->pad), dest_copy) == 0)) {
 			if (ids == NULL) {
-				ids = g_strdup(tmp_ptr->pad->id);
+				ids = g_strdup(otp_pad_get_id(tmp_ptr->pad));
 			} else {
-				ids = g_strconcat(ids, ",", tmp_ptr->pad->id, NULL);
+				ids = g_strconcat(ids, ",", otp_pad_get_id(tmp_ptr->pad), NULL);
 			}
 		}
 		tmp_ptr = tmp_ptr->next;
@@ -299,9 +298,9 @@ static struct key* par_search_key_by_id(const char* id, const char* src,
 	struct key* tmp_ptr = keylist;
 
 	while (!(tmp_ptr == NULL)) {
-		if (strcmp(tmp_ptr->pad->id, id) == 0) {
-			if ((strcmp(tmp_ptr->pad->src, src_copy) == 0) 
-					&& (strcmp(tmp_ptr->pad->dest, dest_copy) == 0)) {
+		if (strcmp(otp_pad_get_id(tmp_ptr->pad), id) == 0) {
+			if ((strcmp(otp_pad_get_src(tmp_ptr->pad), src_copy) == 0) 
+					&& (strcmp(otp_pad_get_dest(tmp_ptr->pad), dest_copy) == 0)) {
 				g_free(src_copy);
 				g_free(dest_copy);
 				return tmp_ptr;
@@ -325,8 +324,8 @@ static struct key* par_search_key(const char* src, const char* dest)
 	struct key* tmp_ptr = keylist;
 
 	while (!(tmp_ptr == NULL)) {
-		if ((strcmp(tmp_ptr->pad->src, src_copy) == 0) 
-					&& (strcmp(tmp_ptr->pad->dest, dest_copy) == 0)
+		if ((strcmp(otp_pad_get_src(tmp_ptr->pad), src_copy) == 0) 
+					&& (strcmp(otp_pad_get_dest(tmp_ptr->pad), dest_copy) == 0)
 					&& tmp_ptr->opt->active) {
 				g_free(src_copy);
 				g_free(dest_copy);
@@ -350,8 +349,8 @@ static struct key* par_search_key_weak(const char* src, const char* dest)
 	struct key* good_key = NULL;
 
 	while (!(tmp_ptr == NULL)) {
-		if ((strcmp(tmp_ptr->pad->src, src_copy) == 0) 
-				&& (strcmp(tmp_ptr->pad->dest, dest_copy) == 0)) {
+		if ((strcmp(otp_pad_get_src(tmp_ptr->pad), src_copy) == 0) 
+				&& (strcmp(otp_pad_get_dest(tmp_ptr->pad), dest_copy) == 0)) {
 			if(tmp_ptr->opt->active) {
 				g_free(src_copy);
 				g_free(dest_copy);
@@ -434,7 +433,7 @@ static gboolean par_session_check_req(const char* alice, const char* bob,
 			tmp_ptr += OTP_ID_LENGTH + 1;
 		}
 		if (temp_key != NULL) {
-			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Found a matching ID: %s\n", temp_key->pad->id);
+			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Found a matching ID: %s\n", otp_pad_get_id(temp_key->pad));
 			if(temp_key->conv == NULL) {
 				temp_key->conv = conv;
 				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "CONV PTR SAVED. at DDDDDDDD.\n");
@@ -670,9 +669,11 @@ static void par_cli_key_details(PurpleConversation *conv)
 				"Destination:\t%s\nID:\t\t\t%s\nSize:\t\t\t%i\nPosition:\t\t%i\n"
 				"Entropy:\t\t%i\nActive:\t\t%i\n" //Waiting for ack:\t\t%i\n
 				"OTP enabled:\t%i\nAuto enable:\t%i\nNo entropy:\t%i",
-				used_key->pad->src, used_key->pad->dest, used_key->pad->id, 
-				used_key->pad->filesize, 
-				used_key->pad->position, used_key->pad->entropy, 
+				otp_pad_get_src(used_key->pad), otp_pad_get_dest(used_key->pad), 
+				otp_pad_get_id(used_key->pad), 
+				(unsigned int) otp_pad_get_filesize(used_key->pad), 
+				(unsigned int) otp_pad_get_position(used_key->pad), 
+				(unsigned int) otp_pad_get_entropy(used_key->pad), 
 				used_key->opt->active, //used_key->opt->waiting_for_ack,
 				used_key->opt->otp_enabled, used_key->opt->auto_enable, 
 				used_key->opt->no_entropy);
@@ -738,7 +739,7 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 		struct key* tmp_ptr = keylist;
 		while (!(tmp_ptr == NULL)) {
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "ID: %s, Active: %i, Otp_ena: %i, Conv: %i\n", 
-					tmp_ptr->pad->id, tmp_ptr->opt->active, tmp_ptr->opt->otp_enabled, tmp_ptr->conv);
+					otp_pad_get_id(tmp_ptr->pad), tmp_ptr->opt->active, tmp_ptr->opt->otp_enabled, tmp_ptr->conv);
 			tmp_ptr = tmp_ptr->next;
 		}
 	} // REMOVE ME end
@@ -931,7 +932,7 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 		struct key* used_key = par_search_key(my_acc_name, *sender);
 		if (used_key != NULL) {
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-					"Found a matching key with ID: %s\n", used_key->pad->id);
+					"Found a matching key with ID: %s\n", otp_pad_get_id(used_key->pad));
 			/* save conversation ptr */
 			if (used_key->conv != NULL) {
 				used_key->conv = conv;
@@ -964,7 +965,7 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 
 	if (used_key != NULL) {
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-				"Found a matching key with ID: %s\n", used_key->pad->id);
+				"Found a matching key with ID: %s\n", otp_pad_get_id(used_key->pad));
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "otp_enabled == %i\n", used_key->opt->otp_enabled);
 
 		/* save conversation ptr */
@@ -1044,7 +1045,7 @@ static void par_im_msg_sending(PurpleAccount *account,
 
 	if (used_key != NULL) {
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-				"Found a matching Key with pad ID: %s\n", used_key->pad->id);
+				"Found a matching Key with pad ID: %s\n", otp_pad_get_id(used_key->pad));
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "otp_enabled == %i\n", used_key->opt->otp_enabled);
 
 		if (strncmp(*message, PARANOIA_REQUEST, PARANOIA_REQUEST_LEN) == 0) {
@@ -1061,7 +1062,7 @@ static void par_im_msg_sending(PurpleAccount *account,
 						"Already active. Won't sent REQUEST.\n");
 				g_free(*message);
 				*message = NULL;
-				used_key->opt->waiting_for_ack = FALSE;
+				//used_key->opt->waiting_for_ack = FALSE;
 				return;
 			} */
 		}
@@ -1075,8 +1076,8 @@ static void par_im_msg_sending(PurpleAccount *account,
 		}
 
 		/* check for remaining entropy */
-		if (used_key->pad->entropy < ENTROPY_LIMIT) {
-			if (used_key->pad->entropy < strlen(*message)) {
+		if (otp_pad_get_entropy(used_key->pad) < ENTROPY_LIMIT) {
+			if (otp_pad_get_entropy(used_key->pad) < strlen(*message)) {
 				used_key->opt->no_entropy = TRUE;
 				used_key->opt->otp_enabled = FALSE;
 				used_key->opt->auto_enable = FALSE;
@@ -1123,7 +1124,7 @@ static void par_im_msg_sending(PurpleAccount *account,
 				// TODO: send an entropy warning (inside the real msg)
 				char *warning_msg = g_strdup_printf (
 						"Your entropy is low! %i bytes left.",
-						used_key->pad->entropy);
+						otp_pad_get_entropy(used_key->pad));
 				purple_conversation_write(used_key->conv, NULL, 
 						warning_msg, PURPLE_MESSAGE_NO_LOG, time(NULL));
 				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, warning_msg);
@@ -1249,10 +1250,8 @@ static gboolean plugin_load(PurplePlugin *plugin)
 
 	/* set the global key folder */
 	const gchar* home = g_get_home_dir();
-	
-	// FIXME: global path not needed anymore */
-	global_otp_path = g_strconcat(home, PARANOIA_PATH, NULL);
-	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Key path: %s\n", global_otp_path);
+	char* otp_path = g_strconcat(home, PARANOIA_PATH, NULL);
+	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Otp path: %s\n", otp_path);
 	
 #ifdef USEDESKTOP
 	const char *desktoppath = g_get_user_special_dir(G_USER_DIRECTORY_DESKTOP);
@@ -1262,7 +1261,8 @@ static gboolean plugin_load(PurplePlugin *plugin)
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Export path: %s\n", desktoppath);
 	
 	/* Create global libotp config */
-	otp_conf = otp_conf_create(PARANOIA_ID, global_otp_path, desktoppath);
+	otp_conf = otp_conf_create(PARANOIA_ID, otp_path, desktoppath);
+	g_free(otp_path);
 
 	/* get the conversation handle */
 	void *conv_handle;
