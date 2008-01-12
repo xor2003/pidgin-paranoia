@@ -12,7 +12,7 @@ Version 0.2
 	 * en/decryption gives **messages back if it fails (Done)
 	 * keyfile entropy really checked for patterns
 	 * keyfile locking
-	 * keeping filehandles and mmaps open to save CPU
+	 * keeping filehandles and mmaps open to save CPU (Done)
  	
  	paranoia.c
 	 * add generated key to keylist

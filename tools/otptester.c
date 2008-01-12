@@ -26,6 +26,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+//#define USEDESKTOP
+/* Requires GNOMElib 2.14! Bob's
+ * keyfile is placed onto the desktop. If not set, the
+ * file is placed in the home directory.*/
+
+
 
 
 

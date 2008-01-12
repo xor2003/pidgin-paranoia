@@ -22,14 +22,6 @@
 #define OTP_ID_LENGTH 8			/* Size of the ID-string. 4 bytes --> 8 bytes base 16*/
 #define OTP_PROTECTED_ENTROPY 100	/* The amount of entropy that is only used for "out of entropy" messages */ 
 
-
-/* -------------------- Public Defines ------------------------------*/
-
-//#define USEDESKTOP
-/* Requires GNOMElib 2.14! Bob's
- * keyfile is placed onto the desktop. If not set, the
- * file is placed in the home directory.*/
-
 /* ------------------ Error Syndrome System  ---------------------- */
 
 typedef enum {
@@ -106,6 +98,11 @@ typedef enum {
  * The keyfile exists already and can not be created */
 	OTP_ERR_FILE_EXISTS	= 0x00140000,
 	
+/* function: many
+ * origin: many
+ * The keyfile is locked! */
+	OTP_ERR_FILE_LOCKED	= 0x00150000,
+
 /* function: otp_conf_free
  * origin: otp_conf_free
  * There are still some pads registered in this config */
@@ -120,6 +117,7 @@ typedef enum {
 /* Data structures */
 struct otp_config;
 struct otp;
+
 
 /* encrypt the message 
  * if it can't encrypt the message a syndrome > OTP_WARN is returned and
