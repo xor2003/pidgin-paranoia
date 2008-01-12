@@ -69,7 +69,7 @@
 /*  ------------------- Defines (for development) ------------------------
  * Useful for Developpers */
 
-#define DEBUG
+//#define DEBUG
 /* Some general debug output */
 
 //#define DEBUG_MSG
@@ -77,7 +77,6 @@
  * Enables the function otp_printint and dumps the way of the 
  * message and key byte by byte. */
 
-/* -------------------- Includes -----------------------------------*/
 /*  -------------------------- Includes ---------------------------- */
 
 /* GNUlibc includes */
@@ -98,17 +97,10 @@
 /* The public functions of this library */
 #include "libotp.h"
 
-#ifdef DEBUG_MSG 
+#if defined DEBUG_MSG || defined DEBUG || defined PRINT_ERRORS
 #include <stdio.h>
 #endif
 
-#ifdef DEBUG 
-#include <stdio.h>
-#endif
-
-#ifdef PRINT_ERRORS
-#include <stdio.h>
-#endif
 
 
 /* ------------------- Private data structures -------------------- */
@@ -126,10 +118,9 @@ struct otp {
 	OtpError syndrome;			/* contains the status of this otp pad, if this
  * is relvant for the future, i.e. OTP_WARN_KEY_NOT_RANDOM */
 	struct otp_config* config;	/* The settings associated with this pad. */
-	// TODO: make this FILE* (can't do in .h file)
-	gboolean file_is_open;
-	int fd;					/* The filedescriptor of the keyfile. */
-	char* data;			/* The contents of the keyfile if open */
+	gboolean file_is_open;		/* Whether the file is already open */
+	int fd;						/* The filedescriptor of the keyfile. */
+	char* data;					/* The contents of the keyfile if open */
 };
 
 struct otp_config {
@@ -788,7 +779,7 @@ struct otp* otp_pad_create_from_file(
 			return NULL;
 	}
 
-	struct otp* pad;
+	static struct otp* pad;
 	pad = (struct otp *)g_malloc(sizeof(struct otp));
 	pad->protected_position = 0;
 	pad->filename = g_strconcat(config->path, filename, NULL);
@@ -942,7 +933,7 @@ struct otp_config* otp_conf_create(
 {
 	if (client_id == NULL || path == NULL || export_path == NULL) return NULL;
 
-	struct otp_config* config;
+	static struct otp_config* config;
 	config = (struct otp_config *)g_malloc(sizeof(struct otp_config));
 	config->client_id = g_strdup(client_id);
 	config->path = g_strdup(path);
