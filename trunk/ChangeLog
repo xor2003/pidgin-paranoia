@@ -10,8 +10,9 @@ Simon Wenner:
 Christian Wäckerlin:
  * Libotp: System of error syndromes (OtpError) implemented
  * Libotp: otp_encrypt, otp_decrypt, otp_encrypt_warning are now transactional
- * Libotp: getter/setter system
+ * Libotp: getter/setter system, struct otp is now private
  * Libotp: otp_conf system implemented, libotp is multi-application aware
+ * Libotp keeps filehandles and mmap open to save CPU cycles.
 
 
 

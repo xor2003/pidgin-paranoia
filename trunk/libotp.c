@@ -62,10 +62,17 @@
 
 #define CHECKKEY                /* Histogram/repeat checking of the key (Needs testing) */
 
+//#ifdef IMMED_CLOSE_FILES		
+/* This enforces the old behaviour were the 
+ * keyfiles were closed immediatly after usage */
+
 /*  ------------------- Defines (for development) ------------------------
  * Useful for Developpers */
 
-//#define DEBUG
+#define DEBUG
+/* Some general debug output */
+
+//#define DEBUG_MSG
 /* Produces lots of output
  * Enables the function otp_printint and dumps the way of the 
  * message and key byte by byte. */
@@ -91,6 +98,10 @@
 /* The public functions of this library */
 #include "libotp.h"
 
+#ifdef DEBUG_MSG 
+#include <stdio.h>
+#endif
+
 #ifdef DEBUG 
 #include <stdio.h>
 #endif
@@ -101,16 +112,6 @@
 
 
 /* ------------------- Private data structures -------------------- */
-
-struct otp_config {
-	char* client_id;			/* Choose the ID of your client, i.e. for debug messages */
-	char* path;					/* The absolute path were the keyfiles are stored */
-	char* export_path;			/* The absolute path were to export bob's newly created keys */
-	unsigned int pad_count; 	/* A counter for the number of associated otp structs */
-	gsize random_msg_tail_max_len;		/* max. padding added onto every message */
-	double msg_key_improbability_limit;	/* entropy for message encryption with 
- * less probable content will be rejected */ 
-};
 
 struct otp {
  	char* src; 					/* for pidgin: 'account' like alice@jabber.org */
@@ -125,6 +126,20 @@ struct otp {
 	OtpError syndrome;			/* contains the status of this otp pad, if this
  * is relvant for the future, i.e. OTP_WARN_KEY_NOT_RANDOM */
 	struct otp_config* config;	/* The settings associated with this pad. */
+	// TODO: make this FILE* (can't do in .h file)
+	gboolean file_is_open;
+	int fd;					/* The filedescriptor of the keyfile. */
+	char* data;			/* The contents of the keyfile if open */
+};
+
+struct otp_config {
+	char* client_id;			/* Choose the ID of your client, i.e. for debug messages */
+	char* path;					/* The absolute path were the keyfiles are stored */
+	char* export_path;			/* The absolute path were to export bob's newly created keys */
+	unsigned int pad_count; 	/* A counter for the number of associated otp structs */
+	gsize random_msg_tail_max_len;		/* max. padding added onto every message */
+	double msg_key_improbability_limit;	/* entropy for message encryption with 
+ * less probable content will be rejected */ 
 };
 
 /*  ----------------- Private Functions of the Library------------ */
@@ -139,7 +154,7 @@ static void otp_xor(char** message, char** key, gsize len)
 	g_free(*key);
 }
 
-#ifdef DEBUG
+#ifdef DEBUG_MSG
 static void otp_printint(char* m, gsize len, const char* hint, const struct otp_config* config)
 /* Helper function for debugging */
 {
@@ -163,67 +178,76 @@ static void otp_calc_entropy(struct otp* pad)
 	}
 }
 
-static OtpError otp_open_keyfile(int* fd, char** data, struct otp* pad)
+static OtpError otp_open_keyfile(struct otp* pad)
 /* Opens a keyfile with memory mapping */
 {
 	struct stat fstat;
-	if ((*fd = open(pad->filename, O_RDWR)) == -1) {
-#ifdef PRINT_ERRORSS
+	if (pad->file_is_open == TRUE) {
+#ifdef DEBUG
+		printf("%s: %s: file is already open.\n",pad->config->client_id, pad->id);
+#endif
+		return OTP_OK;
+}
+	if ((pad->fd = open(pad->filename, O_RDWR)) == -1) {
+#ifdef PRINT_ERRORS
 		perror("open");
 #endif
 		return OTP_ERR_FILE;
 	}
 	if (stat(pad->filename, &fstat) == -1) {
-#ifdef PRINT_ERRORSS
+#ifdef PRINT_ERRORS
 		perror("stat");
 #endif
-		close(*fd);
+		close(pad->fd);
 		return OTP_ERR_FILE;
 	}
 	pad->filesize = fstat.st_size;
 
-	if ((*data = mmap((caddr_t)0, pad->filesize, PROT_READ | PROT_WRITE,
-			MAP_SHARED, *fd, 0)) == (caddr_t)(-1)) {
-#ifdef PRINT_ERRORSS
+	if ((pad->data = mmap((caddr_t)0, pad->filesize, PROT_READ | PROT_WRITE,
+			MAP_SHARED, pad->fd, 0)) == (caddr_t)(-1)) {
+#ifdef PRINT_ERRORS
 		perror("mmap");
 #endif
-		close(*fd);
+		close(pad->fd);
 		return OTP_ERR_FILE;
 	}
+#ifdef DEBUG
+	printf("%s: pad  %s opened in fd %u\n",pad->config->client_id, pad->id, pad->fd);
+#endif
+	pad->file_is_open = TRUE;
 	return OTP_OK;
 }
 
-static void otp_close_keyfile(int* fd, char** data, struct otp* pad)
+static void otp_close_keyfile(struct otp* pad)
 /* Closes a keyfile with memory mapping */
 {
-	munmap(*data, pad->filesize);
-	close(*fd);
+	if (pad->file_is_open == FALSE) {
+#ifdef PRINT_ERRORS
+		printf("%s: %s: file is already closed!\n",pad->config->client_id, pad->id);
+#endif
+		return;
+}
+#ifdef DEBUG
+	printf("%s: pad  %s closed in fd %u\n",pad->config->client_id, pad->id, pad->fd);
+#endif
+	munmap(pad->data, pad->filesize);
+	close(pad->fd);
+	pad->file_is_open = FALSE;
+	return;
 }
 
-static gsize otp_seek_pos(const char* data, const struct otp* pad)
+static gsize otp_seek_pos(const struct otp* pad)
 /* Seeks the position where the pad can be used for encryption */
 {
 	gsize pos = 0;
+	char* data = pad->data;
 	while ( ((data+pos)[0] == PAD_EMPTYCHAR) && (pos < pad->filesize) ) {
 		pos++;
 	}
+#ifdef DEBUG
+	printf("%s: pad  %s seeked: found pos %u\n",pad->config->client_id, pad->id, pos);
+#endif
 	return pos;
-}
-
-static OtpError otp_seek_start(struct otp* pad)
-/* Seeks the the starting position, filesize and entropy from the keyfile */
-{
-	int space1 = 0;
-	int* fd = &space1;
-	char* space2 = "";
-	char** data = &space2;
-	OtpError syndrome = otp_open_keyfile(fd, data, pad);
-	if (syndrome == OTP_OK) {
-		pad->position = otp_seek_pos(*data, pad);
-		otp_calc_entropy(pad);
-		otp_close_keyfile(fd, data, pad);
-	}
-	return syndrome;
 }
 
 static gboolean otp_id_is_valid(const char* id_str)
@@ -260,6 +284,9 @@ static gboolean otp_key_is_random(char** key, gsize len,
 	if (repeatprob < config->msg_key_improbability_limit) {
 		/* Fail if the probability for a random key to have a repeat is smaller than the tolerance. */
 #ifdef PRINT_ERRORS
+//		if (pad->syndrome != OTP_WARN_KEY_NOT_RANDOM) {
+//				pad->syndrome = pad->syndrome | OTP_WARN_KEY_NOT_RANDOM;
+//		}
 		printf("%s: Probability for a repeat of len %i: %e\n", config->client_id, rep, repeatprob);
 #endif
 		return FALSE;
@@ -271,10 +298,6 @@ static OtpError otp_get_encryptkey_from_file(char** key, struct otp* pad,
 			gsize len, struct otp_config* config)
 /* Gets the key to encrypt from the keyfile */
 {
-	int space1 = 0;
-	int* fd = &space1;
-	char* space2 = "";
-	char** data = &space2;
 	gsize i = 0;
 	gsize protected_entropy = OTP_PROTECTED_ENTROPY;
 	gsize position = pad->position;
@@ -289,13 +312,14 @@ static OtpError otp_get_encryptkey_from_file(char** key, struct otp* pad,
 			|| position < 0 ) {
 		return OTP_ERR_KEY_EMPTY;
 	}
-	syndrome = otp_open_keyfile(fd, data, pad);
-	if (syndrome > OTP_WARN) return syndrome;
-		
+	if (pad->file_is_open == FALSE) {
+		syndrome = otp_open_keyfile(pad);
+		if (syndrome > OTP_WARN) return syndrome;
+	}
 	*key = (char*)g_malloc((len)*sizeof(char));
-	memcpy(*key, *data+position, len-1);
+	memcpy(*key, pad->data+position, len-1);
 	/* the pad could be anything... using memcpy */
-	char *datpos = *data+position;
+	char *datpos = pad->data+position;
 
 #ifdef CHECKKEY
 	/* TODO v0.2: What should i do if the key is rejected?
@@ -325,12 +349,14 @@ static OtpError otp_get_encryptkey_from_file(char** key, struct otp* pad,
 		}
 	}
 #endif
-	otp_close_keyfile(fd, data, pad);
 	if (pad->protected_position == 0) {
 		pad->position = pad->position + len -1;
 	}
 	/* In all cases where the protected entropy is not used */
 	otp_calc_entropy(pad);
+#ifdef IMMED_CLOSE_FILES
+	otp_close_keyfile(pad);
+#endif
 	return syndrome;
 }
 
@@ -338,10 +364,6 @@ static OtpError otp_get_decryptkey_from_file(char** key, struct otp* pad,
 			gsize len, gsize decryptpos)
 /* Gets the key to decrypt from the keyfile */
 {
-	int space1 = 0;
-	int* fd = &space1;
-	char* space2 = "";
-	char** data = &space2;
 	gsize i = 0;
 	OtpError syndrome = OTP_OK;
 	if ((decryptpos + (len+1) + pad->filesize/2) > pad->filesize
@@ -349,15 +371,20 @@ static OtpError otp_get_decryptkey_from_file(char** key, struct otp* pad,
 		syndrome = OTP_ERR_KEY_SIZE_MISMATCH;
 		return syndrome;
 	}
-	syndrome = otp_open_keyfile(fd, data, pad);
+	if (pad->file_is_open == FALSE) {
+		syndrome = otp_open_keyfile(pad);
+		if (syndrome > OTP_WARN) return syndrome;
+	}
 	if (syndrome > OTP_WARN) return syndrome;
 
 	char* vkey = (char*)g_malloc( len*sizeof(char) );
-	char* datpos = *data + pad->filesize - decryptpos - (len+1);
+	char* datpos = pad->data + pad->filesize - decryptpos - (len+1);
 	/* read reverse*/
 	for (i = 0; i <= (len -1); i++) vkey[i] = datpos[len - i];
 	*key = vkey;
-	otp_close_keyfile(fd, data, pad);
+#ifdef IMMED_CLOSE_FILES
+	otp_close_keyfile(pad);
+#endif
 	return syndrome;
 }
 
@@ -393,11 +420,11 @@ static OtpError otp_udecrypt(char** message, struct otp* pad, gsize decryptpos)
 	OtpError syndrome = OTP_OK;
 	syndrome = otp_get_decryptkey_from_file(key, pad, len, decryptpos);
 	if (syndrome > OTP_WARN) return syndrome;
-#ifdef DEBUG 
+#ifdef DEBUG_MSG
 	otp_printint(*key, len, "decryptkey", pad->config);
 #endif
 	otp_xor(message, key, len);
-#ifdef DEBUG 
+#ifdef DEBUG_MSG 
 	otp_printint(*key,len, "decrypt-xor", pad->config);
 #endif
 	return syndrome;
@@ -430,11 +457,11 @@ static OtpError otp_uencrypt(char** message, struct otp* pad)
 #endif
 	syndrome = otp_get_encryptkey_from_file(key, pad, len, pad->config);
 	if ( syndrome > OTP_WARN ) return syndrome;
-#ifdef DEBUG 
+#ifdef DEBUG_MSG
 	otp_printint(*key,len, "encryptkey", pad->config);
 #endif
 	otp_xor(message, key, len);
-#ifdef DEBUG 
+#ifdef DEBUG_MSG 
 	otp_printint(*key,len, "encrypt-xor", pad->config);
 #endif
 	otp_base64_encode(message, len);
@@ -765,6 +792,9 @@ struct otp* otp_pad_create_from_file(
 	pad = (struct otp *)g_malloc(sizeof(struct otp));
 	pad->protected_position = 0;
 	pad->filename = g_strconcat(config->path, filename, NULL);
+	pad->fd=0;
+	pad->file_is_open = FALSE;
+	
 	pad->config = config;
 	config->pad_count++;
 
@@ -778,16 +808,19 @@ struct otp* otp_pad_create_from_file(
 	g_strfreev(p_array);
 	g_strfreev(f_array);
 
-	if (otp_id_is_valid(pad->id) == FALSE) return NULL;
-
-	OtpError syndrome = otp_seek_start(pad);
-	if (syndrome > OTP_WARN) {
+	if (otp_id_is_valid(pad->id) == FALSE) {
 		otp_pad_destroy(pad);
 		return NULL;
 	}
+
+	if (otp_open_keyfile(pad) > OTP_WARN) return NULL;
+
+	pad->position = otp_seek_pos(pad);
+	otp_calc_entropy(pad);
+	otp_close_keyfile(pad);
 	
 #ifdef DEBUG 
-	printf("%s: pad created: %i pads open.\n", config->client_id, config->pad_count);
+	printf("%s: pad created: %u pads open.\n", config->client_id, config->pad_count);
 #endif
 	return pad;
 }
@@ -798,7 +831,7 @@ void otp_pad_destroy(struct otp* pad)
 	if (pad != NULL) {
 		pad->config->pad_count--;
 #ifdef DEBUG 
-		printf("%s: pad destroyed: %i pads open.\n", pad->config->client_id, pad->config->pad_count);
+		printf("%s: pad destroyed: %u pads open.\n", pad->config->client_id, pad->config->pad_count);
 #endif
 		if (pad->src != NULL) g_free(pad->src);
 		if (pad->dest != NULL) g_free(pad->dest);
@@ -813,7 +846,7 @@ OtpError otp_encrypt(struct otp* pad, char** message)
    returns TRUE if it could encrypt the message */
 {
 	OtpError syndrome = OTP_OK;
-#ifdef DEBUG 
+#ifdef DEBUG_MSG 
 	otp_printint(*message,strlen(*message), "before encrypt", pad->config);
 #endif
 	if (pad == NULL || message == NULL || *message == NULL) return OTP_ERR_INPUT;
@@ -842,7 +875,7 @@ OtpError otp_encrypt(struct otp* pad, char** message)
 	g_free(*message);
 	g_free(pos_str);
 	*message = new_msg;
-#ifdef DEBUG 
+#ifdef DEBUG_MSG 
 	otp_printint(*message,strlen(*message), "after encrypt", pad->config);
 #endif
 	g_free(old_msg);
@@ -853,7 +886,7 @@ OtpError otp_decrypt(struct otp* pad, char** message)
 /* Strips the encrypted message and decrypts it.
    returns TRUE if it could decrypt the message  */
 {
-#ifdef DEBUG 
+#ifdef DEBUG_MSG 
 	otp_printint(*message, strlen(*message), "before decrypt", pad->config);
 #endif
 	OtpError syndrome = OTP_OK;
@@ -889,7 +922,7 @@ OtpError otp_decrypt(struct otp* pad, char** message)
 	}
 #endif
 
-#ifdef DEBUG 
+#ifdef DEBUG_MSG 
 	otp_printint(*message,strlen(*message), "after decrypt", pad->config);
 #endif
 	g_free(old_msg);
@@ -1118,7 +1151,14 @@ OtpError otp_pad_get_syndrome(struct otp* mypad)
 /* closes the filehandle and the memory map. 
  * You can do this any time you want, it will just save memory */
 void otp_pad_use_less_memory(struct otp* pad) {
+	if (pad->file_is_open == TRUE) {
 #ifdef PRINT_ERRORS
-	printf("%s: 0 byes of memory saved because this function is a stub!\n", pad->config->client_id);
+		printf("%s: file and memory map closed.\n", pad->config->client_id);
 #endif
+		otp_close_keyfile(pad);
+	} else {
+#ifdef PRINT_ERRORS
+		printf("%s: this pad has no open file.\n", pad->config->client_id);
+#endif
+	}
 }
