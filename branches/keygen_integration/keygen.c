@@ -33,10 +33,12 @@
 
 // Definition for the funcions and global variables.
 GThread *generate_keys_from_keygen(char *alice, char *bob, unsigned int size, int loop);
+GThread *generate_keys_from_file(char *alice, char *bob, char *file, unsigned int size, int loop);
 int otp_invert(char *src, char *dest);
 int otp_loop_invert(char *src);
 unsigned int otp_get_id();
 unsigned char bit2char(short buf[8]);
+gpointer key_from_file(gpointer data);
 gpointer start_generation(gpointer data);
 gpointer devrand(gpointer data);
 gpointer audio(gpointer data);
@@ -50,7 +52,7 @@ gpointer keygen_mutex = NULL;
 struct _key_data {
 	int size;
 	int loop;
-	char *alice, *bob;
+	char *alice, *bob, *file;
 } key_data;
 
 
@@ -179,9 +181,81 @@ unsigned int otp_get_id() {
 	return id;
 } // end get_id()
 
+GThread *generate_keys_from_file(char *alice, char *bob, char *file, unsigned int size, int loop)
+/*
+*	generate the key pair for alice and bob out of a entropy file
+*	alice, bob and file must be correct filenames including the correct absolute path
+*	size should be strictly positiv in bytes.
+*	loop is zero if it should generate a loop key
+*/
+{
+	GThread *key_file_thread;
+	if(alice == NULL || bob == NULL || file == NULL) {
+		g_printerr("input NULL\n");
+		return NULL;
+	}
+
+	key_data.alice = g_strdup(alice);
+	key_data.bob = g_strdup(bob);
+	key_data.file = g_strdup(file);
+	key_data.loop = loop;
+	key_data.size = size;
+
+	// initialize g_thread if not already done.
+	// The program will abort if no thread system is available!
+	if (!g_thread_supported()) g_thread_init (NULL);
+
+	if((key_file_thread = g_thread_create(key_from_file ,NULL, TRUE, NULL)) == NULL) {
+		g_printerr("couldn't create thread");
+	}
+
+	return key_file_thread;
+}
+
+gpointer key_from_file(gpointer data)
+{
+	FILE *fp_alice, *fp_file;
+	unsigned int file_length;
+	int c;
+
+	if((fp_file = fopen(key_data.file, "r")) == NULL) {
+		g_printerr("couldn't open file for reading\n");
+		return NULL;
+	}
+
+// check if the entropy file has enough entropy to generate the key
+	fseek(fp_file, -1, SEEK_END);
+	if((file_length = ftell(fp_file)) < key_data.size) {
+		g_printerr("file doesn't have enough entropy\n");
+		fclose(fp_file);
+		return NULL;
+	}
+	rewind(fp_file);
+
+	if((fp_alice = fopen(key_data.alice, "w")) == NULL) {
+		g_printerr("couldn't open keyfile alice for writing\n");
+		fclose(fp_file);
+		return NULL;
+	}
+
+	while(key_data.size > 0) {
+		c = fgetc(fp_file);
+		fputc(c, fp_alice);
+		key_data.size--;
+	}
+
+	fclose(fp_file);
+	fclose(fp_alice);
+
+	if(key_data.loop == 0) {
+		otp_loop_invert(key_data.alice);
+	} else otp_invert(key_data.alice, key_data.bob);
+
+	return 0;
+}
 
 GThread *generate_keys_from_keygen(char *alice, char *bob, unsigned int size, int loop)
-/*
+/*h
 *	generate the key pair for alice and bob
 *	alice and bob must be the correct filenames including the correct absoute path.
 *	Size should be strictly positiv in bytes.

@@ -264,6 +264,8 @@ GThread *generate_keys_from_keygen(char *alice, char *bob, unsigned int size, in
 /* get a random id for the key filename */
 unsigned int otp_get_id();
 
+GThread *generate_keys_from_file(char *alice, char *bob, char *file, unsigned int size, int loop);
+
 /* invert:
 *				invert writes the bytewise inverse of the src file into the dest
 *				file. src and dest must be valid file names
