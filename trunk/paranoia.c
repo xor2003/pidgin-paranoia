@@ -545,6 +545,8 @@ static void par_session_reset_conv(PurpleConversation *conv)
 	while (!(tmp_ptr == NULL)) {
 		if (tmp_ptr->conv == conv) {
 			tmp_ptr->conv = NULL;
+			/* free mmap's of libotp */
+			otp_pad_use_less_memory(tmp_ptr->pad);
 		}
 		tmp_ptr = tmp_ptr->next;
 	}
