@@ -135,6 +135,7 @@ struct options {
 	gboolean otp_enabled; /* otp on/off */
 	gboolean auto_enable; /* false to force disable */
 	gboolean no_entropy; /* all entropy of one user was used up completely */
+	gboolean handshake_done;
 	gboolean active; /* an initialised key */
 };
 
@@ -166,6 +167,7 @@ static struct key* par_create_key(const char* filename)
 	//test_opt->waiting_for_ack = FALSE;
 	test_opt->otp_enabled = FALSE;
 	test_opt->auto_enable = TRUE;
+	test_opt->handshake_done = FALSE;
 	test_opt->active = FALSE;
 	if(otp_pad_get_entropy(test_pad) <= 0) {
 		test_opt->no_entropy = TRUE;
@@ -271,7 +273,8 @@ static char* par_search_ids(const char* src, const char* dest)
 	
 	while (!(tmp_ptr == NULL)) {
 		if ((strcmp(otp_pad_get_src(tmp_ptr->pad), src_copy) == 0) 
-				&& (strcmp(otp_pad_get_dest(tmp_ptr->pad), dest_copy) == 0)) {
+				&& (strcmp(otp_pad_get_dest(tmp_ptr->pad), dest_copy) == 0)
+				&& (!tmp_ptr->opt->no_entropy)) {
 			if (ids == NULL) {
 				ids = g_strdup(otp_pad_get_id(tmp_ptr->pad));
 			} else {
@@ -401,7 +404,7 @@ void par_session_ack(PurpleConversation *conv) {
 } */
 
 
-void par_session_close(PurpleConversation *conv)
+void par_session_close(PurpleConversation *conv) //FIXME: rename
 /* sends an otp termination message */
 {
 	purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), 
@@ -433,19 +436,19 @@ static gboolean par_session_check_req(const char* alice, const char* bob,
 			tmp_ptr += OTP_ID_LENGTH + 1;
 		}
 		if (temp_key != NULL) {
-			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Found a matching ID: %s\n", otp_pad_get_id(temp_key->pad));
+			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Found a matching ID: %s, active = TRUE\n", otp_pad_get_id(temp_key->pad));
+			temp_key->opt->active = TRUE;
 			if(temp_key->conv == NULL) {
 				temp_key->conv = conv;
-				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "CONV PTR SAVED. at DDDDDDDD.\n");
+				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Conversation pointer saved! (D).\n");
 			}
 			if (temp_key->opt->auto_enable && !temp_key->opt->no_entropy) {
 				//temp_key->opt->waiting_for_ack = TRUE;
 				temp_key->opt->otp_enabled = TRUE;
-				temp_key->opt->active = TRUE;
 				purple_conversation_write(conv, NULL, 
 						"Encryption enabled.", 
 						PURPLE_MESSAGE_NO_LOG, time(NULL));
-				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "REQUEST checked: now otp_enabled = TRUE.\n");
+				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "REQUEST checked: otp_enabled = TRUE.\n");
 			}
 		} else {
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "REQUEST failed! No key available.\n");
@@ -529,7 +532,7 @@ static gboolean par_session_check_msg(struct key* used_key,
 				"Encryption disabled (remote).", 
 				PURPLE_MESSAGE_NO_LOG, time(NULL));
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-				"PARANOIA_NO_ENTROPY detected. otp_enabled = FALSE\n");
+				"PARANOIA_NO_ENTROPY detected. otp_enabled = FALSE, active = FALSE\n");
 		return TRUE;
 	}
 	else {
@@ -545,7 +548,7 @@ static void par_session_reset_conv(PurpleConversation *conv)
 	while (!(tmp_ptr == NULL)) {
 		if (tmp_ptr->conv == conv) {
 			tmp_ptr->conv = NULL;
-			/* free mmap's of libotp */
+			/* free the mmap of libotp */
 			otp_pad_use_less_memory(tmp_ptr->pad);
 		}
 		tmp_ptr = tmp_ptr->next;
@@ -579,49 +582,43 @@ static gboolean par_cli_try_enable_enc(PurpleConversation *conv)
 				purple_conversation_get_account(conv));
 	const char* other_acc = purple_conversation_get_name(conv);
 	
-	struct key* used_key = par_search_key(my_acc, other_acc); // OLD: by_conv
-	// TODO: rewrite this function!!!
+	struct key* used_key = par_search_key(my_acc, other_acc);
 	if (used_key != NULL) {
-		if (!used_key->opt->no_entropy) {
-			if (used_key->opt->active == TRUE) {
-				if (!used_key->opt->otp_enabled) {
-					used_key->opt->otp_enabled = TRUE;
-					//used_key->opt->waiting_for_ack = TRUE;
-					purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), 
-							PARANOIA_START, 
-							PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
-					purple_conversation_write(conv, NULL, 
-							"Encryption enabled.", 
-							PURPLE_MESSAGE_NO_LOG, time(NULL));
-				} else {
-					purple_conversation_write(conv, NULL, 
-							"Encryption already enabled.", 
-							PURPLE_MESSAGE_NO_LOG, time(NULL));
-				}
-			} else {
-				if (par_session_send_request(my_acc, other_acc, conv)) {
-					purple_conversation_write(conv, NULL, 
-							"Trying to enable encryption.", 
-							PURPLE_MESSAGE_NO_LOG, time(NULL));
-				} else {
-					// TODO: not possible?!
-					purple_conversation_write(conv, NULL, 
-							"Couldn't enable the encryption. No key available.",
-							PURPLE_MESSAGE_NO_LOG, time(NULL));
-				}
-			}
-			used_key->opt->auto_enable = TRUE;
+		if (used_key->opt->no_entropy) {
+			purple_conversation_write(conv, NULL, 
+					"Couldn't enable the encryption. No entropy available.",
+					PURPLE_MESSAGE_NO_LOG, time(NULL));
+			return FALSE;
+		}			
+		if (!used_key->opt->otp_enabled) {
+			used_key->opt->otp_enabled = TRUE;
+			//used_key->opt->waiting_for_ack = TRUE;
+			purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), 
+					PARANOIA_START, 
+					PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
+			purple_conversation_write(conv, NULL, 
+					"Encryption enabled.", 
+					PURPLE_MESSAGE_NO_LOG, time(NULL));
 			return TRUE;
+		} else {
+			used_key->opt->auto_enable = TRUE;
+			purple_conversation_write(conv, NULL, 
+					"Encryption already enabled.", 
+					PURPLE_MESSAGE_NO_LOG, time(NULL));
+			return TRUE;
+		}			
+	} else {
+		if (par_session_send_request(my_acc, other_acc, conv)) {
+			purple_conversation_write(conv, NULL, 
+					"Trying to enable encryption.", 
+					PURPLE_MESSAGE_NO_LOG, time(NULL));
+			return TRUE;
+		} else {
+			purple_conversation_write(conv, NULL, 
+					"Couldn't enable the encryption. No key available.",
+					PURPLE_MESSAGE_NO_LOG, time(NULL));
 		}
-		purple_conversation_write(conv, NULL, 
-				"Couldn't enable the encryption. No entropy available.",
-				PURPLE_MESSAGE_NO_LOG, time(NULL));
-		return FALSE;
 	}
-	
-	purple_conversation_write(conv, NULL, 
-			"Couldn't enable the encryption. No key available.",
-			PURPLE_MESSAGE_NO_LOG, time(NULL));
 	return FALSE;
 }
 
@@ -863,15 +860,25 @@ void par_conversation_created(PurpleConversation *conv)
 					"Encryption enabled.", 
 					PURPLE_MESSAGE_NO_LOG, time(NULL));
 		}
-	}
-	
-	/* send a request message */
-	if(par_session_send_request(my_acc_name, receiver, conv)) {
-		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-				"Matching keys found. REQUEST sent.\n");
+		if (!active_key->opt->handshake_done) {
+			/* send a request message */
+			if(par_session_send_request(my_acc_name, receiver, conv)) {
+				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+						"Matching key(s) found. REQUEST sent.\n");
+			} else {
+				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+						"Found no matching key. Won't sent REQUEST.\n");
+			}
+		}
 	} else {
-		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-				"Found no matching key. Won't sent REQUEST.\n");
+		/* send a request message */
+		if(par_session_send_request(my_acc_name, receiver, conv)) {
+			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+					"Matching key(s) found. REQUEST sent.\n");
+		} else {
+			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+					"Found no matching key. Won't sent REQUEST.\n");
+		}
 	}
 	
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
@@ -930,23 +937,24 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 			g_free(*stripped_message);
 			return FALSE;
 		}
-		// FIXME: problematic code! Disable all keys?
+		// FIXME: problematic code! Disable all keys? Search weak?
 		struct key* used_key = par_search_key(my_acc_name, *sender);
 		if (used_key != NULL) {
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-					"Found a matching key with ID: %s\n", otp_pad_get_id(used_key->pad));
+					"Found an active key with ID: %s\n", otp_pad_get_id(used_key->pad));
 			/* save conversation ptr */
 			if (used_key->conv != NULL) {
 				used_key->conv = conv;
-				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "CONV PTR SAVED. at AAAAAAAAA.\n");
+				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Conversation pointer saved! (A)\n");
 			}
 
-			/* disable encryption if unencrypted message received but not waiting for ack */
+			/* disable encryption if unencrypted message received */ //but not waiting for ack
 			if (used_key->opt->otp_enabled) { //&& !used_key->opt->waiting_for_ack
 				used_key->opt->otp_enabled = FALSE;
 				purple_conversation_write(conv, NULL, 
 						"Encryption disabled.", 
 						PURPLE_MESSAGE_NO_LOG, time(NULL));
+				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Unencrypted message received. otp_enabled = FALSE\n");
 			}
 		}
 		/* free the jabber/msn strip! */
@@ -973,7 +981,7 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 		/* save conversation ptr */
 		if (used_key->conv != NULL) {
 			used_key->conv = conv;
-			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "CONV PTR SAVED. at BBBBBBBB.\n");
+			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Conversation pointer saved! (B)\n");
 		}
 
 #ifdef NO_OTP
@@ -997,15 +1005,20 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 		if (par_session_check_msg(used_key, message, conv)) {
 			return TRUE;
 		}
+		
+		/* activete this key? */
+		if(!used_key->opt->handshake_done) {
+			used_key->opt->handshake_done = TRUE;
+			used_key->opt->active = TRUE;
+			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Key Activated! active and handshake_done are now TRUE;\n");
+		}
 
 		// TODO: detect ACK message
 
-		// encryption not enabled?
+		/* (Auto) enable the encryption? */
 		if (!used_key->opt->otp_enabled) {
-			//can I activate an encrypted conversation too?
 			if(used_key->opt->auto_enable) {
 				used_key->opt->otp_enabled = TRUE;
-				used_key->opt->active = TRUE;
 				purple_conversation_write(conv, NULL, 
 						"Encryption enabled.", 
 						PURPLE_MESSAGE_NO_LOG, time(NULL));
@@ -1047,33 +1060,14 @@ static void par_im_msg_sending(PurpleAccount *account,
 
 	if (used_key != NULL) {
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-				"Found a matching Key with pad ID: %s\n", otp_pad_get_id(used_key->pad));
+				"Found an active key with pad ID: %s\n", otp_pad_get_id(used_key->pad));
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "otp_enabled == %i\n", used_key->opt->otp_enabled);
-
-		if (strncmp(*message, PARANOIA_REQUEST, PARANOIA_REQUEST_LEN) == 0) {
-			/* don't send requests if we have no entropy. */
-			if (used_key->opt->no_entropy) {
-				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-						"No entropy available. Won't sent REQUEST.\n");
-				g_free(*message);
-				*message = NULL;
-				return;
-			}
-			/*if (used_key->opt->active) {
-				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-						"Already active. Won't sent REQUEST.\n");
-				g_free(*message);
-				*message = NULL;
-				//used_key->opt->waiting_for_ack = FALSE;
-				return;
-			} */
-		}
 
 		//used_key->opt->waiting_for_ack = FALSE;
 
-		// encryption enabled?
+		/* encryption enabled? */
 		if (!used_key->opt->otp_enabled) {
-			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "This conversation was not initialized! otp_enabled == FALSE.\n");
+			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Encryption not enabled!\n");
 			return;
 		}
 
@@ -1162,7 +1156,7 @@ static void par_im_msg_sending(PurpleAccount *account,
 	} else {
 	
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-				"Found no matching key. Won't encrypt.\n");
+				"No active key found. Won't encrypt.\n");
 	}
 	return;
 }
@@ -1183,7 +1177,7 @@ static gboolean par_im_msg_change_display(PurpleAccount *account,
 		if ( used_key != NULL) {
 			if (used_key->conv == NULL) {
 				used_key->conv = conv;
-				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Conversation pointer saved! CCCCCCC\n");
+				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Conversation pointer saved! (C)\n");
 			}
 		}
 	}
@@ -1192,13 +1186,13 @@ static gboolean par_im_msg_change_display(PurpleAccount *account,
 
 	char* stripped_message = g_strdup(purple_markup_strip_html(*message));
 
-	/* hide session init messages */
 	if (strncmp(stripped_message, PARANOIA_REQUEST, PARANOIA_REQUEST_LEN) == 0) {
 		if (flags & PURPLE_MESSAGE_SEND) {
+			/* hide outgoing session init messages */
 			g_free(stripped_message);
 			return TRUE;
 		} else {
-			/* cosmetics */
+			/* session init message cosmetics */
 			g_free(*message);
 			*message = g_strndup(stripped_message, PARANOIA_REQUEST_LEN);
 			g_free(stripped_message);
