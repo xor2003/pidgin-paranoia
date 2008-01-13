@@ -404,7 +404,7 @@ void par_session_ack(PurpleConversation *conv) {
 } */
 
 
-void par_session_close(PurpleConversation *conv) //FIXME: rename
+void par_session_send_close(PurpleConversation *conv)
 /* sends an otp termination message */
 {
 	purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), 
@@ -629,7 +629,7 @@ static gboolean par_cli_disable_enc(PurpleConversation *conv)
 				purple_conversation_get_account(conv));
 	const char* other_acc = purple_conversation_get_name(conv);
 	
-	struct key* used_key = par_search_key(my_acc, other_acc); // OLD: by_conv
+	struct key* used_key = par_search_key(my_acc, other_acc);
 	if (used_key != NULL) {
 		if (used_key->opt->otp_enabled) {
 			purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), 
@@ -716,7 +716,7 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 	}
 	else if (strcmp("drop", *args) == 0) {
 	// REMOVE ME (just for testing!)
-		struct key* used_key = par_search_key(my_acc, other_acc); // OLD: by_conv
+		struct key* used_key = par_search_key(my_acc, other_acc);
 		if (used_key != NULL) {
 			if (used_key->opt->otp_enabled) {
 				used_key->opt->otp_enabled = FALSE;
@@ -948,7 +948,7 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Conversation pointer saved! (A)\n");
 			}
 
-			/* disable encryption if unencrypted message received */ //but not waiting for ack
+			/* disable encryption if unencrypted message received */
 			if (used_key->opt->otp_enabled) { //&& !used_key->opt->waiting_for_ack
 				used_key->opt->otp_enabled = FALSE;
 				purple_conversation_write(conv, NULL, 
@@ -969,9 +969,12 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 	*message = *stripped_message;
 
 	/* search in key list */
+	struct key* used_key = NULL;
 	char* recv_id = otp_id_get_from_message(otp_conf, *message);
-	struct key* used_key = par_search_key_by_id(recv_id, my_acc_name, *sender);
-	g_free(recv_id);
+	if (recv_id != NULL) {
+		used_key = par_search_key_by_id(recv_id, my_acc_name, *sender);
+		g_free(recv_id);
+	}
 
 	if (used_key != NULL) {
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
@@ -992,7 +995,11 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 		if (syndrome > OTP_WARN) {
 			purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
 					"Could not decrypt the message! That's a serious error! %.8X\n", syndrome);
-			// TODO: notify the user
+			/* notify the user */
+			*flags = *flags | PURPLE_MESSAGE_ERROR;
+			g_free(*message);
+			*message = g_strdup("The last incoming message could not be decrypted. This is a serious error!\n");
+			return FALSE;
 		} else {
 			if (syndrome != OTP_OK) {
 				purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
@@ -1001,7 +1008,7 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 		}
 #endif
 
-		// detect START, STOP and EXIT message
+		/* detect START, STOP and EXIT message */
 		if (par_session_check_msg(used_key, message, conv)) {
 			return TRUE;
 		}
@@ -1138,7 +1145,12 @@ static void par_im_msg_sending(PurpleAccount *account,
 		if (syndrome > OTP_WARN) {
 			purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
 					"Could not encrypt the message. That's a serious error! %.8X\n", syndrome);
-			// TODO: notify the user
+			/* notify the user */
+			purple_conversation_write(used_key->conv, NULL, 
+						"The last outgoing message could not be encrypted. "
+						"This is a serious error!", 
+						PURPLE_MESSAGE_ERROR, time(NULL));
+			return;
 		} else {
 			if (syndrome != OTP_OK) {
 				purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
@@ -1297,7 +1309,7 @@ gboolean plugin_unload(PurplePlugin *plugin)
 	struct key* key_ptr = keylist;
 	while (key_ptr != NULL) {
 		if (key_ptr->conv != NULL) {
-			par_session_close(key_ptr->conv);
+			par_session_send_close(key_ptr->conv);
 		}
 		key_ptr = key_ptr->next;
 	}
