@@ -119,7 +119,7 @@ struct otp {
  * is relvant for the future, i.e. OTP_WARN_KEY_NOT_RANDOM */
 	struct otp_config* config;	/* The settings associated with this pad. */
 	gboolean file_is_open;		/* Whether the file is already open */
-	int fd;						/* The filedescriptor of the keyfile. */
+	int fd;						/* The filedescriptor of the keyfile. Note: libc: 'int open(..)' */
 	char* data;					/* The contents of the keyfile if open */
 };
 
