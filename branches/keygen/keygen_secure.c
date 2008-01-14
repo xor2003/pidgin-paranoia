@@ -17,31 +17,22 @@
 */
 
 
-// pthread.h has to be included first
 #include <glib.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/resource.h>
 #include <sys/time.h>
-
-/*
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/ioctl.h>
-#include <termio.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <time.h>
-*/
-
+#include <string.h>
 
 #define BUFFSIZE 20
 #define CHARSIZE 256
 #define OFFSET 0
 
-/* generates a new key pair (two files) with the name alice and bob of 'size' bytes.
-unsigned int otp_generate_key_pair(const char* alice,const char* bob,const char* path,const char* source, unsigned int size);
-*/
+/* Private data struct */
+struct _entropy {
+	int length;
+	char pool[10];
+} entropy;
 
 // Definition for the funcions and global variables. => Has to be moved into the header file later
 unsigned char bit2char(short buf[8]);
@@ -50,7 +41,7 @@ gpointer audio(gpointer data);
 gpointer stub(gpointer data);
 gpointer threads(gpointer data);
 gpointer sysstate(gpointer data);
-gpointer prg(gpointer data);
+gpointer prng(gpointer data);
 gpointer mutex = NULL;
 
 
@@ -62,19 +53,23 @@ int main() {
 #ifdef FAST
 	GThread *p5;
 #endif
-	int number;
+	int length;
 
-	number = 100000;
+	entropy.length = 100000;
+	length = entropy.length;
+	// initalize pool
+	memset(entropy.pool,'\0',10);
+
 	g_thread_init(NULL);
 	mutex = g_mutex_new();		// create mutex
 
 // create threads
-	if((p2 = g_thread_create(devrand, &number, TRUE, NULL)) != NULL) g_print("collecting entropy from /dev/random\n");
-	if((p1 = g_thread_create(audio, &number, TRUE, NULL)) != NULL) g_print("collecting entropy from /dev/audio\n");
-	if((p3 = g_thread_create(threads, &number, TRUE, NULL)) != NULL) g_print("collecting entropy from thread timing\n");
-	if((p4 = g_thread_create(sysstate, &number, TRUE, NULL)) != NULL) g_print("collecting entropy from system state\n");
+	if((p2 = g_thread_create(devrand, &length, TRUE, NULL)) != NULL) g_print("collecting entropy from /dev/random\n");
+	if((p1 = g_thread_create(audio, &length, TRUE, NULL)) != NULL) g_print("collecting entropy from /dev/audio\n");
+	if((p3 = g_thread_create(threads, &length, TRUE, NULL)) != NULL) g_print("collecting entropy from thread timing\n");
+	if((p4 = g_thread_create(sysstate, &length, TRUE, NULL)) != NULL) g_print("collecting entropy from system state\n");
 #ifdef FAST
-	if((p5 = g_thread_create(prg, &number, TRUE, NULL)) != NULL) g_print("collecting entropy from PRG\n");
+	if((p5 = g_thread_create(prng, &length, TRUE, NULL)) != NULL) g_print("collecting entropy from PRNG\n");
 #endif
 
 // wait for threads to return
@@ -93,11 +88,12 @@ int main() {
 } // end main();
 
 
+unsigned char bit2char(short buf[8])
 /*
 * function which takes an array of 8 bits, and output an ascii char. The buf array should only contain
 * 0 or 1, else the return value is not usefule
 */
-unsigned char bit2char(short buf[8]) {
+{
 	short i,l,in;
 	unsigned char out;
 	l = 1;
@@ -111,10 +107,12 @@ unsigned char bit2char(short buf[8]) {
 } // end bit2char()
 
 
+gpointer devrand(gpointer data)
 /*
 * devrand() collects entropie from the /dev/random device and writes it into a keyfile
 */
-gpointer devrand(gpointer data) {
+
+{
 	int fd1, file;
 	unsigned char c1;
 	unsigned char buffer[BUFFSIZE];
@@ -161,20 +159,22 @@ gpointer devrand(gpointer data) {
 } // end devrand()
 
 
+gpointer stub(gpointer data)
 /*
 *	a helper function for the threads function
 */
-gpointer stub(gpointer data) {
+{
 	return 0;
 } // end stub ()
 
 
+gpointer threads(gpointer data)
 /*
 *	threads() collects entropie from thread timing, by just mesuring the time it takes
 *	to open and close the stub() thread. This function takes one sample every second
 * 	and writes the entropie to the keyfile
 */
-gpointer threads(gpointer data) {
+{
 	short i;
 	unsigned char diff;
 	struct timeval start, finish;
@@ -214,13 +214,14 @@ gpointer threads(gpointer data) {
 } // end threads()
 
 
+gpointer audio(gpointer data)
 /*
 	audio() collect entropie from /dev/audio and xor it with a value from /dev/urandom to
 	get a better distribution even if no sound is running.
 	This function generates one bit of entropie out of 7 samples, generates an ascii char
 	and write this to the keyfile
 */
-gpointer audio(gpointer data) {
+{
 	int fd, fd1, file;
 	short i;
 	unsigned char c, d, oldc;
@@ -286,13 +287,14 @@ gpointer audio(gpointer data) {
 } // end audio()
 
 
+gpointer sysstate(gpointer data)
 /*
 *	sysstate() collects entropy by adding up system time user time and minor pagefaults and generates one byte of entropy
 *	if the current state is different from the last state. Because I use microseconds as measurement, the time depends on
 *	the CPU strenght and only the time of the current program is measured the output is not predictable or manipulatable
 *	from outside.
 */
-gpointer sysstate(gpointer data) {
+{
 	int minflt, fp, who;
 	double systime, usertime;
 	unsigned int result = 0, old_result = 0;
@@ -328,10 +330,15 @@ gpointer sysstate(gpointer data) {
 	}
 	close(fp);
 	return 0;
-}
+} //end sysstat()
 
-gpointer prg(gpointer data) {
-	int fp_file, fp_prg;
+
+gpointer prng(gpointer data)
+/*
+*	prng gets entropy from the pseudorandom number generator /dev/urandom
+*/
+{
+	int fp_file, fp_prng;
 	unsigned short c;
 
 	if((fp_file = open("keyfile", O_RDWR|O_CREAT|O_APPEND, 00644)) < 0) {
@@ -339,14 +346,14 @@ gpointer prg(gpointer data) {
 		return 0;
 	}
 
-	if((fp_prg = open("/dev/urandom", O_RDONLY)) < 0) {
+	if((fp_prng = open("/dev/urandom", O_RDONLY)) < 0) {
 		g_printerr("could not open /dev/urandom\n");
 		return 0;
 	}
 
 	while(1) {
 		g_mutex_lock(mutex);
-		if(read(fp_prg, &c, 1) != 1) {
+		if(read(fp_prng, &c, 1) != 1) {
 			g_printerr("read error\n");
 			g_mutex_unlock(mutex);
 			return 0;
@@ -373,6 +380,6 @@ gpointer prg(gpointer data) {
 	}
 
 	close(fp_file);
-	close(fp_prg);
+	close(fp_prng);
 	return 0;
-}
+} // end prng()
