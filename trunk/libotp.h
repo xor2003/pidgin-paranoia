@@ -236,7 +236,8 @@ OtpError otp_conf_set_msg_key_improbability_limit(struct otp_config* myconfig,
 				 double msg_key_improbability_limit);
 				 
 /* extracts and returns the ID from a given encrypted message. 
-   Leaves the message constant. Returns NULL if it fails. */
+ * Leaves the message constant. Returns NULL if it fails because the ID is not valid
+ * or because it could not be extracted form the message */
 char* otp_id_get_from_message(const struct otp_config* myconfig, const char *msg);
 
 /* creates an otp pad with the data from a key file */
