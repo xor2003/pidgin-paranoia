@@ -118,6 +118,7 @@ typedef enum {
 struct otp_config;
 struct otp;
 
+/* ------------------ Principal functions ----------------------------*/ 
 
 /* encrypt the message 
  * if it can't encrypt the message a syndrome > OTP_WARN is returned and
@@ -140,8 +141,34 @@ OtpError otp_decrypt(struct otp* mypad, char** message);
 
 /* destroys a keyfile by using up all encryption-entropy */
 OtpError otp_erase_key(struct otp* mypad);
+//OtpError otp_pad_erase_entropy(struct otp* mypad);
+
+/* extracts and returns the ID from a given encrypted message. 
+ * Leaves the message constant. Returns NULL if it fails because the ID is not valid
+ * or because it could not be extracted form the message */
+char* otp_id_get_from_message(const struct otp_config* myconfig, const char *msg);
+
+/* generates a new key pair (two files) with the name alice and bob of 'size' bytes. 
+ * TODO: if source is NULL (suggested as default), generate with keygen */
+// TODO:		struct otp* alice_pad, struct otp* bob_pad
+// Note: Giving back bob_pad makes no sense since it has no use for alice.
+		/* alice and bob is optional. if NULL not created */
+OtpError otp_generate_key_pair(const struct otp_config* myconfig, 
+			const char* alice, const char* bob, 
+			const char* source, gsize size);
 
 /* ------------------ otp_pad ------------------------------ */
+
+/* creates an otp pad with the data from a key file */
+struct otp* otp_pad_create_from_file(struct otp_config* myconfig, const char* filename);
+
+/* closes the filehandle and the memory map. 
+ * You can do this any time you want, it will just save memory 
+ * (This function is a stub ATM)*/
+void otp_pad_use_less_memory(struct otp* mypad);
+
+/* destroys an otp object */
+void otp_pad_destroy(struct otp* mypad);
 
 /* ------------------ otp_pad get functions ------------------- */
 
@@ -166,21 +193,13 @@ gsize otp_pad_get_position(struct otp* mypad);
 /* gets the size of the file in bytes */
 gsize otp_pad_get_filesize(struct otp* mypad);
 
-
-/* closes the filehandle and the memory map. 
- * You can do this any time you want, it will just save memory 
- * (This function is a stub ATM)*/
-// TODO: Please implement in paranoia.c
-void otp_pad_use_less_memory(struct otp* mypad);
-
 /* gets an OtpError that contains information about the status of the pad */
 OtpError otp_pad_get_syndrome(struct otp* mypad);
 
 /* gets a reference to the config associated with this pad */
 // TODO
-//struct otp_config* otp_get_conf(struct otp* mypad);
+//struct otp_config* otp_pad_get_conf(struct otp* mypad);
 
-/* CONF operations (No effect ATM) */
 /* ------------------ otp_config ------------------------------ */
 
 /* Creation of the config stucture of the library, sets some parameters 
@@ -234,24 +253,4 @@ OtpError otp_conf_set_random_msg_tail_max_len(struct otp_config* myconfig,
  * 					Disabled if 0.0. Default is already set to DEFAULT_IMPROBABILITY. */
 OtpError otp_conf_set_msg_key_improbability_limit(struct otp_config* myconfig,
 				 double msg_key_improbability_limit);
-				 
-/* extracts and returns the ID from a given encrypted message. 
- * Leaves the message constant. Returns NULL if it fails because the ID is not valid
- * or because it could not be extracted form the message */
-char* otp_id_get_from_message(const struct otp_config* myconfig, const char *msg);
-
-/* creates an otp pad with the data from a key file */
-struct otp* otp_pad_create_from_file(struct otp_config* myconfig, const char* filename);
-
-/* destroys an otp object */
-void otp_pad_destroy(struct otp* mypad);
-
-/* generates a new key pair (two files) with the name alice and bob of 'size' bytes. 
- * TODO: if source is NULL (suggested as default), generate with keygen */
-// TODO:		struct otp* alice_pad, struct otp* bob_pad
-// Note: Giving back bob_pad makes no sense since it has no use for alice.
-		/* alice and bob is optional. if NULL not created */
-OtpError otp_generate_key_pair(const struct otp_config* myconfig, 
-			const char* alice, const char* bob, 
-			const char* source, gsize size);
 

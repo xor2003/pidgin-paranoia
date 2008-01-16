@@ -13,6 +13,8 @@ Version 0.2
 	 * keyfile entropy really checked for patterns
 	 * keyfile locking
 	 * keeping filehandles and mmaps open to save CPU (Done)
+	 * checking for \0\0\0 on decrypt to check if the message is valid 
+		(maybe version 0.3)
  	
  	paranoia.c
 	 * add generated key to keylist
@@ -25,12 +27,12 @@ Version 0.2
 	 
 	other
 	 * commandline program that can use libotp for general usage
+		(possibly version 0.3)
  
 Version 0.3
 ============
 	paranoia.c
 	 * string freeze
-
 Version 1.0
 ============
  	paranoia.c
