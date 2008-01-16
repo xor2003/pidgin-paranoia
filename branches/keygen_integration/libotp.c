@@ -466,18 +466,12 @@ OtpError otp_generate_key_pair(const char* alice,
 	/* Loop-Keys not supported */
 //	if (strcmp(alice, bob) == 0) return OTP_ERR_LOOP_KEY;
 
-
-	if ( size/BLOCKSIZE == (float)size/BLOCKSIZE ) {
-		size = size/BLOCKSIZE;
-	} else {
-		size = size/BLOCKSIZE + 1;
-	}
 #ifdef DEBUG
 	g_print("paranoia: otp_genkey initial checks\n");
 #endif
 
 	id = otp_get_id();
-	key_size = size * BLOCKSIZE;
+	key_size = size;
 	home_path = (char *)g_getenv ("HOME");
 	if(!home_path) home_path = (char *)g_get_home_dir();
 
