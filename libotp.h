@@ -140,8 +140,7 @@ OtpError otp_encrypt_warning(struct otp* mypad, char** message, gsize protected_
 OtpError otp_decrypt(struct otp* mypad, char** message);
 
 /* destroys a keyfile by using up all encryption-entropy */
-OtpError otp_erase_key(struct otp* mypad);
-//OtpError otp_pad_erase_entropy(struct otp* mypad);
+OtpError otp_pad_erase_entropy(struct otp* mypad);
 
 /* extracts and returns the ID from a given encrypted message. 
  * Leaves the message constant. Returns NULL if it fails because the ID is not valid
@@ -197,8 +196,7 @@ gsize otp_pad_get_filesize(struct otp* mypad);
 OtpError otp_pad_get_syndrome(struct otp* mypad);
 
 /* gets a reference to the config associated with this pad */
-// TODO
-//struct otp_config* otp_pad_get_conf(struct otp* mypad);
+struct otp_config* otp_pad_get_conf(struct otp* mypad);
 
 /* ------------------ otp_config ------------------------------ */
 

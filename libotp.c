@@ -506,7 +506,7 @@ static OtpError otp_uencrypt(char** message, struct otp* pad)
  * Exported in libtop.h */
 
 
-OtpError otp_erase_key(struct otp* pad)
+OtpError otp_pad_erase_entropy(struct otp* pad)
 /* destroys a keyfile by using up all encryption-entropy */
 {
 	if (pad == NULL) return OTP_ERR_INPUT;
@@ -1184,13 +1184,18 @@ OtpError otp_pad_get_syndrome(struct otp* mypad)
 	if (mypad == NULL) return 0;
 	return mypad->syndrome;
 }
-/* gets an the config associated with this pad */
-// TODO
-//struct otp_config* otp_get_conf(struct otp* mypad);
 
+struct otp_config* otp_pad_get_conf(struct otp* mypad)
+/* gets the config of this pad as reference */
+{
+	if (mypad == NULL) return NULL;
+	return mypad->config;
+}
+
+void otp_pad_use_less_memory(struct otp* pad)
 /* closes the filehandle and the memory map. 
  * You can do this any time you want, it will just save memory */
-void otp_pad_use_less_memory(struct otp* pad) {
+{
 	if (pad->file_is_open == TRUE) {
 #ifdef PRINT_ERRORS
 		printf("%s: file and memory map closed.\n", pad->config->client_id);

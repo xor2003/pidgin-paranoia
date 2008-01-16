@@ -95,6 +95,9 @@ int something() {
 	if(*argpos+takes-1 >= *argnumber) {
 		return FALSE;
 	}
+	struct otp_config* c = otp_pad_get_conf(encryptpad);
+	printf("%s\n",otp_conf_get_export_path(c));
+	
 	//printf("%.8X\n",otp_conf_set_path(config, "testtest"));
 	//printf("%.8X\n",otp_conf_set_export_path(config, "testtest"));
 	//printf("%s\n",otp_conf_get_path(config));
@@ -208,7 +211,7 @@ int erasekey() {
 	if(*argpos+takes-1 >= *argnumber) {
 		return FALSE;
 	}
-	OtpError syndrome = otp_erase_key(encryptpad);
+	OtpError syndrome = otp_pad_erase_entropy(encryptpad);
 	if (syndrome > OTP_WARN) {
 		printf("Error erasing keys %.8X\n",syndrome);
 		return FALSE;
