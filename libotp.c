@@ -119,7 +119,8 @@ struct otp {
  * is relvant for the future, i.e. OTP_WARN_KEY_NOT_RANDOM */
 	struct otp_config* config;	/* The settings associated with this pad. */
 	gboolean file_is_open;		/* Whether the file is already open */
-	int fd;						/* The filedescriptor of the keyfile. Note: libc: 'int open(..)' */
+	int fd;						/* The file descriptor of the keyfile. Note: libc: 'int open(..)' */
+	struct flock* fl;			/* The file lock */
 	char* data;					/* The contents of the keyfile if open */
 };
 
@@ -179,12 +180,16 @@ static OtpError otp_open_keyfile(struct otp* pad)
 #endif
 		return OTP_OK;
 }
+
+	/* Open file desriptor */
 	if ((pad->fd = open(pad->filename, O_RDWR)) == -1) {
 #ifdef PRINT_ERRORS
 		perror("open");
 #endif
 		return OTP_ERR_FILE;
 	}
+
+	/* Get Filesize */
 	if (stat(pad->filename, &fstat) == -1) {
 #ifdef PRINT_ERRORS
 		perror("stat");
@@ -194,6 +199,11 @@ static OtpError otp_open_keyfile(struct otp* pad)
 	}
 	pad->filesize = fstat.st_size;
 
+	/* mmap 
+	 * Note: Because the memory map maps the whole file, the exclusive lock
+	 * set onto the first half of the file will always prevent an other 
+	 * application from opening the same key. */
+	
 	if ((pad->data = mmap((caddr_t)0, pad->filesize, PROT_READ | PROT_WRITE,
 			MAP_SHARED, pad->fd, 0)) == (caddr_t)(-1)) {
 #ifdef PRINT_ERRORS
@@ -205,6 +215,30 @@ static OtpError otp_open_keyfile(struct otp* pad)
 #ifdef DEBUG
 	printf("%s: pad  %s opened in fd %u\n",pad->config->client_id, pad->id, pad->fd);
 #endif
+	/* File lock */
+	pad->fl = (struct flock*)g_malloc(sizeof(struct flock));
+	pad->fl->l_type = F_WRLCK;		/* Get an exclusive lock */
+	pad->fl->l_whence = SEEK_SET;	/* Lock from the beginning of the file */
+	pad->fl->l_start  = 0;
+	/* Lock until the end of the part that is used to encrypt */
+	pad->fl->l_len    = pad->filesize/2;
+	pad->fl->l_pid    = getpid();
+	
+	if ((fcntl(pad->fd, F_SETLK, pad->fl)) == -1) {
+		munmap(pad->data, pad->filesize);
+		g_free(pad->fl);
+		pad->fl = NULL;
+		close(pad->fd);
+#ifdef PRINT_ERRORS
+		perror("fcntl");
+#endif
+		return OTP_ERR_FILE;
+	}
+#ifdef DEBUG
+	printf("%s: filelock: -1 if not locked: %d\n",pad->config->client_id,fcntl(pad->fd, F_GETLK, pad->fl));
+#endif
+
+	/* Everything is fine */
 	pad->file_is_open = TRUE;
 	return OTP_OK;
 }
@@ -221,7 +255,15 @@ static void otp_close_keyfile(struct otp* pad)
 #ifdef DEBUG
 	printf("%s: pad  %s closed in fd %u\n",pad->config->client_id, pad->id, pad->fd);
 #endif
+	pad->fl->l_type   = F_UNLCK;
+	if ((fcntl(pad->fd, F_SETLK, pad->fl)) == -1) {
+#ifdef PRINT_ERRORS
+		perror("fcntl");
+#endif
+	}
 	munmap(pad->data, pad->filesize);
+	g_free(pad->fl);
+	pad->fl = NULL;
 	close(pad->fd);
 	pad->file_is_open = FALSE;
 	return;
@@ -358,7 +400,7 @@ static OtpError otp_get_decryptkey_from_file(char** key, struct otp* pad,
 	gsize i = 0;
 	OtpError syndrome = OTP_OK;
 	if ((decryptpos + (len+1) + pad->filesize/2) > pad->filesize
-			|| decryptpos < 0) {
+			|| decryptpos < 0) { /* < 0 is not needed but is more understandable */
 		syndrome = OTP_ERR_KEY_SIZE_MISMATCH;
 		return syndrome;
 	}
@@ -703,14 +745,13 @@ OtpError otp_encrypt_warning(struct otp* pad, char** message, gsize protected_po
 			return OTP_ERR_INPUT;
 		}
 	}
-	char* old_msg = g_strdup(*message);
 	gsize oldpos = pad->position;
 	// TODO v0.2 oldpos is unflexible
 	pad->protected_position = pad->filesize/2-OTP_PROTECTED_ENTROPY-protected_pos;
 #ifdef RNDMSGLEN
 	oldpos += 1;
 #endif
-
+	char* old_msg = g_strdup(*message);
 #ifdef UCRYPT
 	syndrome = otp_uencrypt(message, pad);
 	if (syndrome > OTP_WARN) {
@@ -783,8 +824,9 @@ struct otp* otp_pad_create_from_file(
 	pad = (struct otp *)g_malloc(sizeof(struct otp));
 	pad->protected_position = 0;
 	pad->filename = g_strconcat(config->path, filename, NULL);
-	pad->fd=0;
+	pad->fd = 0;
 	pad->file_is_open = FALSE;
+	pad->fl = NULL;
 	
 	pad->config = config;
 	config->pad_count++;
@@ -891,11 +933,18 @@ OtpError otp_decrypt(struct otp* pad, char** message)
 		g_strfreev(m_array);
 		return OTP_ERR_MSG_FORMAT;
 		}
-	char* old_msg = g_strdup(*message);
-	
 	/* Our position to decrypt in the pad */
-	gsize decryptpos = (unsigned int)g_ascii_strtoll( strdup(m_array[0]), NULL, 10);
-	if (strcmp(m_array[1], pad->id) != 0) return OTP_ERR_ID_MISMATCH;
+	int testpos = g_ascii_strtoll( strdup(m_array[0]), NULL, 10);
+	if (testpos < 0 || testpos > pad->filesize/2) {
+		g_strfreev(m_array);
+		return OTP_ERR_KEY_SIZE_MISMATCH;
+	}
+	gsize decryptpos = (unsigned int) testpos;
+	if (strcmp(m_array[1], pad->id) != 0) {
+		g_strfreev(m_array);
+		return OTP_ERR_ID_MISMATCH;
+	}
+	char* old_msg = g_strdup(*message);
 	char* new_msg = g_strdup(m_array[2]);
 	g_free(*message);
 	*message = new_msg;
