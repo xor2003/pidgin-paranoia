@@ -36,8 +36,11 @@
 				 * creation function */
 #define ERASEBLOCKSIZE 1024				/* The blocksize used in the key
 				 * eraseure function */
-#define DEFAULT_RNDLENMAX 30			/* Default value: Maximal length of the added
+#define DEFAULT_RNDLENMAX 25			/* Default value: Maximal length of the added
 				 * random-length tail onto the encrypted message */
+#define MIN_PADDING 5			/* The mininal length of this tailing string 
+								* This allows future checks if the message
+								* was decrypted correctly. */
 #define DEFAULT_IMPROBABILITY 1E-12		/* Default value: If a key with less
 				 * probability then this occurs, throw the key away */
 
@@ -480,7 +483,8 @@ static OtpError otp_uencrypt(char** message, struct otp* pad)
 	syndrome = otp_get_encryptkey_from_file(rand, pad, 1+1, pad->config);
 	if ( syndrome > OTP_WARN ) return syndrome;
 	
-	rnd = (unsigned char)*rand[0]*pad->config->random_msg_tail_max_len/255;
+	rnd = (unsigned char)*rand[0]*pad->config->random_msg_tail_max_len/255 
+				+ MIN_PADDING;
 	g_free(*rand);
 	msg = g_malloc0(rnd+len);       /* Create a new,longer message */
 	memcpy(msg, *message, len-1);
