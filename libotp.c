@@ -19,11 +19,12 @@
 /*  ------------------- Constants (don't change) -------------------
  * Changing this makes your one-time-pad incompatible */
 
-#define FILE_DELI " "            /* Delimiter in the filename */
+#define FILE_DELI " "            /* Delimiter in the filename, separating alice, bob and id*/
 #define MSG_DELI "|"             /* Delimiter in the encrypted message */
 #define PAD_EMPTYCHAR '\0'        /* Char that is used to mark the pad as used. */
-#define FILE_SUFFIX ".entropy"   /* The keyfiles have to end with
-				 * this string to be valid. This string has to be separated by ".". */
+#define FILE_SUFFIX "entropy"   /* The keyfiles have to end with
+				 * this string to be valid. . */
+#define FILE_SUFFIX_DELI "."	/* Separates FILE_SUFFIX from the rest */
 #define NOENTROPY_SIGNAL "*** I'm out of entropy!"       /* The message that
 							 * is send in case the sender is out of entropy */
 #define ID_SIZE		4	/* The size in bytes of the ID. */
@@ -602,10 +603,10 @@ OtpError otp_generate_key_pair(const struct otp_config *config,
 	const char *desktoppath = g_get_home_dir ();
 #endif
 	char* afilename = g_strconcat(config->path, alice, FILE_DELI, bob, FILE_DELI, 
-			idstr, ".entropy", NULL);
+			idstr, FILE_SUFFIX_DELI, FILE_SUFFIX, NULL);
 
 	char* bfilename = g_strconcat(desktoppath, PATH_DELI, bob, FILE_DELI,
-			alice, FILE_DELI, idstr, ".entropy", NULL);
+			alice, FILE_DELI, idstr, FILE_SUFFIX_DELI, FILE_SUFFIX, NULL);
 
 	g_free(idstr);
 
@@ -810,14 +811,17 @@ struct otp* otp_pad_create_from_file(
 		return NULL;
 	}
 
-	gchar** p_array = g_strsplit(f_array[2], ".", 2);
-	if ((p_array[0] == NULL ) || (p_array[1] == NULL )) {
-		if (g_str_has_suffix(f_array[2], FILE_SUFFIX) == FALSE )
-			g_strfreev(f_array);
-			g_strfreev(p_array);
-			return NULL;
+	gchar** p_array = g_strsplit(f_array[2], FILE_SUFFIX_DELI, 3);
+	if ((p_array[0] == NULL ) || (p_array[1] == NULL || p_array[2] != NULL )) {
+		g_strfreev(f_array);
+		g_strfreev(p_array);
+		return NULL;
 	}
-
+	if (strcmp(p_array[1], FILE_SUFFIX) != 0) {
+		g_strfreev(f_array);
+		g_strfreev(p_array);
+		return NULL;
+	}
 	struct otp* pad;
 	pad = (struct otp *)g_malloc(sizeof(struct otp));
 	pad->using_protected_pos = FALSE;
