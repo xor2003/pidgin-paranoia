@@ -13,6 +13,9 @@ Christian Wäckerlin:
  * Libotp: getter/setter system, struct otp is now private
  * Libotp: otp_conf system implemented, libotp is multi-application aware
  * Libotp keeps filehandles and mmap open to save CPU cycles.
+ * Libotp locks the keyfiles that are in use.
+ * A tailing minimal padding is added to the messages on encryption (and also
+   random length padding) (allows future feature without breakage of the spec.)
 
 
 

@@ -114,7 +114,8 @@ struct otp {
 	char* id; 					/* 8 digits unique random number of the key pair (hex) */
 	char* filename; 			/* The full path and the filename defined in the libotp spec */
 	gsize position; 			/* start positon for the next encryption */
-	gsize protected_position;	/* Only used for messages and signals 
+	gsize encrypt_start_pos;	/* The position that is given to Bob */
+	gboolean using_protected_pos;/* Only used for messages and signals 
  * from the protected entropy. Otherwise set to zero */
 	gsize entropy; 				/* the size (in bytes) of the entropy left for the sender */
 	gsize filesize; 			/* The size of the file in bytes */
@@ -338,11 +339,10 @@ static OtpError otp_get_encryptkey_from_file(char** key, struct otp* pad,
 	gsize protected_entropy = OTP_PROTECTED_ENTROPY;
 	gsize position = pad->position;
 	OtpError syndrome = OTP_OK;
-
-	if (pad->protected_position != 0) {
+	
+	if (pad->using_protected_pos == TRUE) {
 		/* allow usage of protected entropy*/
 		protected_entropy = 0;
-		position = pad->protected_position;
 	}
 	if ( (position+len-1 > (pad->filesize/2-protected_entropy) )
 			|| position < 0 ) {
@@ -360,35 +360,29 @@ static OtpError otp_get_encryptkey_from_file(char** key, struct otp* pad,
 #ifdef CHECKKEY
 	/* TODO v0.2: What should i do if the key is rejected?
 	 * ATM it just fails and destroys the keyblock.*/
-	if (otp_key_is_random(key, len-1, config) == FALSE) {
 #ifdef KEYOVERWRITE
-		if (pad->protected_position == 0) {
-			syndrome = syndrome | OTP_WARN_KEY_NOT_RANDOM;
-			/* not using protected entropy, make the used key unusable
-			 * in the keyfile */
-			for (i = 0; i < (len - 1); i++) datpos[i] = PAD_EMPTYCHAR;
-		}
-		if (pad->protected_position == 0) {
-			pad->position = pad->position + len -1;
-		}
+	if ((otp_key_is_random(key, len-1, config) == FALSE) && (pad->using_protected_pos == FALSE)) {
+		syndrome = syndrome | OTP_WARN_KEY_NOT_RANDOM;
+		/* not using protected entropy, make the used key unusable
+		 * in the keyfile */
+		for (i = 0; i < (len - 1); i++) datpos[i] = PAD_EMPTYCHAR;
+		pad->position = pad->position + len -1;
 		otp_calc_entropy(pad);
 		return syndrome;
-#endif
 	}
 #endif
+#endif
+	if (pad->using_protected_pos == FALSE) {
 #ifdef KEYOVERWRITE
-	if (pad->protected_position == 0) {
 		/* Make the used key unusable in the keyfile unless the entropy
 		 * is protected */
 		for (i = 0; i < (len - 1); i++) {
 			datpos[i] = PAD_EMPTYCHAR;
 		}
-	}
 #endif
-	if (pad->protected_position == 0) {
+	/* In all cases where the protected entropy is not used */
 		pad->position = pad->position + len -1;
 	}
-	/* In all cases where the protected entropy is not used */
 	otp_calc_entropy(pad);
 #ifdef IMMED_CLOSE_FILES
 	otp_close_keyfile(pad);
@@ -479,18 +473,21 @@ static OtpError otp_uencrypt(char** message, struct otp* pad)
 	OtpError syndrome = OTP_OK;
 
 #ifdef RNDMSGLEN
-	/* get one byte from keyfile for random length */
-	syndrome = otp_get_encryptkey_from_file(rand, pad, 1+1, pad->config);
-	if ( syndrome > OTP_WARN ) return syndrome;
+	if (pad->using_protected_pos == FALSE) { /* No random tail for signals */
+		/* get one byte from keyfile for random length */
+		syndrome = otp_get_encryptkey_from_file(rand, pad, 1+1, pad->config);
+		pad->encrypt_start_pos += 1;
+		if ( syndrome > OTP_WARN ) return syndrome;
 	
-	rnd = (unsigned char)*rand[0]*pad->config->random_msg_tail_max_len/255 
+		rnd = (unsigned char)*rand[0]*pad->config->random_msg_tail_max_len/255 
 				+ MIN_PADDING;
-	g_free(*rand);
-	msg = g_malloc0(rnd+len);       /* Create a new,longer message */
-	memcpy(msg, *message, len-1);
-	g_free(*message);
-	*message = msg;
-	len += rnd;
+		g_free(*rand);
+		msg = g_malloc0(rnd+len);       /* Create a new,longer message */
+		memcpy(msg, *message, len-1);
+		g_free(*message);
+		*message = msg;
+		len += rnd;
+	}
 #endif
 	syndrome = otp_get_encryptkey_from_file(key, pad, len, pad->config);
 	if ( syndrome > OTP_WARN ) return syndrome;
@@ -514,7 +511,7 @@ OtpError otp_pad_erase_entropy(struct otp* pad)
 /* destroys a keyfile by using up all encryption-entropy */
 {
 	if (pad == NULL) return OTP_ERR_INPUT;
-	pad->protected_position = 0;
+	pad->using_protected_pos = FALSE;
 	gsize len = (ERASEBLOCKSIZE+1) * sizeof(char);
 	char* space1 = "";
 	char** key = &space1;
@@ -749,17 +746,14 @@ OtpError otp_encrypt_warning(struct otp* pad, char** message, gsize protected_po
 			return OTP_ERR_INPUT;
 		}
 	}
-	gsize oldpos = pad->position;
-	// TODO v0.2 oldpos is unflexible
-	pad->protected_position = pad->filesize/2-OTP_PROTECTED_ENTROPY-protected_pos;
-#ifdef RNDMSGLEN
-	oldpos += 1;
-#endif
+	pad->using_protected_pos = TRUE;
+	pad->position = pad->filesize/2-OTP_PROTECTED_ENTROPY-protected_pos;
+	pad->encrypt_start_pos = pad->position;
 	char* old_msg = g_strdup(*message);
 #ifdef UCRYPT
 	syndrome = otp_uencrypt(message, pad);
 	if (syndrome > OTP_WARN) {
-		pad->protected_position = 0;
+		pad->using_protected_pos = FALSE;
 #ifdef PRINT_ERRORS
 		printf("%s: encrypt warning failed: %.8X\n",pad->config->client_id, syndrome);
 #endif
@@ -769,14 +763,14 @@ OtpError otp_encrypt_warning(struct otp* pad, char** message, gsize protected_po
 	}
 #endif
 	/* Our position in the pad */
-	char* pos_str = g_strdup_printf("%u", oldpos);
+	char* pos_str = g_strdup_printf("%u", pad->encrypt_start_pos);
 	/*Something like "3EF9|34EF4588|M+Rla2w=" */
 	char* new_msg = g_strconcat(pos_str, MSG_DELI,
 	                            pad->id, MSG_DELI, *message, NULL);
 	g_free(*message);
 	g_free(pos_str);
 	*message = new_msg;
-	pad->protected_position = 0;
+	pad->using_protected_pos = FALSE;
 	g_free(old_msg);
 	return syndrome;
 }
@@ -826,7 +820,7 @@ struct otp* otp_pad_create_from_file(
 
 	struct otp* pad;
 	pad = (struct otp *)g_malloc(sizeof(struct otp));
-	pad->protected_position = 0;
+	pad->using_protected_pos = FALSE;
 	pad->filename = g_strconcat(config->path, filename, NULL);
 	pad->fd = 0;
 	pad->file_is_open = FALSE;
@@ -887,12 +881,9 @@ OtpError otp_encrypt(struct otp* pad, char** message)
 	otp_printint(*message,strlen(*message), "before encrypt", pad->config);
 #endif
 	if (pad == NULL || message == NULL || *message == NULL) return OTP_ERR_INPUT;
-	pad->protected_position = 0;
-	gsize oldpos = pad->position;
+	pad->using_protected_pos = FALSE;
+	pad->encrypt_start_pos = pad->position;
 	char* old_msg = g_strdup(*message);
-#ifdef RNDMSGLEN
-	oldpos += 1;
-#endif
 #ifdef UCRYPT
 	syndrome = otp_uencrypt(message, pad);
 	if (syndrome > OTP_WARN) {
@@ -906,7 +897,7 @@ OtpError otp_encrypt(struct otp* pad, char** message)
 #endif
 
 	/* Our position in the pad*/
-	char* pos_str = g_strdup_printf("%u", oldpos);
+	char* pos_str = g_strdup_printf("%u", pad->encrypt_start_pos);
 	/*Something like "3EF9|34EF4588|M+Rla2w=" */
 	char* new_msg = g_strconcat(pos_str, MSG_DELI, pad->id, MSG_DELI, *message, NULL);
 	g_free(*message);
@@ -928,9 +919,8 @@ OtpError otp_decrypt(struct otp* pad, char** message)
 #endif
 	OtpError syndrome = OTP_OK;
 	if (pad == NULL) return OTP_ERR_INPUT;
-	pad->protected_position = 0;
+	pad->using_protected_pos = FALSE;
 	gchar** m_array = g_strsplit(*message, MSG_DELI, 3);
-
 	if ( (m_array[0] == NULL)
 			|| (m_array[1] == NULL)
 			|| (m_array[2] == NULL) ) {
