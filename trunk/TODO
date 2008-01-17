@@ -5,14 +5,8 @@
 Version 0.2
 ============
  	libotp.c
- 	 * detailed error-numbers instead of return FALSE (Done)
 	 * integrate the threaded key-generator
-	 * setter/getter API (Partly done)
-	 * otp_config infrastructure (Done)
-	 * en/decryption gives **messages back if it fails (Done)
-	 * keyfile entropy really checked for patterns
-	 * keyfile locking
-	 * keeping filehandles and mmaps open to save CPU (Done)
+	 * keyfile entropy really checked for patterns 
 	 * checking for \0\0\0 on decrypt to check if the message is valid 
 		(maybe version 0.3)
  	
@@ -28,7 +22,6 @@ Version 0.2
 	other
 	 * commandline program that can use libotp for general usage
 		(possibly version 0.3)
- 
 Version 0.3
 ============
 	paranoia.c
@@ -43,6 +36,7 @@ Version 1.0
 Misc
  * Debian/Ubuntu package
  * Test all the less common protocols (Gadu-Gadu, QQ, SIMPLE...)
+ * ensure that the protocol is stable
 
 Ideas
  * Support for loop key creation
