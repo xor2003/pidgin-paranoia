@@ -998,7 +998,7 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 			/* notify the user */
 			*flags = *flags | PURPLE_MESSAGE_ERROR;
 			g_free(*message);
-			*message = g_strdup("The last incoming message could not be decrypted. This is a serious error!\n");
+			*message = g_strdup("The last incoming message could not be decrypted. This is a serious error!");
 			return FALSE;
 		} else {
 			if (syndrome != OTP_OK) {
