@@ -1,6 +1,6 @@
 /*
  * One-Time Pad Library - Encrypts strings with one-time pads.
- * Copyright (C) 2007  Christian Wäckerlin
+ * Copyright (C) 2007-2008  Christian Wäckerlin
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
