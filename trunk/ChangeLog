@@ -6,6 +6,8 @@ Version 0.2.0
 --------------------------------------------------------------------------------
 Simon Wenner:
  * Check libpurple and glib minor version number in configure
+ * Paranoia: Support multiple key files per conversation
+ * Paranoia: Use the new libotp api (set/get and config)
 
 Christian Wäckerlin:
  * Libotp: System of error syndromes (OtpError) implemented

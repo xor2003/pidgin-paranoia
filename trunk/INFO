@@ -1,6 +1,6 @@
 --------------------------------------------------------------------------------
                      Informations how the plugin works 
--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 
 1. Introduction 
 --------------------------------------------------------------------------------
@@ -102,18 +102,18 @@ receives a message the plugin searches for a matching key in the key list.
 
 3.2 Initialisation:
 --------------------------------------------------------------------------------
-When a conversation starts and a matching key is available, the plugin sends a 
-special request message: "*** Request for conversation with the Pidgin-Paranoia 
-plugin ($ID): I'm paranoid, please download the One-Time Pag plugin to 
-communicate encrypted.". If the receiving user has the plugin and 
-a matching key this message won't be displayed entirely. Instead the plugin 
-automatically sends the message "*** Encrypted with the Pidgin-Paranoia plugin: 
-" + "paranoia" (encrypted).
-If the plugin is able to decrypt that message, it activates the encryption for 
+When a conversation starts and at least one matching key is available, the 
+plugin sends a special request message: "*** Request for conversation with the 
+Pidgin-Paranoia plugin ($(comma separated IDs)): I'm paranoid, please download 
+the One-Time Pag plugin to communicate encrypted.". If the receiving user has 
+the plugin and a matching key this message won't be displayed entirely. Instead 
+the plugin automatically sends an encrypted acknowledge message.
+If the plugin is able to decrypt this message, it activates the encryption for 
 this key id. All following messages are automatically encrypted and have the 
 following structure: "*** Encrypted with the Pidgin-Paranoia plugin: " + the 
 encrypted message.
 
-Every time a conversation gets closed (or updated) all option are reset to 
-default and a new initialisation is needed. If the opposite client sends an 
-unencypted message, our plugin stops sending encrypted messages too.
+If a buddy goes offline the session gets closed and a new initialisation is 
+needed. 
+If the opposite client sends an unencypted message, our plugin stops 
+sending encrypted messages too.
