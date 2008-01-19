@@ -154,31 +154,31 @@ static struct key* par_create_key(const char* filename)
 /* creates a key struct from a valid key file or returns NULL */
 {
 	/* get otp object */
-	static struct otp* test_pad;
-	test_pad = otp_pad_create_from_file(otp_conf, filename);
+	static struct otp* a_pad;
+	a_pad = otp_pad_create_from_file(otp_conf, filename);
 
-	if(test_pad == NULL) {
+	if(a_pad == NULL) {
 		return NULL;
 	}
 
 	/* default option struct */
-	static struct options* test_opt;
-	test_opt = (struct options *) g_malloc(sizeof(struct options));
+	static struct options* a_opt;
+	a_opt = (struct options *) g_malloc(sizeof(struct options));
 	//test_opt->waiting_for_ack = FALSE;
-	test_opt->otp_enabled = FALSE;
-	test_opt->auto_enable = TRUE;
-	test_opt->handshake_done = FALSE;
-	test_opt->active = FALSE;
-	if(otp_pad_get_entropy(test_pad) <= 0) {
-		test_opt->no_entropy = TRUE;
+	a_opt->otp_enabled = FALSE;
+	a_opt->auto_enable = TRUE;
+	a_opt->handshake_done = FALSE;
+	a_opt->active = FALSE;
+	if(otp_pad_get_entropy(a_pad) <= 0) {
+		a_opt->no_entropy = TRUE;
 	} else {
-		test_opt->no_entropy = FALSE;
+		a_opt->no_entropy = FALSE;
 	}
 
 	static struct key* key;
 	key = (struct key *) g_malloc(sizeof(struct key));
-	key->pad = test_pad;
-	key->opt = test_opt;
+	key->pad = a_pad;
+	key->opt = a_opt;
 	key->conv = NULL;
 	key->next = NULL;
 	return key;
@@ -195,6 +195,35 @@ static int par_count_keys()
 	}
 	return sum;
 }
+
+static void par_add_key(struct otp* a_pad)
+/* adds a key created from a pad at the first position of the key list */
+{
+	/* default option struct */
+	static struct options* a_opt;
+	a_opt = (struct options *) g_malloc(sizeof(struct options));
+	//test_opt->waiting_for_ack = FALSE;
+	a_opt->otp_enabled = FALSE;
+	a_opt->auto_enable = TRUE;
+	a_opt->handshake_done = FALSE;
+	a_opt->active = FALSE;
+	if(otp_pad_get_entropy(a_pad) <= 0) {
+		a_opt->no_entropy = TRUE;
+	} else {
+		a_opt->no_entropy = FALSE;
+	}
+
+	static struct key* key;
+	key = (struct key *) g_malloc(sizeof(struct key));
+	key->pad = a_pad;
+	key->opt = a_opt;
+	key->conv = NULL;
+	key->next = keylist;
+	
+	keylist = key;
+	return;
+}
+
 
 static gboolean par_init_key_list()
 /* loads all valid keys from the global otp folder into the key list */
@@ -661,22 +690,26 @@ static void par_cli_key_details(PurpleConversation *conv)
 				purple_conversation_get_account(conv));
 	const char* other_acc = purple_conversation_get_name(conv);
 	
-	struct key* used_key = par_search_key(my_acc, other_acc); // OLD: by_conv
+	struct key* used_key = par_search_key_weak(my_acc, other_acc);
 	char* disp_string = NULL;
 	if(used_key != NULL) {
-		disp_string = g_strdup_printf("Key infos:\nSource:\t\t%s\n"
-				"Destination:\t%s\nID:\t\t\t%s\nSize:\t\t\t%i\nPosition:\t\t%i\n"
-				"Entropy:\t\t%i\nActive:\t\t%i\n" //Waiting for ack:\t\t%i\n
-				"OTP enabled:\t%i\nAuto enable:\t%i\nNo entropy:\t%i",
-				otp_pad_get_src(used_key->pad), otp_pad_get_dest(used_key->pad), 
-				otp_pad_get_id(used_key->pad), 
-				(unsigned int) otp_pad_get_filesize(used_key->pad), 
-				(unsigned int) otp_pad_get_position(used_key->pad), 
-				(unsigned int) otp_pad_get_entropy(used_key->pad), 
-				used_key->opt->active, //used_key->opt->waiting_for_ack,
-				used_key->opt->otp_enabled, used_key->opt->auto_enable, 
-				used_key->opt->no_entropy);
-
+		if (used_key->opt->active) {
+			disp_string = g_strdup_printf("Active key infos:\nSource:\t\t%s\n"
+					"Destination:\t%s\nID:\t\t\t%s\nSize:\t\t\t%i\nPosition:\t\t%i\n"
+					"Entropy:\t\t%i\nActive:\t\t%i\n" //Waiting for ack:\t\t%i\n
+					"OTP enabled:\t%i\nAuto enable:\t%i\nNo entropy:\t%i",
+					otp_pad_get_src(used_key->pad), otp_pad_get_dest(used_key->pad), 
+					otp_pad_get_id(used_key->pad), 
+					(unsigned int) otp_pad_get_filesize(used_key->pad), 
+					(unsigned int) otp_pad_get_position(used_key->pad), 
+					(unsigned int) otp_pad_get_entropy(used_key->pad), 
+					used_key->opt->active, //used_key->opt->waiting_for_ack,
+					used_key->opt->otp_enabled, used_key->opt->auto_enable, 
+					used_key->opt->no_entropy);
+		} else {
+			disp_string = g_strdup("There is no active key available for this conversation.");
+			// TODO: other keys for this buddy?
+		}
 	} else {
 		disp_string = g_strdup("There is no key available for this conversation.");
 	}
