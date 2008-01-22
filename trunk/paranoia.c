@@ -45,8 +45,7 @@
 
 /* Requires GNOMElib 2.14! Bob's keyfile is placed onto the desktop. 
  * If not set, the file is placed in the home directory. */
-// boognu: I moved this to libotp.h
-////#define USEDESKTOP
+//#define USEDESKTOP
 
 /* ----------------- General Paranoia Stuff ------------------ */
 #define PARANOIA_HEADER "*** Encrypted with the Pidgin-Paranoia plugin: "
@@ -196,6 +195,25 @@ static int par_count_keys()
 	return sum;
 }
 
+static int par_count_matching_keys(const char* src, const char* dest)
+/* counts all matching keys in the list */
+{
+	int sum = 0;
+	char* src_copy = par_strip_jabber_ressource(src);
+	char* dest_copy = par_strip_jabber_ressource(dest);
+	struct key* tmp_ptr = keylist;
+	while (!(tmp_ptr == NULL)) {
+		if ((strcmp(otp_pad_get_src(tmp_ptr->pad), src_copy) == 0) 
+				&& (strcmp(otp_pad_get_dest(tmp_ptr->pad), dest_copy) == 0)) {
+			sum++;
+		}
+		tmp_ptr = tmp_ptr->next;
+	}
+	g_free(src_copy);
+	g_free(dest_copy);
+	return sum;
+}
+
 static void par_add_key(struct otp* a_pad)
 /* adds a key created from a pad at the first position of the key list */
 {
@@ -224,6 +242,20 @@ static void par_add_key(struct otp* a_pad)
 	return;
 }
 
+static void par_reset_key(struct key* a_key) 
+/* resets all option values of a key to default */
+{
+	a_key->opt->otp_enabled = FALSE;
+	a_key->opt->auto_enable = TRUE;
+	a_key->opt->handshake_done = FALSE;
+	a_key->opt->active = FALSE;
+	if(otp_pad_get_entropy(a_key->pad) <= 0) {
+		a_key->opt->no_entropy = TRUE;
+	} else {
+		a_key->opt->no_entropy = FALSE;
+	}
+	return;
+}
 
 static gboolean par_init_key_list()
 /* loads all valid keys from the global otp folder into the key list */
@@ -690,30 +722,32 @@ static void par_cli_key_details(PurpleConversation *conv)
 				purple_conversation_get_account(conv));
 	const char* other_acc = purple_conversation_get_name(conv);
 	
-	struct key* used_key = par_search_key_weak(my_acc, other_acc);
+	struct key* used_key = par_search_key(my_acc, other_acc);
+	int num = par_count_matching_keys(my_acc, other_acc);
 	char* disp_string = NULL;
-	if(used_key != NULL) {
-		if (used_key->opt->active) {
-			disp_string = g_strdup_printf("Active key infos:\nSource:\t\t%s\n"
-					"Destination:\t%s\nID:\t\t\t%s\nSize:\t\t\t%i\nPosition:\t\t%i\n"
-					"Entropy:\t\t%i\nActive:\t\t%i\n" //Waiting for ack:\t\t%i\n
-					"OTP enabled:\t%i\nAuto enable:\t%i\nNo entropy:\t%i",
-					otp_pad_get_src(used_key->pad), otp_pad_get_dest(used_key->pad), 
-					otp_pad_get_id(used_key->pad), 
-					(unsigned int) otp_pad_get_filesize(used_key->pad), 
-					(unsigned int) otp_pad_get_position(used_key->pad), 
-					(unsigned int) otp_pad_get_entropy(used_key->pad), 
-					used_key->opt->active, //used_key->opt->waiting_for_ack,
-					used_key->opt->otp_enabled, used_key->opt->auto_enable, 
-					used_key->opt->no_entropy);
-		} else {
-			disp_string = g_strdup("There is no active key available for this conversation.");
-			// TODO: other keys for this buddy?
-		}
-	} else {
-		disp_string = g_strdup("There is no key available for this conversation.");
-	}
 
+	if(used_key != NULL) {
+		disp_string = g_strdup_printf("There are %i keys available for this"
+				" conversation.\nActive key infos:\nSource:\t\t%s\n"
+				"Destination:\t%s\nID:\t\t\t%s\nSize:\t\t\t%i\nPosition:\t\t%i\n"
+				"Entropy:\t\t%i\n" //Waiting for ack:\t\t%i\n
+				"OTP enabled:\t%i\nAuto enable:\t%i\nNo entropy:\t%i", num,
+				otp_pad_get_src(used_key->pad), otp_pad_get_dest(used_key->pad), 
+				otp_pad_get_id(used_key->pad), 
+				(unsigned int) otp_pad_get_filesize(used_key->pad), 
+				(unsigned int) otp_pad_get_position(used_key->pad), 
+				(unsigned int) otp_pad_get_entropy(used_key->pad), 
+				//used_key->opt->waiting_for_ack,
+				used_key->opt->otp_enabled, used_key->opt->auto_enable, 
+					used_key->opt->no_entropy);
+	} else {
+		if (num != 0) {
+			disp_string = g_strdup_printf("There are %i keys available for this"
+					" conversation, but none is active.", num);
+		} else {
+			disp_string = g_strdup("There is no key available for this conversation.");
+		}
+	}
 	purple_conversation_write(conv, NULL, disp_string, 
 			PURPLE_MESSAGE_NO_LOG, time(NULL));
 	g_free(disp_string);

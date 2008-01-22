@@ -12,7 +12,6 @@ Version 0.2
  	
  	paranoia.c
 	 * add generated key to keylist
- 	 * enhanced session management (ack)
  	 * use "buddy-signed-off" signal to reset a session
 	 * optimize key list (sort it intelligent)
 	 * send entropy warnings (inside messages)
@@ -28,6 +27,7 @@ Version 0.3
 	paranoia.c
 	 * string freeze
 	 * add a message queue thread
+	 * enhanced session management (auto ack)
 
 Version 1.0
 ============
