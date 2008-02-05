@@ -3,7 +3,9 @@
 noinst_PROGRAMS = otptester
 
 otptester_SOURCES = \
-	otptester.c \
+	otptester.c
+
+nodist_otptester_SOURCES = \
 	../keygen.c \
 	../keygen.h \
 	../libotp.c \
