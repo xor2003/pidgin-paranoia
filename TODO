@@ -5,11 +5,11 @@
 Version 0.2
 ============
  	libotp.c
-	 * integrate the threaded key-generator
+	 * integrate the threaded key-generator (partially done by Edrundor)
 	 * keyfile entropy really checked for patterns 
 	 * checking for \0\0\0 on decrypt to check if the message is valid 
 		(maybe version 0.3)
- 	
+
  	paranoia.c
 	 * add generated key to keylist
  	 * use "buddy-signed-off" signal to reset a session
@@ -18,6 +18,7 @@ Version 0.2
 	 * /otp scan, to read in new keys
 	 * /otp keys, to list all keys
 	 
+
 	other
 	 * commandline program that can use libotp for general usage
 		(possibly version 0.3)
@@ -35,13 +36,13 @@ Version 1.0
  	 * gettext support (translations)
  	 * no conversation windows that pop-up independently
 	 * all pidgin protocols are tested and work
- 	
+
 Misc
  * Debian/Ubuntu package
  * Test all the less common protocols (Gadu-Gadu, QQ, SIMPLE...)
  * ensure that the protocol is stable
 
 Ideas
- * Support for loop key creation
+ * Support for loop key creation (Done by Edrundor)
  * Entropy pool file
  * Encrypted file transfer

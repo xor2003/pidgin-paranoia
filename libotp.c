@@ -1,17 +1,17 @@
 /*
  * One-Time Pad Library - Encrypts strings with one-time pads.
  * Copyright (C) 2007-2008  Christian Wäckerlin
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
@@ -479,7 +479,6 @@ static OtpError otp_uencrypt(char** message, struct otp* pad)
 		syndrome = otp_get_encryptkey_from_file(rand, pad, 1+1, pad->config);
 		pad->encrypt_start_pos += 1;
 		if ( syndrome > OTP_WARN ) return syndrome;
-	
 		rnd = (unsigned char)*rand[0]*pad->config->random_msg_tail_max_len/255 
 				+ MIN_PADDING;
 		g_free(*rand);
@@ -970,11 +969,11 @@ OtpError otp_decrypt(struct otp* pad, char** message)
 /* ------------------ otp_config ------------------------------ */
 
 struct otp_config* otp_conf_create(
-				const char* client_id, 
-				const char* path, 
+				const char* client_id,
+				const char* path,
 				const char* export_path)
-/* Creation of the config stucture of the library, sets some parameters 
- * Default values: 
+/* Creation of the config stucture of the library, sets some parameters
+ * Default values:
  * Sets msg_key_improbability_limit = DEFAULT_IMPROBABILITY
  * Sets random_msg_tail_max_len = DEFAULT_RNDLENMAX */
 {
@@ -989,7 +988,7 @@ struct otp_config* otp_conf_create(
 	config->random_msg_tail_max_len = DEFAULT_RNDLENMAX;
 	config->pad_count = 0; /* Initialize with no associated pads */
 
-#ifdef DEBUG 
+#ifdef DEBUG
 	printf("%s: config created with: %s, %s, %s, %e, %i\n", config->client_id, config->client_id,
 			config->path, config->export_path, config->msg_key_improbability_limit,
 			config->random_msg_tail_max_len);
@@ -998,9 +997,9 @@ struct otp_config* otp_conf_create(
 return config;
 }
 
-OtpError otp_conf_destroy(struct otp_config* config) 
+OtpError otp_conf_destroy(struct otp_config* config)
 {
-/* Freeing of the otp_config struct 
+/* Freeing of the otp_config struct
  * This fails with OTP_ERR_CONFIG_PAD_COUNT if there are any pads open in this config */
 	if (config == NULL) return OTP_ERR_INPUT;
 	if (config->pad_count != 0) {
@@ -1023,32 +1022,32 @@ OtpError otp_conf_destroy(struct otp_config* config)
 /* ------------------ otp_config get functions ------------------- */
 
 const char* otp_conf_get_path(const struct otp_config* config)
-/* Gets a reference to the path in the config 
+/* Gets a reference to the path in the config
  * Does not need to be freed.  */
 {
 	if (config == NULL) return NULL;
-#ifdef DEBUG 
+#ifdef DEBUG
 	printf("%s: read config->path: %s\n",config->client_id, config->path);
 #endif
 	return config->path;
 }
 
 const char* otp_conf_get_export_path(const struct otp_config* config)
-/* Gets a reference to the export path in the config 
+/* Gets a reference to the export path in the config
  * Does not need to be freed.  */
 {
 	if (config == NULL) return NULL;
-#ifdef DEBUG 
+#ifdef DEBUG
 	printf("%s: read config->export_path: %s\n",config->client_id, config->export_path);
 #endif
 	return config->export_path;
 }
 
-gsize otp_conf_get_random_msg_tail_max_len(const struct otp_config* config) 
+gsize otp_conf_get_random_msg_tail_max_len(const struct otp_config* config)
 /* Gets random_msg_tail_max_len */
 {
 	if (config == NULL) return 0;
-#ifdef DEBUG 
+#ifdef DEBUG
 	printf("%s: read config->random_msg_tail_max_len: %u\n",config->client_id, config->random_msg_tail_max_len);
 #endif
 	return config->random_msg_tail_max_len;
@@ -1058,7 +1057,7 @@ double otp_conf_get_msg_key_improbability_limit(const struct otp_config* config)
 /* Gets msg_key_improbability_limit */
 {
 	if (config == NULL) return 0;
-#ifdef DEBUG 
+#ifdef DEBUG
 	printf("%s: read config->msg_key_improbability_limit: %e\n",config->client_id, config->msg_key_improbability_limit);
 #endif
 	return config->msg_key_improbability_limit;
@@ -1073,7 +1072,7 @@ OtpError otp_conf_set_path(struct otp_config* config, const char* path)
 	if (config->path == NULL) return OTP_ERR_INPUT;
 	g_free(config->path);
 	config->path = g_strdup(path);
-#ifdef DEBUG 
+#ifdef DEBUG
 	printf("%s: set config->path: %s\n",config->client_id, config->path);
 #endif
 	return OTP_OK;
@@ -1086,39 +1085,39 @@ OtpError otp_conf_set_export_path(struct otp_config* config, const char* export_
 	if (config->export_path == NULL) return OTP_ERR_INPUT;
 	g_free(config->export_path);
 	config->export_path = g_strdup(export_path);
-#ifdef DEBUG 
+#ifdef DEBUG
 	printf("%s: set config->export_path: %s\n",config->client_id, config->export_path);
 #endif
 	return OTP_OK;
 }
 
 OtpError otp_conf_set_random_msg_tail_max_len(struct otp_config* config,
-				 gsize random_msg_tail_max_len) 
+				 gsize random_msg_tail_max_len)
 /* Sets random_msg_tail_max_len:
- * 					The max length of the randomly added tailing charakters 
+ * 					The max length of the randomly added tailing charakters
  * 					to prevent 'eve' from knowng the length of the message.
  * 					Disabled if 0. Default is already set to DEFAULT_RNDLENMAX */
 {
 	if (config == NULL) return OTP_ERR_INPUT;
 	config->random_msg_tail_max_len = random_msg_tail_max_len;
-#ifdef DEBUG 
+#ifdef DEBUG
 	printf("%s: set config->random_msg_tail_max_len: %u\n",config->client_id, config->random_msg_tail_max_len);
 #endif
 	return OTP_OK;
 }
 
 OtpError otp_conf_set_msg_key_improbability_limit(struct otp_config* config,
-				 double msg_key_improbability_limit) 
-/* Sets msg_key_improbability_limit: 
+				 double msg_key_improbability_limit)
+/* Sets msg_key_improbability_limit:
  * 					If the used random entropy shows pattern that are less likely
- * 					then this limit, the entropy is discarded and an other block of 
+ * 					then this limit, the entropy is discarded and an other block of
  * 					entropy is used. A warning OTP_WARN_KEY_NOT_RANDOM is given.
  * 					Disabled if 0.0. Default is already set to DEFAULT_IMPROBABILITY. */
 {
 	if (config == NULL) return OTP_ERR_INPUT;
 	if (msg_key_improbability_limit < 0.0 || msg_key_improbability_limit > 1.0) return OTP_ERR_INPUT;
 	config->msg_key_improbability_limit = msg_key_improbability_limit;
-#ifdef DEBUG 
+#ifdef DEBUG
 	printf("%s: set config->msg_key_improbability_limit: %e\n",config->client_id, config->msg_key_improbability_limit);
 #endif
 	return OTP_OK;
