@@ -19,6 +19,9 @@ Christian Wäckerlin:
  * A tailing minimal padding is added to the messages on encryption (and also
    random length padding) (allows future feature without breakage of the spec.)
 
+Pascal Sachs:
+ * Create and integrate the threaded key-generator
+ * Support for loop key creation
 
 
 Version 0.1.0

@@ -5,7 +5,6 @@
 Version 0.2
 ============
  	libotp.c
-	 * integrate the threaded key-generator (partially done by Edrundor)
 	 * keyfile entropy really checked for patterns 
 	 * checking for \0\0\0 on decrypt to check if the message is valid 
 		(maybe version 0.3)
@@ -17,7 +16,6 @@ Version 0.2
 	 * send entropy warnings (inside messages)
 	 * /otp scan, to read in new keys
 	 * /otp keys, to list all keys
-	 
 
 	other
 	 * commandline program that can use libotp for general usage
@@ -43,6 +41,5 @@ Misc
  * ensure that the protocol is stable
 
 Ideas
- * Support for loop key creation (Done by Edrundor)
  * Entropy pool file
  * Encrypted file transfer
