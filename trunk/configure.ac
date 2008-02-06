@@ -26,6 +26,7 @@ AM_INIT_AUTOMAKE()
 # Check for tools we need
 #
 AM_PROG_CC_STDC
+AM_PROG_CC_C_O
 CFLAGS+=" -Wall"
 AC_CHECK_LIB(m, cos)
 AC_PATH_PROG(sedpath, sed)
