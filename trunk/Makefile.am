@@ -11,6 +11,7 @@ paranoia_la_LIBADD = $(GLIB_LIBS)
 paranoia_la_SOURCES = \
 	keygen.h \
 	keygen.c \
+	otperror.h \
 	libotp.h \
 	libotp.c \
 	paranoia.c

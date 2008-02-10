@@ -6,8 +6,6 @@ Version 0.2
 ============
  	libotp.c
 	 * keyfile entropy really checked for patterns 
-	 * checking for \0\0\0 on decrypt to check if the message is valid 
-		(maybe version 0.3)
 
  	paranoia.c
 	 * add generated key to keylist
@@ -17,16 +15,16 @@ Version 0.2
 	 * /otp scan, to read in new keys
 	 * /otp keys, to list all keys
 
-	other
-	 * commandline program that can use libotp for general usage
-		(possibly version 0.3)
-
 Version 0.3
 ============
 	paranoia.c
 	 * string freeze
 	 * add a message queue thread
 	 * enhanced session management (auto ack)
+
+	other
+	 * commandline program that can use libotp for general usage
+	 * checking for \0\0\0 on decrypt to check if the message is valid 
 
 Version 1.0
 ============

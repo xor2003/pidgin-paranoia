@@ -127,6 +127,9 @@ struct otp {
 	int fd;						/* The file descriptor of the keyfile. Note: libc: 'int open(..)' */
 	struct flock* fl;			/* The file lock */
 	char* data;					/* The contents of the keyfile if open */
+// TODO:
+	gboolean keygen_blocked;	/* Checked by otp_keygen -> OtpError if blocked */
+	gpointer keygen_process;	/* ??? */
 };
 
 struct otp_config {
