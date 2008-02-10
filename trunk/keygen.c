@@ -56,17 +56,6 @@ struct _key_data {
 } key_data;
 
 
-/*
-*	For standalone test uncomment main function
-*/
-/*
-int main() {
-	generate_keys_from_keygen("alice", "bob", 10000, 1);
-	sleep(30);
-	return 0;
-}
-*/
-
 int otp_invert(char *src, char *dest)
 /*
 *	Write the bytewise inverse of src to dest
@@ -160,7 +149,11 @@ int otp_loop_invert(char *src)
 } // end loop_invert()
 
 
-unsigned int otp_get_id() {
+unsigned int otp_get_id()
+/*
+*	get a random id from /dev/urandom
+*/
+{
 	int fp_urand;
 	unsigned int id;
 
@@ -180,6 +173,7 @@ unsigned int otp_get_id() {
 
 	return id;
 } // end get_id()
+
 
 GThread *generate_keys_from_file(char *alice, char *bob, char *file, unsigned int size, int loop)
 /*
@@ -213,6 +207,9 @@ GThread *generate_keys_from_file(char *alice, char *bob, char *file, unsigned in
 }
 
 gpointer key_from_file(gpointer data)
+/*
+*	thread function which creates a keyfile from a file.
+*/
 {
 	FILE *fp_alice, *fp_file;
 	unsigned int file_length;
@@ -254,6 +251,7 @@ gpointer key_from_file(gpointer data)
 	return 0;
 }
 
+
 GThread *generate_keys_from_keygen(char *alice, char *bob, unsigned int size, int loop)
 /*h
 *	generate the key pair for alice and bob
@@ -291,6 +289,7 @@ GThread *generate_keys_from_keygen(char *alice, char *bob, unsigned int size, in
 
 	return key_thread;
 }
+
 
 gpointer start_generation(gpointer data)
 /*
@@ -348,7 +347,6 @@ gpointer start_generation(gpointer data)
 } // end start_generation();
 
 
-
 unsigned char bit2char(short buf[8])
 /*
 * bit2char takes an array of 8 bits, and output an ascii char. The buf array should only contain
@@ -366,6 +364,7 @@ unsigned char bit2char(short buf[8])
 	out = (unsigned char)in;
 	return out;
 } // end bit2char()
+
 
 gpointer devrand(gpointer data)
 /*
@@ -606,6 +605,7 @@ gpointer sysstate(gpointer data)
 	close(fp_alice);
 	return 0;
 } // end sysstate()
+
 
 gpointer prng(gpointer data)
 /*

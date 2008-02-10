@@ -77,17 +77,17 @@ typedef enum {
  * origin: otp_decrypt
  * The ID '34EF4588' does not match with the one in the pad */
 	OTP_ERR_ID_MISMATCH		= 0x00070000,
-	
+
 /* function: otp_generate_key_pair
  * origin: otp_generate_key_pair
  * Generation of loop keys not supported */
 	OTP_ERR_LOOP_KEY		= 0x00110000,
-	
+
 /* function: otp_generate_key_pair
  * origin: otp_generate_key_pair
  * Error opening the file from where entropy is taken */
 	OTP_ERR_FILE_ENTROPY_SOURCE		= 0x00120000,
-	
+
 /* function: otp_generate_key_pair
  * origin: otp_generate_key_pair
  * The file from where entropy is taken is smaller then the requested key size*/
@@ -97,7 +97,7 @@ typedef enum {
  * origin: otp_generate_key_pair
  * The keyfile exists already and can not be created */
 	OTP_ERR_FILE_EXISTS	= 0x00140000,
-	
+
 /* function: many
  * origin: many
  * The keyfile is locked! */
@@ -118,7 +118,7 @@ typedef enum {
 struct otp_config;
 struct otp;
 
-/* ------------------ Principal functions ----------------------------*/ 
+/* ------------------ Principal functions ----------------------------*/
 
 /* encrypt the message
  * if it can't encrypt the message a syndrome > OTP_WARN is returned and
@@ -142,18 +142,18 @@ OtpError otp_decrypt(struct otp* mypad, char** message);
 /* destroys a keyfile by using up all encryption-entropy */
 OtpError otp_pad_erase_entropy(struct otp* mypad);
 
-/* extracts and returns the ID from a given encrypted message. 
+/* extracts and returns the ID from a given encrypted message.
  * Leaves the message constant. Returns NULL if it fails because the ID is not valid
  * or because it could not be extracted form the message */
 char* otp_id_get_from_message(const struct otp_config* myconfig, const char *msg);
 
-/* generates a new key pair (two files) with the name alice and bob of 'size' bytes. 
+/* generates a new key pair (two files) with the name alice and bob of 'size' bytes.
  * TODO: if source is NULL (suggested as default), generate with keygen */
 // TODO:		struct otp* alice_pad, struct otp* bob_pad
 // Note: Giving back bob_pad makes no sense since it has no use for alice.
 		/* alice and bob is optional. if NULL not created */
-OtpError otp_generate_key_pair(const struct otp_config* myconfig, 
-			const char* alice, const char* bob, 
+OtpError otp_generate_key_pair(const struct otp_config* myconfig,
+			const char* alice, const char* bob,
 			const char* source, gsize size);
 
 /* ------------------ otp_pad ------------------------------ */
@@ -161,8 +161,8 @@ OtpError otp_generate_key_pair(const struct otp_config* myconfig,
 /* creates an otp pad with the data from a key file */
 struct otp* otp_pad_create_from_file(struct otp_config* myconfig, const char* filename);
 
-/* closes the filehandle and the memory map. 
- * You can do this any time you want, it will just save memory 
+/* closes the filehandle and the memory map.
+ * You can do this any time you want, it will just save memory
  * (This function is a stub ATM)*/
 void otp_pad_use_less_memory(struct otp* mypad);
 
@@ -258,16 +258,5 @@ GThread *generate_keys_from_keygen(char *alice, char *bob, unsigned int size, in
 /* get a random id for the key filename */
 unsigned int otp_get_id();
 
+/* Generate a key-pair alice and bob with size size out of an entropy file file.*/
 GThread *generate_keys_from_file(char *alice, char *bob, char *file, unsigned int size, int loop);
-
-/* invert:
-*				invert writes the bytewise inverse of the src file into the dest
-*				file. src and dest must be valid file names
-*				this function returns 0 for success, -1 if a failure occures. */
-//int otp_invert(char *src, char *dest);
-
-/* loop-invert:
-*				append the bytewise inverse of src to src
-*				src must be a valide filename with valide path
-*				returns 0 for success, -1 if a failure occures */
-//int otp_loop_invert(char *src);
