@@ -23,6 +23,8 @@
 #include <sys/time.h>
 #include <stdio.h>
 #include <string.h>
+#include "keygen.h"
+#include "otperror.h"
 
 // buffer which is stores the bytes before they are written into the keyfile
 #define BUFFSIZE 20
