@@ -6,8 +6,10 @@ Version 0.2.0
 --------------------------------------------------------------------------------
 Simon Wenner:
  * Check libpurple and glib minor version number in configure
- * Paranoia: Support multiple key files per conversation
+ * Cleaned and enhanced the make system
+ * Paranoia: Support for multiple key files per conversation
  * Paranoia: Use the new libotp api (set/get and config)
+ * Paranoia: Key settings are resetted if a buddy goes offline
 
 Christian Wäckerlin:
  * Libotp: System of error syndromes (OtpError) implemented
@@ -57,9 +59,3 @@ Christan Wäckerlin:
  * Added support for addition of a random tail onto the encrypted message 
    to prevent 'eve' from knowing the exact length of the message
 
-
-Known bugs:
- * there are some anomalies if both set /otp off and one user tries to reenable
- * Keyfile creation function is not threaded and therfore locks pidgin
- * More then one key per conversation is not supported yet
- * Sometimes the first "Encryption enabled." message gets lost due to timing problems
