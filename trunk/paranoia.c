@@ -29,6 +29,7 @@
 #include "signals.h"
 #include "debug.h"
 #include "cmds.h"
+#include "blist.h"
 // debug only:
 #include "core.h"
 
@@ -728,7 +729,7 @@ static void par_cli_key_details(PurpleConversation *conv)
 
 	if(used_key != NULL) {
 		disp_string = g_strdup_printf("There are %i keys available for this"
-				" conversation.\nActive key infos:\nSource:\t\t%s\n"
+				" conversation.\nCurrently active key infos:\nSource:\t\t%s\n"
 				"Destination:\t%s\nID:\t\t\t%s\nSize:\t\t\t%i\nPosition:\t\t%i\n"
 				"Entropy:\t\t%i\n" //Waiting for ack:\t\t%i\n
 				"OTP enabled:\t%i\nAuto enable:\t%i\nNo entropy:\t%i", num,
@@ -910,7 +911,7 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 
 /* ----------------- Siganl Handlers ------------------ */
 
-void par_conversation_created(PurpleConversation *conv)
+static void par_conversation_created(PurpleConversation *conv)
 /* signal handler for "conversation-created" */
 {
 	const char* my_acc_name = purple_account_get_username(
@@ -952,7 +953,7 @@ void par_conversation_created(PurpleConversation *conv)
 			"Conversation created.\n");
 }
 
-void par_conversation_deleting(PurpleConversation *conv)
+static void par_conversation_deleting(PurpleConversation *conv)
 /* signal handler for "deleting-conversation" */
 {
 	/* cleanup all keys with this conversation */
@@ -960,6 +961,36 @@ void par_conversation_deleting(PurpleConversation *conv)
 	
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 			"Conversation deleted.\n");
+}
+
+static void par_buddy_signed_off(PurpleBuddy *buddy) 
+/* signal handler for "buddy-signed-off" */
+{
+	const char* src_acc = purple_account_get_username(purple_buddy_get_account(buddy));
+	const char* dest_acc = purple_buddy_get_name(buddy);
+	
+	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+			"%s went offline.\n", dest_acc);
+	
+	/* reset all related keys */
+	char* src_copy = par_strip_jabber_ressource(src_acc);
+	char* dest_copy = par_strip_jabber_ressource(dest_acc);
+
+	struct key* tmp_ptr = keylist;
+
+	while (tmp_ptr != NULL) {
+		if ((strcmp(otp_pad_get_src(tmp_ptr->pad), src_copy) == 0) 
+					&& (strcmp(otp_pad_get_dest(tmp_ptr->pad), dest_copy) == 0)) {
+				// TODO: Maybe just reset active keys?
+				par_reset_key(tmp_ptr);
+				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+						"Key %s resetted.\n", otp_pad_get_id(tmp_ptr->pad));
+			}
+		tmp_ptr = tmp_ptr->next;
+	}
+	g_free(src_copy);
+	g_free(dest_copy);
+	return;
 }
 
 static gboolean par_im_msg_receiving(PurpleAccount *account, 
@@ -1166,10 +1197,10 @@ static void par_im_msg_sending(PurpleAccount *account,
 							"Remaining entropy erased!\n");
 					if (syndrome <= OTP_WARN) {
 						purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-								"Warning erasing entropy! %.8X\n",syndrome);
+								"Warning erasing entropy! %.8X\n", syndrome);
 					} else {
 						purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-								"Error erasing entropy! %.8X\n",syndrome);
+								"Error erasing entropy! %.8X\n", syndrome);
 					}
 				}
 				/* delete message and send no entropy msg */
@@ -1179,12 +1210,12 @@ static void par_im_msg_sending(PurpleAccount *account,
 				syndrome = otp_encrypt_warning(used_key->pad, message, 0);
 				if (syndrome > OTP_WARN) {
 					purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
-							"Could not send an entropy warning. That's a serious error! %.8X\n",syndrome);
+							"Could not send an entropy warning. That's a serious error! %.8X\n", syndrome);
 				// TODO: notify the user
 				} else {
 					if (syndrome != OTP_OK) {
 						purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
-								"Entropy waring sent but there is a warning! %.8X\n",syndrome);
+								"Entropy waring sent but there is a warning! %.8X\n", syndrome);
 					}
 				}
 				
@@ -1340,8 +1371,10 @@ static gboolean plugin_load(PurplePlugin *plugin)
 	g_free(otp_path);
 
 	/* get the conversation handle */
-	void *conv_handle;
-	conv_handle = purple_conversations_get_handle();
+	void *conv_handle = purple_conversations_get_handle();
+	
+	/* get the buddy list handle */
+	void* blist_handle = purple_blist_get_handle();
 
 	/* setup the key list */
 	par_init_key_list();
@@ -1357,6 +1390,8 @@ static gboolean plugin_load(PurplePlugin *plugin)
 			PURPLE_CALLBACK(par_conversation_created), NULL);
 	purple_signal_connect(conv_handle, "deleting-conversation", plugin, 
 			PURPLE_CALLBACK(par_conversation_deleting), NULL);
+	purple_signal_connect(blist_handle, "buddy-signed-off", plugin, 
+			PURPLE_CALLBACK(par_buddy_signed_off), NULL);
 
 	/* register commands ("/otp" + a string of args) */
 	par_cmd_id = purple_cmd_register ("otp", "s", PURPLE_CMD_P_DEFAULT,

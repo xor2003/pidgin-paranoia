@@ -4,32 +4,37 @@
 
 Version 0.2
 ============
- 	libotp.c
+ 	libotp
 	 * keyfile entropy really checked for patterns 
 
- 	paranoia.c
+ 	paranoia
 	 * add generated key to keylist
- 	 * use "buddy-signed-off" signal to reset a session
-	 * optimize key list (sort it intelligent)
 	 * send entropy warnings (inside messages)
 	 * /otp scan, to read in new keys
 	 * /otp keys, to list all keys
 
 Version 0.3
 ============
-	paranoia.c
+	paranoia
 	 * string freeze
 	 * add a message queue thread
 	 * enhanced session management (auto ack)
+	 * optimize key list (sort it intelligent)
+
+	libotp
+	 * checking for \0\0\0 on decrypt to check if the message is valid 
 
 	other
 	 * commandline program that can use libotp for general usage
-	 * checking for \0\0\0 on decrypt to check if the message is valid 
+
+Version 0.4
+============
+ 	paranoia
+ 	 * gettext support (translations)
 
 Version 1.0
 ============
- 	paranoia.c
- 	 * gettext support (translations)
+ 	paranoia
  	 * no conversation windows that pop-up independently
 	 * all pidgin protocols are tested and work
 
@@ -41,3 +46,8 @@ Misc
 Ideas
  * Entropy pool file
  * Encrypted file transfer
+
+Known bugs
+ * there are some anomalies if both set /otp off and one user tries to reenable
+ * Sometimes the first "Encryption enabled." message gets lost due to timing problems
+ 
