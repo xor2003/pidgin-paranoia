@@ -23,6 +23,7 @@
 #include <sys/time.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #include "keygen.h"
 #include "otperror.h"
@@ -38,6 +39,7 @@
 OtpError keygen_invert(char *src, char *dest);
 OtpError keygen_loop_invert(char *src);
 unsigned char bit2char(short buf[8]);
+gpointer key_from_device(gpointer data);
 gpointer key_from_file(gpointer data);
 gpointer start_generation(gpointer data);
 gpointer devrand(gpointer data);
@@ -175,6 +177,107 @@ unsigned int keygen_id_get()
 } // end keygen_id_get()
 
 
+GThread *keygen_keys_generate_from_device(const char *alice_file, 
+		const char *bob_file, const char *device, gsize size, 
+		gboolean is_loopkey)
+/*
+*	generate the key pair for alice and bob out of a character device
+*	alice_file and bob_file must be correct filenames including the correct absoute path
+*	size should be strictly positiv
+*	is_loopkey is true if one would like to generate a loop key, else false
+*	device must be a character device
+*/
+{
+	GThread *key_device_thread;
+	
+	if(alice_file == NULL || bob_file == NULL || device == NULL) {
+		g_printerr("input NULL\n");
+		return NULL;
+	}
+	
+	key_data.alice = g_strdup(alice_file);
+	key_data.bob = g_strdup(bob_file);
+	key_data.size = size;
+	key_data.file = g_strdup(device);
+	key_data.is_loopkey = is_loopkey;
+	
+	// initialize g_thread if not already done.
+	// The program will abort if no thread system is available!
+	if (!g_thread_supported()) g_thread_init (NULL);
+
+	if((key_device_thread = g_thread_create(key_from_device ,NULL, TRUE, NULL)) == NULL) {
+		g_printerr("couldn't create thread");
+	}
+
+	return key_device_thread;
+}
+
+gpointer key_from_device(gpointer data) 
+/*
+*	Thread which collects the entropy from a char device
+*/
+{
+	int fp_dev, fp_alice;
+	unsigned int blk_size;
+	
+	if((fp_dev = open(key_data.file, O_RDONLY)) < 0) {
+		g_printerr("couldn't open device\n");
+		return 0;
+	}
+	
+	struct stat rfstat;
+	
+	if(stat(key_data.file, &rfstat) < 0) {
+		g_printerr("couldn't get stat\n");
+		close(fp_dev);
+		return 0;
+	}
+	
+	if(!S_ISCHR(rfstat.st_mode)) {
+		g_printerr("no character device\n");
+		close(fp_dev);
+		return 0;
+	}
+	
+	blk_size = rfstat.st_blksize;
+	
+	
+	if((fp_alice = open(key_data.alice, O_RDWR | O_CREAT | O_APPEND, 00644)) < 0) {
+		g_printerr("couldn't open alice_file\n");
+		close(fp_dev);
+		return 0;
+	}
+	
+	unsigned char buf[blk_size];
+	
+	while(key_data.size > 0) {
+		if(key_data.size > blk_size) {
+			read(fp_dev, buf, blk_size);
+			write(fp_alice, buf, blk_size);
+			key_data.size -= blk_size;
+		} else {
+			read(fp_dev, buf, key_data.size);
+			write(fp_alice, buf, key_data.size);
+			key_data.size = 0;
+		}
+	}
+	
+	close(fp_dev);
+	close(fp_alice);
+	
+	if(key_data.is_loopkey) {
+		keygen_loop_invert(key_data.alice);
+	} else {
+		keygen_invert(key_data.alice, key_data.bob);
+	}
+	
+	g_free(key_data.alice);
+	g_free(key_data.bob);
+	g_free(key_data.file);
+	
+	return 0;
+}
+
 GThread *keygen_keys_generate_from_file(const char *alice_file,	const char *bob_file, 
 										const char *entropy_src_file, gsize size, gboolean is_loopkey)
 /*
@@ -185,6 +288,7 @@ GThread *keygen_keys_generate_from_file(const char *alice_file,	const char *bob_
 */
 {
 	GThread *key_file_thread;
+	
 	if(alice_file == NULL || bob_file == NULL || entropy_src_file == NULL) {
 		g_printerr("input NULL\n");
 		return NULL;
