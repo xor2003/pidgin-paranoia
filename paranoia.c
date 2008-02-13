@@ -855,7 +855,7 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 			/* default entropy source */
 			syndrome = otp_generate_key_pair(
 					otp_conf, my_acc_stp, other_acc_stp, 
-					"/dev/urandom",
+					NULL,
 					size*1024);
 			
 		} else {

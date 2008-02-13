@@ -101,6 +101,9 @@
 /* The public functions of this library */
 #include "libotp.h"
 
+/* Key generation functions*/
+#include "keygen.h"
+
 #if defined DEBUG_MSG || defined DEBUG || defined PRINT_ERRORS
 #include <stdio.h>
 #endif
@@ -539,8 +542,7 @@ OtpError otp_generate_key_pair(const struct otp_config *config,
 //TODO: v0.2: support loop-keys (alice=bob)
  /* The function can only generate Keyfiles with a filesize of n*BLOCKSIZE */
 {
-	if (alice == NULL || bob == NULL || config == NULL
-			|| source == NULL || size <= 0) {
+	if (alice == NULL || bob == NULL || config == NULL || size <= 0) {
 		return OTP_ERR_INPUT;
 	}
 	/* Check for things like '/'. Alice and Bob will become filenames */
@@ -548,194 +550,33 @@ OtpError otp_generate_key_pair(const struct otp_config *config,
 			|| (g_strrstr(bob, PATH_DELI) != NULL)) {
 		return OTP_ERR_INPUT;
 	}
-	/* Loop-Keys not supported */
-	if (strcmp(alice, bob) == 0) return OTP_ERR_LOOP_KEY;
-
-
-	if ( size/BLOCKSIZE == (float)size/BLOCKSIZE ) {
-		size = size/BLOCKSIZE;
-	} else {
-		size = size/BLOCKSIZE + 1;
-	}
-#ifdef DEBUG 
-	printf("%s: otp_genkey initial checks\n", config->client_id);
-#endif
-	/* open entropy source */
-	int rfd;
-	if ((rfd = open(source, O_RDONLY)) == -1) {
-#ifdef PRINT_ERRORS
-		perror("open");
-#endif
-		return OTP_ERR_FILE_ENTROPY_SOURCE;
-	}
-	struct stat rfstat;
-	if (stat(source, &rfstat) == -1) {
-#ifdef PRINT_ERRORS
-		perror("stat");
-#endif
-		close(rfd);
-		return OTP_ERR_FILE_ENTROPY_SOURCE;
-	}
-
-	gsize rfilesize = rfstat.st_size;
-	/* If the source is to small and not a character dev 
-	 * The ID (an integer) is also generated from the entropy. */
-	if ( !( ((rfstat.st_mode|S_IFCHR) == rfstat.st_mode)
-			|| (rfilesize >= size*BLOCKSIZE + ID_SIZE) ) ) {
-		close(rfd);
-		return OTP_ERR_FILE_ENTROPY_SOURCE_SIZE;
-	}
-#ifdef DEBUG 
-	printf("%s: otp_genkey source open\n", config->client_id);
-#endif
-
-	/* id string from integer */
+	
+	gchar *alice_file, *bob_file;
 	unsigned int id;
-	/* Create ID from entropy source */
-	read(rfd, &id, ID_SIZE);
-	/* Our ID string */;
-	char* idstr = g_strdup_printf("%.8X", id);
+	struct stat rfstat;
 	
-	/* alloc filesnames */	
-	/* get filepath to drop bob's key */
-#ifdef USEDESKTOP
-	/* Owned by Glib. No need for g_free */
-	const char *desktoppath = g_get_user_special_dir(G_USER_DIRECTORY_DESKTOP);
-#else
-	const char *desktoppath = g_get_home_dir ();
-#endif
-	char* afilename = g_strconcat(config->path, alice, FILE_DELI, bob, FILE_DELI, 
-			idstr, FILE_SUFFIX_DELI, FILE_SUFFIX, NULL);
-
-	char* bfilename = g_strconcat(desktoppath, PATH_DELI, bob, FILE_DELI,
-			alice, FILE_DELI, idstr, FILE_SUFFIX_DELI, FILE_SUFFIX, NULL);
-
-	g_free(idstr);
-
-	/* entropy source ready, check for directory with the keyfiles*/
-	DIR* dp;
-	dp = opendir(config->path);
-	if (dp == NULL) {
-		/* Create the directory for the entropy files if it does not exist */
-		mkdir(config->path, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP );
+	/* create filenames with the correct path*/
+	id = keygen_id_get();
+	
+	alice_file = (char *)g_strdup_printf("%s%s%s %s %.8X.entropy", otp_conf_get_path(config), PATH_DELI, alice, bob, id);
+	bob_file = (char *)g_strdup_printf("%s%s%s %s %.8X.entropy", otp_conf_get_export_path(config), PATH_DELI, bob, alice, id);
+	
+	if(source == NULL) {
+		keygen_keys_generate(alice_file, bob_file, size, (strcmp(alice, bob) == 0));
+		return OTP_OK;
 	} else {
-		closedir(dp);
-	}
-#ifdef DEBUG 
-	printf("%s: otp_genkey dir checked\n", config->client_id);
-#endif
-	
-	/* Opening the alice's key file */
-	int afd;
-	char* space1 = "";
-	char** adata = &space1;
-	if ((afd = open(afilename, O_RDWR)) == -1) {
-	} else {
-		/* File already exists. I will not overwrite any existing file!*/
-		close(rfd);
-		g_free(afilename);
-		g_free(bfilename);
-		return OTP_ERR_FILE_EXISTS;
-	}
-	if ((afd = open(afilename,
-	                O_RDWR|O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP ))
-	    == -1) {
-#ifdef PRINT_ERRORS
-		perror("open");
-#endif
-		close(rfd);
-		close(afd);
-		g_free(afilename);
-		g_free(bfilename);
-		return OTP_ERR_FILE;
-	}
-	
-#ifdef DEBUG 
-	printf("%s: otp_genkey afile open\n", config->client_id);
-#endif
-	
-	/* Source and alice key file is open, copy entropy */
-	char buffer[BLOCKSIZE];
-	int i = 0;
-
-	/* Filling the first file */
-	for (i = 0; i < size; i++) {
-		read(rfd, buffer, BLOCKSIZE);
-		write(afd, buffer, BLOCKSIZE);
-	}
-	/* Close the entropy source */
-	close(rfd);
-	
-#ifdef DEBUG 
-	printf("%s: otp_genkey source closed\n", config->client_id);
-#endif
-	
-	/* Alice's file written, opening the Bob's file */
-	int bfd = 0;
-	if ((bfd = open(bfilename, O_RDWR)) == -1) {
-	} else {
-		/* File already exists. I will not overwrite any existing file!*/
-		close(afd);
-		g_free(afilename);
-		g_free(bfilename);
-		return OTP_ERR_FILE_EXISTS;
-	}
-	if ((bfd = open(bfilename,
-			O_RDWR|O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP )) == -1) {
-#ifdef PRINT_ERRORS
-		perror("open");
-#endif
-		close(afd);
-		close(bfd);
-		g_free(afilename);
-		g_free(bfilename);
-		return OTP_ERR_FILE;
-	}
-	
-	/* Opening a memory map for Alice's file */
-	struct stat afstat;
-	if (stat(afilename, &afstat) == -1) {
-#ifdef PRINT_ERRORS
-		perror("stat");
-#endif
-		close(afd);
-		close(bfd);
-		g_free(afilename);
-		g_free(bfilename);
-		return OTP_ERR_FILE;
-	}
-	gsize afilesize = afstat.st_size;
-	if ((*adata = mmap((caddr_t)0, afilesize, PROT_READ, MAP_SHARED, afd, 0)) == (caddr_t)(-1)) {
-#ifdef PRINT_ERRORS
-		perror("mmap");
-#endif
-		close(afd);
-		close(bfd);
-		g_free(afilename);
-		g_free(bfilename);
-		return OTP_ERR_FILE;
-	}
-#ifdef DEBUG 
-	printf("%s: otp_genkey afile written\n", config->client_id);
-#endif
-	
-	/* Create the reversed second file from Alice's one */
-	int j;
-	for (i = afilesize-BLOCKSIZE; i >= 0; i = i-BLOCKSIZE) {
-		for (j = 0; j < BLOCKSIZE; j++) {
-			buffer[BLOCKSIZE-1-j] = *(*adata+i+j);
+		if(stat(source, &rfstat) < 0) return OTP_ERR_INPUT;
+		if(S_ISREG(rfstat.st_mode)) {
+			keygen_keys_generate_from_file(alice_file, bob_file, source, size, (strcmp(alice, bob) == 0));
+			return OTP_OK;
+		} else if(S_ISCHR(rfstat.st_mode)) {
+			keygen_keys_generate_from_device(alice_file, bob_file, source, size, (strcmp(alice, bob) == 0));
+			return OTP_OK;
 		}
-		write(bfd, buffer, BLOCKSIZE);
+		else return OTP_ERR_INPUT;
 	}
-#ifdef DEBUG 
-	printf("%s: otp_genkey bfile written\n", config->client_id);
-#endif
-	munmap(adata, afilesize);
-	close(afd);
-	close(bfd);
-	g_free(afilename);
-	g_free(bfilename);
-	return OTP_OK;
+
+	return OTP_ERR_INPUT;
 }
 
 
