@@ -18,24 +18,14 @@
 
 
 /* Generate a key-pair alice and bob with size size */
-GThread *keygen_keys_generate(char *alice_file, char *bob_file, 
+GThread *keygen_keys_generate(char *alice_file, char *bob_file,
 		gsize size, gboolean is_loopkey);
 
 /* get a random id for the key filename */
-unsigned int keygen_get_id();
+unsigned int keygen_id_get();
 
-GThread *keygen_keys_generate_from_file(const char *alice_file, 
-		const char *bob_file, const char *entropy_src_file, 
+/* Generate a key-pair alice and bob with size size out of the entropy in file */
+GThread *keygen_keys_generate_from_file(const char *alice_file,
+		const char *bob_file, const char *entropy_src_file,
 		gsize size, gboolean is_loopkey);
-
-/* invert:
-*				invert writes the bytewise inverse of the src file into the dest
-*				file. src and dest must be valid file names
-*				this function returns 0 for success, -1 if a failure occures. */
-//OtpError keygen_key_invert(const char *src_file, const char *dest_file);
-
-/* loop-invert:
-*				append the bytewise inverse of src to src
-*				src must be a valide filename with valide path
-*				returns 0 for success, -1 if a failure occures */
-//OtpError keygen_loopkey_invert(const char *file);
+		
