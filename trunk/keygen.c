@@ -23,6 +23,7 @@
 #include <sys/time.h>
 #include <stdio.h>
 #include <string.h>
+
 #include "keygen.h"
 #include "otperror.h"
 
@@ -34,11 +35,8 @@
 
 
 // Definition for the funcions and global variables.
-GThread *generate_keys_from_keygen(char *alice, char *bob, unsigned int size, int loop);
-GThread *generate_keys_from_file(char *alice, char *bob, char *file, unsigned int size, int loop);
-int otp_invert(char *src, char *dest);
-int otp_loop_invert(char *src);
-unsigned int otp_get_id();
+OtpError keygen_invert(char *src, char *dest);
+OtpError keygen_loop_invert(char *src);
 unsigned char bit2char(short buf[8]);
 gpointer key_from_file(gpointer data);
 gpointer start_generation(gpointer data);
@@ -53,12 +51,12 @@ gpointer keygen_mutex = NULL;
 // private key data for the threads
 struct _key_data {
 	int size;
-	int loop;
+	gboolean is_loopkey;
 	char *alice, *bob, *file;
 } key_data;
 
 
-int otp_invert(char *src, char *dest)
+OtpError keygen_invert(char *src, char *dest)
 /*
 *	Write the bytewise inverse of src to dest
 *	src and dest must be a valide filename with correct path
@@ -71,23 +69,23 @@ int otp_invert(char *src, char *dest)
 
 	if(src == NULL || dest == NULL) {
 		g_printerr("source or destination NULL\n");
-		return -1;
+		return OTP_ERR_KEYGEN_ERROR3;
 	}
 
 	if(strcmp(src,dest) == 0) {
 		g_printerr("source and destination same file\n");
-		return -1;
+		return OTP_ERR_KEYGEN_ERROR3;
 	}
 
 	if((fpin = fopen(src, "r")) == NULL) {
 		g_printerr("couldn't open source\n");
-		return -1;
+		return OTP_ERR_KEYGEN_ERROR3;
 	}
 
 	if((fpout = fopen(dest, "w")) == NULL) {
 		g_printerr("couldn't open destination\n");
 		fclose(fpin);
-		return -1;
+		return OTP_ERR_KEYGEN_ERROR3;
 	}
 
 	fseek(fpin, -1, SEEK_END);
@@ -103,11 +101,11 @@ int otp_invert(char *src, char *dest)
 	fclose(fpin);
 	fclose(fpout);
 
-	return 0;
+	return OTP_OK;
 } // end invert()
 
 
-int otp_loop_invert(char *src)
+OtpError keygen_loop_invert(char *src)
 /*
 *	append inverse of src to src.
 *	src must be a valide filename with correct path.
@@ -120,18 +118,18 @@ int otp_loop_invert(char *src)
 
 	if(src == NULL) {
 		g_printerr("source NULL\n");
-		return -1;
+		return OTP_ERR_KEYGEN_ERROR3;
 	}
 
 	if((fpin = fopen(src, "r")) == NULL) {
 		g_printerr("couldn't open source\n");
-		return -1;
+		return OTP_ERR_KEYGEN_ERROR3;
 	}
 
 	if((fpout = fopen(src, "a")) == NULL) {
 		g_printerr("couldn't open source for writing\n");
 		fclose(fpin);
-		return -1;
+		return OTP_ERR_KEYGEN_ERROR3;
 	}
 
 	fseek(fpin, -1, SEEK_END);
@@ -147,11 +145,11 @@ int otp_loop_invert(char *src)
 	fclose(fpin);
 	fclose(fpout);
 
-	return 0;
+	return OTP_OK;
 } // end loop_invert()
 
 
-unsigned int otp_get_id()
+unsigned int keygen_id_get()
 /*
 *	get a random id from /dev/urandom
 */
@@ -174,10 +172,11 @@ unsigned int otp_get_id()
 	close(fp_urand);
 
 	return id;
-} // end get_id()
+} // end keygen_id_get()
 
 
-GThread *generate_keys_from_file(char *alice, char *bob, char *file, unsigned int size, int loop)
+GThread *keygen_keys_generate_from_file(const char *alice_file,	const char *bob_file, 
+										const char *entropy_src_file, gsize size, gboolean is_loopkey)
 /*
 *	generate the key pair for alice and bob out of a entropy file
 *	alice, bob and file must be correct filenames including the correct absolute path
@@ -186,15 +185,15 @@ GThread *generate_keys_from_file(char *alice, char *bob, char *file, unsigned in
 */
 {
 	GThread *key_file_thread;
-	if(alice == NULL || bob == NULL || file == NULL) {
+	if(alice_file == NULL || bob_file == NULL || entropy_src_file == NULL) {
 		g_printerr("input NULL\n");
 		return NULL;
 	}
 
-	key_data.alice = g_strdup(alice);
-	key_data.bob = g_strdup(bob);
-	key_data.file = g_strdup(file);
-	key_data.loop = loop;
+	key_data.alice = g_strdup(alice_file);
+	key_data.bob = g_strdup(bob_file);
+	key_data.file = g_strdup(entropy_src_file);
+	key_data.is_loopkey = is_loopkey;
 	key_data.size = size;
 
 	// initialize g_thread if not already done.
@@ -246,16 +245,17 @@ gpointer key_from_file(gpointer data)
 	fclose(fp_file);
 	fclose(fp_alice);
 
-	if(key_data.loop == 0) {
-		otp_loop_invert(key_data.alice);
-	} else otp_invert(key_data.alice, key_data.bob);
+	if(key_data.is_loopkey) {
+		keygen_loop_invert(key_data.alice);
+	} else keygen_invert(key_data.alice, key_data.bob);
 
 	return 0;
 }
 
 
-GThread *generate_keys_from_keygen(char *alice, char *bob, unsigned int size, int loop)
-/*h
+GThread *keygen_keys_generate(char *alice_file, char *bob_file,
+		gsize size, gboolean is_loopkey)
+/*
 *	generate the key pair for alice and bob
 *	alice and bob must be the correct filenames including the correct absoute path.
 *	Size should be strictly positiv in bytes.
@@ -264,12 +264,12 @@ GThread *generate_keys_from_keygen(char *alice, char *bob, unsigned int size, in
 	GThread *key_thread;
 
 // check if the function inputs are correct
-	if(alice == NULL) {
+	if(alice_file == NULL) {
 		g_printerr("Alice file pointer NULL\n");
 		return NULL;
 	}
 
-	if(bob == NULL) {
+	if(bob_file == NULL) {
 		g_printerr("Bob file pointer NULL\n");
 		return NULL;
 	}
@@ -280,12 +280,12 @@ GThread *generate_keys_from_keygen(char *alice, char *bob, unsigned int size, in
 	if (!g_thread_supported()) g_thread_init (NULL);
 
 // set key_data
-	if(loop == 0) {
+	if(is_loopkey) {
 		key_data.size = size/2;
 	} else key_data.size = size;
-	key_data.loop = loop;
-	key_data.alice = g_strdup(alice);
-	key_data.bob = g_strdup(bob);
+	key_data.is_loopkey = is_loopkey;
+	key_data.alice = g_strdup(alice_file);
+	key_data.bob = g_strdup(bob_file);
 
 	if((key_thread = g_thread_create(start_generation, NULL, TRUE, NULL)) != NULL) g_print("keygen started\n");
 
@@ -336,10 +336,10 @@ gpointer start_generation(gpointer data)
 		return 0;
 	}
 
-	if(key_data.loop != 0) {
-		otp_invert(key_data.alice, key_data.bob);
+	if(key_data.is_loopkey) {
+		keygen_loop_invert(key_data.alice);
 	} else {
-		otp_loop_invert(key_data.alice);
+		keygen_invert(key_data.alice, key_data.bob);
 	}
 
 	g_free(key_data.alice);
