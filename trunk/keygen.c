@@ -200,7 +200,9 @@ GThread *keygen_keys_generate_from_device(const char *alice_file,
 	
 	key_data.alice = g_strdup(alice_file);
 	key_data.bob = g_strdup(bob_file);
-	key_data.size = size;
+	if(is_loopkey) {
+		key_data.size = size / 2;
+	} else key_data.size = size;
 	key_data.file = g_strdup(device);
 	key_data.is_loopkey = is_loopkey;
 	
@@ -311,7 +313,9 @@ GThread *keygen_keys_generate_from_file(const char *alice_file,	const char *bob_
 	key_data.bob = g_strdup(bob_file);
 	key_data.file = g_strdup(entropy_src_file);
 	key_data.is_loopkey = is_loopkey;
-	key_data.size = size;
+	if(is_loopkey) {
+		key_data.size = size / 2;
+	} else key_data.size = size;
 
 	// initialize g_thread if not already done.
 	// The program will abort if no thread system is available!
