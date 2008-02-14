@@ -578,7 +578,11 @@ OtpError otp_generate_key_pair(struct otp_config *config,
 			return OTP_ERR_KEYGEN_ERROR1;
 		return OTP_OK;
 	} else {
-		if(stat(source, &rfstat) < 0) return OTP_ERR_INPUT;
+		if(stat(source, &rfstat) < 0) {
+			g_printerr("source doesn't exist");
+			if(otp_conf_set_keycount(config, -1) != 0) g_printerr("couldn't set keycount in libotp\n");
+			return OTP_ERR_INPUT;
+		}
 		if(S_ISREG(rfstat.st_mode)) {
 			if(keygen_keys_generate_from_file(alice_file, bob_file, source, size, 
 									(strcmp(alice, bob) == 0), (void *)config) == NULL)
@@ -589,14 +593,14 @@ OtpError otp_generate_key_pair(struct otp_config *config,
 									(strcmp(alice, bob) == 0), (void *)config) == NULL)
 				return OTP_ERR_KEYGEN_ERROR1;
 			return OTP_OK;
-		}
-		else {
-			otp_conf_set_keycount(config, -1);
+		} else {
+			g_printerr("Source not supported\n");
+			if(otp_conf_set_keycount(config, -1) != 0) g_printerr("couldn't set keycount in libotp\n");
 			return OTP_ERR_INPUT;
 		}
 	}
 	
-	otp_conf_set_keycount(config, -1);
+	if(otp_conf_set_keycount(config, -1) != 0) g_printerr("couldn't set keycount in libotp\n");
 	return OTP_ERR_INPUT;
 }
 
