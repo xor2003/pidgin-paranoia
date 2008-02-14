@@ -26,7 +26,7 @@
 #include <sys/stat.h>
 
 #include "keygen.h"
-#include "otperror.h"
+#include "libotp.h"
 
 // buffer which is stores the bytes before they are written into the keyfile
 #define BUFFSIZE 20
@@ -55,6 +55,7 @@ struct _key_data {
 	int size;
 	gboolean is_loopkey;
 	char *alice, *bob, *file;
+	struct otp_config* config;
 } key_data;
 
 
@@ -179,7 +180,7 @@ unsigned int keygen_id_get()
 
 GThread *keygen_keys_generate_from_device(const char *alice_file, 
 		const char *bob_file, const char *device, gsize size, 
-		gboolean is_loopkey)
+		gboolean is_loopkey, void* config)
 /*
 *	generate the key pair for alice and bob out of a character device
 *	alice_file and bob_file must be correct filenames including the correct absoute path
@@ -189,9 +190,11 @@ GThread *keygen_keys_generate_from_device(const char *alice_file,
 */
 {
 	GThread *key_device_thread;
+	key_data.config = (struct otp_config *)config;
 	
-	if(alice_file == NULL || bob_file == NULL || device == NULL) {
+	if(alice_file == NULL || bob_file == NULL || device == NULL || config == NULL) {
 		g_printerr("input NULL\n");
+		otp_conf_set_keycount(key_data.config, -1);
 		return NULL;
 	}
 	
@@ -206,6 +209,7 @@ GThread *keygen_keys_generate_from_device(const char *alice_file,
 	if (!g_thread_supported()) g_thread_init (NULL);
 
 	if((key_device_thread = g_thread_create(key_from_device ,NULL, TRUE, NULL)) == NULL) {
+		otp_conf_set_keycount(key_data.config, -1);
 		g_printerr("couldn't create thread");
 	}
 
@@ -222,6 +226,7 @@ gpointer key_from_device(gpointer data)
 	
 	if((fp_dev = open(key_data.file, O_RDONLY)) < 0) {
 		g_printerr("couldn't open device\n");
+		otp_conf_set_keycount(key_data.config, -1);
 		return 0;
 	}
 	
@@ -230,12 +235,14 @@ gpointer key_from_device(gpointer data)
 	if(stat(key_data.file, &rfstat) < 0) {
 		g_printerr("couldn't get stat\n");
 		close(fp_dev);
+		otp_conf_set_keycount(key_data.config, -1);
 		return 0;
 	}
 	
 	if(!S_ISCHR(rfstat.st_mode)) {
 		g_printerr("no character device\n");
 		close(fp_dev);
+		otp_conf_set_keycount(key_data.config, -1);
 		return 0;
 	}
 	
@@ -245,6 +252,7 @@ gpointer key_from_device(gpointer data)
 	if((fp_alice = open(key_data.alice, O_RDWR | O_CREAT | O_APPEND, 00644)) < 0) {
 		g_printerr("couldn't open alice_file\n");
 		close(fp_dev);
+		otp_conf_set_keycount(key_data.config, -1);
 		return 0;
 	}
 	
@@ -275,11 +283,13 @@ gpointer key_from_device(gpointer data)
 	g_free(key_data.bob);
 	g_free(key_data.file);
 	
+	if(otp_conf_set_keycount(key_data.config, -1) != 0) g_printerr("error writing keycount\n");
 	return 0;
 }
 
 GThread *keygen_keys_generate_from_file(const char *alice_file,	const char *bob_file, 
-										const char *entropy_src_file, gsize size, gboolean is_loopkey)
+										const char *entropy_src_file, gsize size, gboolean is_loopkey, 
+										void* config)
 /*
 *	generate the key pair for alice and bob out of a entropy file
 *	alice, bob and file must be correct filenames including the correct absolute path
@@ -289,8 +299,11 @@ GThread *keygen_keys_generate_from_file(const char *alice_file,	const char *bob_
 {
 	GThread *key_file_thread;
 	
-	if(alice_file == NULL || bob_file == NULL || entropy_src_file == NULL) {
-		g_printerr("input NULL\n");
+	key_data.config = (struct otp_config *)config;
+	
+	if(alice_file == NULL || bob_file == NULL || entropy_src_file == NULL || config == NULL) {
+		g_printerr("input error\n");
+		otp_conf_set_keycount(key_data.config, -1);
 		return NULL;
 	}
 
@@ -306,6 +319,7 @@ GThread *keygen_keys_generate_from_file(const char *alice_file,	const char *bob_
 
 	if((key_file_thread = g_thread_create(key_from_file ,NULL, TRUE, NULL)) == NULL) {
 		g_printerr("couldn't create thread");
+		otp_conf_set_keycount(key_data.config, -1);
 	}
 
 	return key_file_thread;
@@ -322,6 +336,7 @@ gpointer key_from_file(gpointer data)
 
 	if((fp_file = fopen(key_data.file, "r")) == NULL) {
 		g_printerr("couldn't open file for reading\n");
+		otp_conf_set_keycount(key_data.config, -1);
 		return NULL;
 	}
 
@@ -330,6 +345,7 @@ gpointer key_from_file(gpointer data)
 	if((file_length = ftell(fp_file)) < key_data.size) {
 		g_printerr("file doesn't have enough entropy\n");
 		fclose(fp_file);
+		otp_conf_set_keycount(key_data.config, -1);
 		return NULL;
 	}
 	rewind(fp_file);
@@ -337,6 +353,7 @@ gpointer key_from_file(gpointer data)
 	if((fp_alice = fopen(key_data.alice, "w")) == NULL) {
 		g_printerr("couldn't open keyfile alice for writing\n");
 		fclose(fp_file);
+		otp_conf_set_keycount(key_data.config, -1);
 		return NULL;
 	}
 
@@ -352,13 +369,14 @@ gpointer key_from_file(gpointer data)
 	if(key_data.is_loopkey) {
 		keygen_loop_invert(key_data.alice);
 	} else keygen_invert(key_data.alice, key_data.bob);
-
+	
+	if(otp_conf_set_keycount(key_data.config, -1) != 0) g_printerr("error writing keycount\n");
 	return 0;
 }
 
 
 GThread *keygen_keys_generate(char *alice_file, char *bob_file,
-		gsize size, gboolean is_loopkey)
+		gsize size, gboolean is_loopkey, void* config)
 /*
 *	generate the key pair for alice and bob
 *	alice and bob must be the correct filenames including the correct absoute path.
@@ -366,18 +384,14 @@ GThread *keygen_keys_generate(char *alice_file, char *bob_file,
 */
 {
 	GThread *key_thread;
-
+	key_data.config = (struct otp_config *)config;
+	
 // check if the function inputs are correct
-	if(alice_file == NULL) {
-		g_printerr("Alice file pointer NULL\n");
+	if(alice_file == NULL || bob_file == NULL || config == NULL) {
+		g_printerr("input error\n");
+		otp_conf_set_keycount(key_data.config, -1);
 		return NULL;
 	}
-
-	if(bob_file == NULL) {
-		g_printerr("Bob file pointer NULL\n");
-		return NULL;
-	}
-
 
 // initialize g_thread if not already done.
 // The program will abort if no thread system is available!
@@ -391,7 +405,10 @@ GThread *keygen_keys_generate(char *alice_file, char *bob_file,
 	key_data.alice = g_strdup(alice_file);
 	key_data.bob = g_strdup(bob_file);
 
-	if((key_thread = g_thread_create(start_generation, NULL, TRUE, NULL)) != NULL) g_print("keygen started\n");
+	if((key_thread = g_thread_create(start_generation, NULL, TRUE, NULL)) == NULL) {
+		g_printerr("couldn't start keygen\n");
+		otp_conf_set_keycount(key_data.config, -1);
+	}
 
 	return key_thread;
 }
@@ -412,12 +429,12 @@ gpointer start_generation(gpointer data)
 	keygen_mutex = g_mutex_new();
 
 // create threads
-	if((p2 = g_thread_create(devrand, NULL, TRUE, NULL)) != NULL) g_print("collecting entropy from /dev/random\n");
-	if((p1 = g_thread_create(audio, NULL, TRUE, NULL)) != NULL) g_print("collecting entropy from /dev/audio\n");
-	if((p3 = g_thread_create(threads, NULL, TRUE, NULL)) != NULL) g_print("collecting entropy from thread timing\n");
-	if((p4 = g_thread_create(sysstate, NULL, TRUE, NULL)) != NULL) g_print("collecting entropy from system state\n");
+	if((p2 = g_thread_create(devrand, NULL, TRUE, NULL)) == NULL) g_printerr("fail: /dev/random\n");
+	if((p1 = g_thread_create(audio, NULL, TRUE, NULL)) == NULL) g_printerr("fail: /dev/audio\n");
+	if((p3 = g_thread_create(threads, NULL, TRUE, NULL)) == NULL) g_printerr("fail: thread timing\n");
+	if((p4 = g_thread_create(sysstate, NULL, TRUE, NULL)) == NULL) g_printerr("fail: system state\n");
 #ifdef FAST
-	if((p5 = g_thread_create(prng, NULL, TRUE, NULL)) != NULL) g_print("collecting entropy from PRG\n");
+	if((p5 = g_thread_create(prng, NULL, TRUE, NULL)) == NULL) g_printerr("fail PRNG\n");
 #endif
 
 
@@ -437,6 +454,7 @@ gpointer start_generation(gpointer data)
 	if(key_data.size != 0) {
 		g_printerr("could not finish writing process\n");
 		key_data.size = 0;
+		otp_conf_set_keycount(key_data.config, -1);
 		return 0;
 	}
 
@@ -449,6 +467,7 @@ gpointer start_generation(gpointer data)
 	g_free(key_data.alice);
 	g_free(key_data.bob);
 
+	if(otp_conf_set_keycount(key_data.config, -1) != 0) g_printerr("error writing keycount\n");
 	return 0;
 } // end start_generation();
 

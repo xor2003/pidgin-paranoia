@@ -63,7 +63,7 @@ char* otp_id_get_from_message(const struct otp_config* myconfig, const char *msg
 // TODO:		struct otp* alice_pad, struct otp* bob_pad
 // Note: Giving back bob_pad makes no sense since it has no use for alice.
 		/* alice and bob is optional. if NULL not created */
-OtpError otp_generate_key_pair(const struct otp_config* myconfig,
+OtpError otp_generate_key_pair(struct otp_config* myconfig,
 			const char* alice, const char* bob,
 			const char* source, gsize size);
 
@@ -140,6 +140,9 @@ gsize otp_conf_get_random_msg_tail_max_len(const struct otp_config* myconfig);
 /* Gets msg_key_improbability_limit */
 double otp_conf_get_msg_key_improbability_limit(const struct otp_config* myconfig);
 
+/* Gets the number of keys currently in construction */
+unsigned int otp_conf_get_keycount(const struct otp_config* config);
+
 /* ------------------ otp_config set functions ------------------- */
 
 /* Sets the path where the .entropy-files are stored */
@@ -162,4 +165,8 @@ OtpError otp_conf_set_random_msg_tail_max_len(struct otp_config* myconfig,
  * 					Disabled if 0.0. Default is already set to DEFAULT_IMPROBABILITY. */
 OtpError otp_conf_set_msg_key_improbability_limit(struct otp_config* myconfig,
 				 double msg_key_improbability_limit);
+
+/*	Sets the keycount
+*	amount should be -1 for decrease or +1 for increase */
+OtpError otp_conf_set_keycount(struct otp_config* config, int amount);
 
