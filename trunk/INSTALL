@@ -62,6 +62,8 @@ Comments:
 
 4. Compile Pidgin-paranoia:
 
+  4.a: Building using make
+
   4.1: Go into the directory:
     $ cd pidgin-paranoia-VERSION
 

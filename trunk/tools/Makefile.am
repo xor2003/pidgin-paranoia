@@ -6,6 +6,7 @@ otptester_SOURCES = \
 	otptester.c
 
 nodist_otptester_SOURCES = \
+	../otperror.h \
 	../keygen.c \
 	../keygen.h \
 	../libotp.c \

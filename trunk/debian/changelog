@@ -1,0 +1,7 @@
+pidgin-paranoia (0.2.0-1) unstable; urgency=low
+
+  * This is my second Debian package
+  * Initial release
+
+ -- Christian Wäckerlin <christian@waeckerlin.com>  Sun, 10 Feb 2008 22:58:07 +0100
+
