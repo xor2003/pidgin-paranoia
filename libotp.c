@@ -570,37 +570,64 @@ OtpError otp_generate_key_pair(struct otp_config *config,
 	
 	alice_file = (char *)g_strdup_printf("%s%s%s %s %.8X.entropy", otp_conf_get_path(config), PATH_DELI, alice, bob, id);
 	bob_file = (char *)g_strdup_printf("%s%s%s %s %.8X.entropy", otp_conf_get_export_path(config), PATH_DELI, bob, alice, id);
+	
+	if(stat(alice_file, &rfstat) == 0) {
+		g_free(alice_file);
+		g_free(bob_file);
+		return OTP_ERR_FILE_EXISTS;
+	}
 
 	/* choose the correct source and generate the key if possible */	
 	if(source == NULL) {
 		if(keygen_keys_generate(alice_file, bob_file, size, 
-									(strcmp(alice, bob) == 0), (void *)config) == NULL)
+									(strcmp(alice, bob) == 0), (void *)config) == NULL) {
+			g_free(alice_file);
+			g_free(bob_file);
 			return OTP_ERR_KEYGEN_ERROR1;
+		}
+		g_free(alice_file);
+		g_free(bob_file);
 		return OTP_OK;
 	} else {
 		if(stat(source, &rfstat) < 0) {
 			g_printerr("source doesn't exist\n");
 			if(otp_conf_set_keycount(config, -1) != 0) g_printerr("couldn't set keycount in libotp\n");
+			g_free(alice_file);
+			g_free(bob_file);
 			return OTP_ERR_INPUT;
 		}
 		if(S_ISREG(rfstat.st_mode)) {
 			if(keygen_keys_generate_from_file(alice_file, bob_file, source, size, 
-									(strcmp(alice, bob) == 0), (void *)config) == NULL)
+									(strcmp(alice, bob) == 0), (void *)config) == NULL) {
+				g_free(alice_file);
+				g_free(bob_file);
 				return OTP_ERR_KEYGEN_ERROR1;
+			}
+			g_free(alice_file);
+			g_free(bob_file);
 			return OTP_OK;
 		} else if(S_ISCHR(rfstat.st_mode)) {
 			if(keygen_keys_generate_from_device(alice_file, bob_file, source, size, 
-									(strcmp(alice, bob) == 0), (void *)config) == NULL)
+									(strcmp(alice, bob) == 0), (void *)config) == NULL) {
+				g_free(alice_file);
+				g_free(bob_file);
 				return OTP_ERR_KEYGEN_ERROR1;
+			}
+			g_free(alice_file);
+			g_free(bob_file);
 			return OTP_OK;
 		} else {
 			g_printerr("Source not supported\n");
 			if(otp_conf_set_keycount(config, -1) != 0) g_printerr("couldn't set keycount in libotp\n");
+			g_free(alice_file);
+			g_free(bob_file);
 			return OTP_ERR_INPUT;
 		}
 	}
 	
 	if(otp_conf_set_keycount(config, -1) != 0) g_printerr("couldn't set keycount in libotp\n");
+	g_free(alice_file);
+	g_free(bob_file);
 	return OTP_ERR_INPUT;
 }
 
