@@ -189,7 +189,7 @@ static int par_count_keys()
 {
 	int sum = 0;
 	struct key* tmp_ptr = keylist;
-	while (!(tmp_ptr == NULL)) {
+	while (tmp_ptr != NULL) {
 		sum++;
 		tmp_ptr = tmp_ptr->next;
 	}
@@ -203,7 +203,7 @@ static int par_count_matching_keys(const char* src, const char* dest)
 	char* src_copy = par_strip_jabber_ressource(src);
 	char* dest_copy = par_strip_jabber_ressource(dest);
 	struct key* tmp_ptr = keylist;
-	while (!(tmp_ptr == NULL)) {
+	while (tmp_ptr != NULL) {
 		if ((strcmp(otp_pad_get_src(tmp_ptr->pad), src_copy) == 0) 
 				&& (strcmp(otp_pad_get_dest(tmp_ptr->pad), dest_copy) == 0)) {
 			sum++;
@@ -273,7 +273,6 @@ static gboolean par_init_key_list()
 				"Opening \"%s\" failed! %s\n", 
 				otp_conf_get_path(otp_conf), error->message);
 		g_error_free(error);
-		// TODO: return?
 	} else {
 		/* loop over global key dir */
 		// TODO: detect dublicate id's?
@@ -333,7 +332,7 @@ static char* par_search_ids(const char* src, const char* dest)
 
 	struct key* tmp_ptr = keylist;
 	
-	while (!(tmp_ptr == NULL)) {
+	while (tmp_ptr != NULL) {
 		if ((strcmp(otp_pad_get_src(tmp_ptr->pad), src_copy) == 0) 
 				&& (strcmp(otp_pad_get_dest(tmp_ptr->pad), dest_copy) == 0)
 				&& (!tmp_ptr->opt->no_entropy)) {
@@ -362,7 +361,7 @@ static struct key* par_search_key_by_id(const char* id, const char* src,
 
 	struct key* tmp_ptr = keylist;
 
-	while (!(tmp_ptr == NULL)) {
+	while (tmp_ptr != NULL) {
 		if (strcmp(otp_pad_get_id(tmp_ptr->pad), id) == 0) {
 			if ((strcmp(otp_pad_get_src(tmp_ptr->pad), src_copy) == 0) 
 					&& (strcmp(otp_pad_get_dest(tmp_ptr->pad), dest_copy) == 0)) {
@@ -388,7 +387,7 @@ static struct key* par_search_key(const char* src, const char* dest)
 
 	struct key* tmp_ptr = keylist;
 
-	while (!(tmp_ptr == NULL)) {
+	while (tmp_ptr != NULL) {
 		if ((strcmp(otp_pad_get_src(tmp_ptr->pad), src_copy) == 0) 
 					&& (strcmp(otp_pad_get_dest(tmp_ptr->pad), dest_copy) == 0)
 					&& tmp_ptr->opt->active) {
@@ -413,7 +412,7 @@ static struct key* par_search_key_weak(const char* src, const char* dest)
 	struct key* tmp_ptr = keylist;
 	struct key* good_key = NULL;
 
-	while (!(tmp_ptr == NULL)) {
+	while (tmp_ptr != NULL) {
 		if ((strcmp(otp_pad_get_src(tmp_ptr->pad), src_copy) == 0) 
 				&& (strcmp(otp_pad_get_dest(tmp_ptr->pad), dest_copy) == 0)) {
 			if(tmp_ptr->opt->active) {
@@ -607,7 +606,7 @@ static void par_session_reset_conv(PurpleConversation *conv)
 {	
 	struct key* tmp_ptr = keylist;
 
-	while (!(tmp_ptr == NULL)) {
+	while (tmp_ptr != NULL) {
 		if (tmp_ptr->conv == conv) {
 			tmp_ptr->conv = NULL;
 			/* free the mmap of libotp */
@@ -622,10 +621,11 @@ static void par_session_reset_conv(PurpleConversation *conv)
 PurpleCmdId par_cmd_id;
 
 #define PARANOIA_HELP_STR "Welcome to the One-Time Pad CLI.\n\
-otp help: shows this message \notp genkey &lt;size&gt; &lt;entropy \
+/otp help: shows this message \n/otp genkey &lt;size&gt; &lt;entropy \
 source&gt;: generates a key pair of &lt;size&gt; \
-kiB\notp on: tries to start the encryption\notp off: stops the \
-encryption\notp info: shows details about the used key"
+kiB\n/otp on: tries to start the encryption\n/otp off: stops the \
+encryption\n/otp info: shows details about the used key\n\
+/otp list: shows all available keys"
 #define PARANOIA_ERROR_STR "Wrong argument(s). Type '/otp help' for help."
 #define PARANOIA_KEYSIZE_ERROR "Your key size is too large."
 
@@ -716,8 +716,8 @@ static gboolean par_cli_disable_enc(PurpleConversation *conv)
 	return FALSE;
 }
 
-static void par_cli_key_details(PurpleConversation *conv)
-/* shows all information about a key of a conversation */
+static void par_cli_show_key_details(PurpleConversation *conv)
+/* shows information about the keys of a conversation */
 {
 	const char* my_acc = purple_account_get_username(
 				purple_conversation_get_account(conv));
@@ -740,7 +740,7 @@ static void par_cli_key_details(PurpleConversation *conv)
 				(unsigned int) otp_pad_get_entropy(used_key->pad), 
 				//used_key->opt->waiting_for_ack,
 				used_key->opt->otp_enabled, used_key->opt->auto_enable, 
-					used_key->opt->no_entropy);
+				used_key->opt->no_entropy); //FIXME: it's redundant!
 	} else {
 		if (num != 0) {
 			disp_string = g_strdup_printf("There are %i keys available for this"
@@ -752,6 +752,30 @@ static void par_cli_key_details(PurpleConversation *conv)
 	purple_conversation_write(conv, NULL, disp_string, 
 			PURPLE_MESSAGE_NO_LOG, time(NULL));
 	g_free(disp_string);
+	return;
+}
+
+static void par_cli_show_keys(PurpleConversation *conv)
+/* shows all keys in the list */
+{
+	struct key* tmp_ptr = keylist;
+	char* nice_str;
+	while (tmp_ptr != NULL) {
+		nice_str = g_strdup_printf("%s -> %s (%s)\n\tSize: %ibytes, "
+				"Bytes left: %i Active: %i Enabled: %i\n",
+				otp_pad_get_src(tmp_ptr->pad), 
+				otp_pad_get_dest(tmp_ptr->pad), 
+				otp_pad_get_id(tmp_ptr->pad), 
+				(unsigned int) otp_pad_get_filesize(tmp_ptr->pad), 
+				(unsigned int) otp_pad_get_entropy(tmp_ptr->pad), 
+				tmp_ptr->opt->active, 
+				tmp_ptr->opt->otp_enabled);
+				
+		purple_conversation_write(conv, NULL, nice_str, 
+				PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_NO_LINKIFY, time(NULL));
+		g_free(nice_str);
+		tmp_ptr = tmp_ptr->next;
+	}
 	return;
 }
 
@@ -804,15 +828,18 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 	}
 	else if (strcmp("debug", *args) == 0) {
 		struct key* tmp_ptr = keylist;
-		while (!(tmp_ptr == NULL)) {
+		while (tmp_ptr != NULL) {
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "ID: %s, Active: %i, Otp_ena: %i, Conv: %i\n", 
 					otp_pad_get_id(tmp_ptr->pad), tmp_ptr->opt->active, tmp_ptr->opt->otp_enabled, tmp_ptr->conv);
 			tmp_ptr = tmp_ptr->next;
 		}
 	} // REMOVE ME end
 	else if (strcmp("info", *args) == 0) {
-		par_cli_key_details(conv);
-	} 
+		par_cli_show_key_details(conv);
+	}
+	else if (strcmp("list", *args) == 0) {
+		par_cli_show_keys(conv);
+	}
 	else if (strncmp("genkey ", *args, 7) == 0) {
 		gchar** param_array = g_strsplit(*args + 7, " ", 2); /* to skip "genkey " */
 
@@ -982,9 +1009,14 @@ static void par_buddy_signed_off(PurpleBuddy *buddy)
 		if ((strcmp(otp_pad_get_src(tmp_ptr->pad), src_copy) == 0) 
 					&& (strcmp(otp_pad_get_dest(tmp_ptr->pad), dest_copy) == 0)) {
 				// TODO: Maybe just reset active keys?
+				if (tmp_ptr->conv != NULL) {
+					purple_conversation_write(tmp_ptr->conv, NULL, 
+						"Encryption disabled.", 
+						PURPLE_MESSAGE_NO_LOG, time(NULL));
+				}
 				par_reset_key(tmp_ptr);
 				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-						"Key %s resetted.\n", otp_pad_get_id(tmp_ptr->pad));
+						"Key %s options resetted.\n", otp_pad_get_id(tmp_ptr->pad));
 			}
 		tmp_ptr = tmp_ptr->next;
 	}

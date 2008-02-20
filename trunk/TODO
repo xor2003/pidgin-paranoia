@@ -9,16 +9,15 @@ Version 0.2
 
  	paranoia
 	 * add generated key to keylist
-	 * send entropy warnings (inside messages)
 	 * /otp scan, to read in new keys
-	 * /otp keys, to list all keys
 
 Version 0.3
 ============
 	paranoia
 	 * string freeze
 	 * add a message queue thread
-	 * enhanced session management (auto ack)
+	 	* enhanced session management (auto ack)
+	 	* send entropy warnings
 	 * optimize key list (sort it intelligent)
 
 	libotp
@@ -37,9 +36,9 @@ Version 1.0
  	paranoia
  	 * no conversation windows that pop-up independently
 	 * all pidgin protocols are tested and work
+	 * all major languages are available
 
 Misc
- * Debian/Ubuntu package
  * Test all the less common protocols (Gadu-Gadu, QQ, SIMPLE...)
  * ensure that the protocol is stable
 
