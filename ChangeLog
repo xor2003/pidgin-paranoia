@@ -10,6 +10,7 @@ Simon Wenner:
  * Paranoia: Support for multiple key files per conversation
  * Paranoia: Use the new libotp api (set/get and config)
  * Paranoia: Key settings are resetted if a buddy goes offline
+ * Paranoia: '/otp list' added to list all available keys
 
 Christian Wäckerlin:
  * Libotp: System of error syndromes (OtpError) implemented
@@ -18,12 +19,13 @@ Christian Wäckerlin:
  * Libotp: otp_conf system implemented, libotp is multi-application aware
  * Libotp keeps filehandles and mmap open to save CPU cycles.
  * Libotp locks the keyfiles that are in use.
- * A tailing minimal padding is added to the messages on encryption (and also
+ * Libotp: A tailing minimal padding is added to the messages on encryption (and also
    random length padding) (allows future feature without breakage of the spec.)
+ * Debian/Ubuntu package support added
 
 Pascal Sachs:
- * Create and integrate the threaded key-generator
- * Support for loop key creation
+ * Libotp: Create and integrate the threaded key-generator
+ * Libotp: Support for loop key creation
 
 
 Version 0.1.0
