@@ -1,6 +1,6 @@
 /*
  * One-Time Pad Library - Encrypts strings with one-time pads.
- * Copyright (C) 2007-2008  Christian Wäckerlin, Simon Wener
+ * Copyright (C) 2007-2008  Christian Wäckerlin, Simon Wenner
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -59,10 +59,7 @@ OtpError otp_pad_erase_entropy(struct otp* mypad);
 char* otp_id_get_from_message(const struct otp_config* myconfig, const char *msg);
 
 /* generates a new key pair (two files) with the name alice and bob of 'size' bytes.
- * TODO: if source is NULL (suggested as default), generate with keygen */
-// TODO:		struct otp* alice_pad, struct otp* bob_pad
-// Note: Giving back bob_pad makes no sense since it has no use for alice.
-		/* alice and bob is optional. if NULL not created */
+ * if source is NULL (suggested as default), generate with keygen */
 OtpError otp_generate_key_pair(struct otp_config* myconfig,
 			const char* alice, const char* bob,
 			const char* source, gsize size);
@@ -72,9 +69,8 @@ OtpError otp_generate_key_pair(struct otp_config* myconfig,
 /* creates an otp pad with the data from a key file */
 struct otp* otp_pad_create_from_file(struct otp_config* myconfig, const char* filename);
 
-/* closes the filehandle and the memory map.
- * You can do this any time you want, it will just save memory
- * (This function is a stub ATM)*/
+/* closes the filehandle and the memory map. 
+ * You can do this any time you want, it will just save memory */
 void otp_pad_use_less_memory(struct otp* mypad);
 
 /* destroys an otp object */
@@ -140,8 +136,8 @@ gsize otp_conf_get_random_msg_tail_max_len(const struct otp_config* myconfig);
 /* Gets msg_key_improbability_limit */
 double otp_conf_get_msg_key_improbability_limit(const struct otp_config* myconfig);
 
-/* Gets the number of keys currently in construction */
-unsigned int otp_conf_get_keycount(const struct otp_config* config);
+/* Gets the number of keys in production in the keygen */
+unsigned int otp_conf_get_number_of_keys_in_production(const struct otp_config* config);
 
 /* ------------------ otp_config set functions ------------------- */
 
@@ -166,7 +162,11 @@ OtpError otp_conf_set_random_msg_tail_max_len(struct otp_config* myconfig,
 OtpError otp_conf_set_msg_key_improbability_limit(struct otp_config* myconfig,
 				 double msg_key_improbability_limit);
 
-/*	Sets the keycount
-*	amount should be -1 for decrease or +1 for increase */
-OtpError otp_conf_set_keycount(struct otp_config* config, int amount);
+/* Increments the number of keys in production in the keygen
+ * This function makes only sense if used in the keygen itself */
+OtpError otp_conf_increment_number_of_keys_in_production(struct otp_config* config);
+
+/* Increments the number of keys in production in the keygen
+ * This function makes only sense if used in the keygen itself */
+OtpError otp_conf_decrement_number_of_keys_in_production(struct otp_config* config);
 

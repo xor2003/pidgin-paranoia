@@ -194,7 +194,7 @@ GThread *keygen_keys_generate_from_device(const char *alice_file,
 	
 	if(alice_file == NULL || bob_file == NULL || device == NULL || config == NULL) {
 		g_printerr("input NULL\n");
-		otp_conf_set_keycount(key_data.config, -1);
+		otp_conf_decrement_number_of_keys_in_production(key_data.config);
 		return NULL;
 	}
 	
@@ -211,7 +211,7 @@ GThread *keygen_keys_generate_from_device(const char *alice_file,
 	if (!g_thread_supported()) g_thread_init (NULL);
 
 	if((key_device_thread = g_thread_create(key_from_device ,NULL, TRUE, NULL)) == NULL) {
-		otp_conf_set_keycount(key_data.config, -1);
+		otp_conf_decrement_number_of_keys_in_production(key_data.config);
 		g_printerr("couldn't create thread");
 	}
 
@@ -228,7 +228,7 @@ gpointer key_from_device(gpointer data)
 	
 	if((fp_dev = open(key_data.file, O_RDONLY)) < 0) {
 		g_printerr("couldn't open device\n");
-		otp_conf_set_keycount(key_data.config, -1);
+		otp_conf_decrement_number_of_keys_in_production(key_data.config);
 		return 0;
 	}
 	
@@ -237,14 +237,14 @@ gpointer key_from_device(gpointer data)
 	if(stat(key_data.file, &rfstat) < 0) {
 		g_printerr("couldn't get stat\n");
 		close(fp_dev);
-		otp_conf_set_keycount(key_data.config, -1);
+		otp_conf_decrement_number_of_keys_in_production(key_data.config);
 		return 0;
 	}
 	
 	if(!S_ISCHR(rfstat.st_mode)) {
 		g_printerr("no character device\n");
 		close(fp_dev);
-		otp_conf_set_keycount(key_data.config, -1);
+		otp_conf_decrement_number_of_keys_in_production(key_data.config);
 		return 0;
 	}
 	
@@ -254,7 +254,7 @@ gpointer key_from_device(gpointer data)
 	if((fp_alice = open(key_data.alice, O_RDWR | O_CREAT | O_APPEND, 00644)) < 0) {
 		g_printerr("couldn't open alice_file\n");
 		close(fp_dev);
-		otp_conf_set_keycount(key_data.config, -1);
+		otp_conf_decrement_number_of_keys_in_production(key_data.config);
 		return 0;
 	}
 	
@@ -285,7 +285,7 @@ gpointer key_from_device(gpointer data)
 	g_free(key_data.bob);
 	g_free(key_data.file);
 	
-	if(otp_conf_set_keycount(key_data.config, -1) != 0) g_printerr("error writing keycount\n");
+	otp_conf_decrement_number_of_keys_in_production(key_data.config);
 	return 0;
 }
 
@@ -305,7 +305,7 @@ GThread *keygen_keys_generate_from_file(const char *alice_file,	const char *bob_
 	
 	if(alice_file == NULL || bob_file == NULL || entropy_src_file == NULL || config == NULL) {
 		g_printerr("input error\n");
-		otp_conf_set_keycount(key_data.config, -1);
+		otp_conf_decrement_number_of_keys_in_production(key_data.config);
 		return NULL;
 	}
 
@@ -323,7 +323,7 @@ GThread *keygen_keys_generate_from_file(const char *alice_file,	const char *bob_
 
 	if((key_file_thread = g_thread_create(key_from_file ,NULL, TRUE, NULL)) == NULL) {
 		g_printerr("couldn't create thread");
-		otp_conf_set_keycount(key_data.config, -1);
+		otp_conf_decrement_number_of_keys_in_production(key_data.config);
 	}
 
 	return key_file_thread;
@@ -340,7 +340,7 @@ gpointer key_from_file(gpointer data)
 
 	if((fp_file = fopen(key_data.file, "r")) == NULL) {
 		g_printerr("couldn't open file for reading\n");
-		otp_conf_set_keycount(key_data.config, -1);
+		otp_conf_decrement_number_of_keys_in_production(key_data.config);
 		return NULL;
 	}
 
@@ -349,7 +349,7 @@ gpointer key_from_file(gpointer data)
 	if((file_length = ftell(fp_file)) < key_data.size) {
 		g_printerr("file doesn't have enough entropy\n");
 		fclose(fp_file);
-		otp_conf_set_keycount(key_data.config, -1);
+		otp_conf_decrement_number_of_keys_in_production(key_data.config);
 		return NULL;
 	}
 	rewind(fp_file);
@@ -357,7 +357,7 @@ gpointer key_from_file(gpointer data)
 	if((fp_alice = fopen(key_data.alice, "w")) == NULL) {
 		g_printerr("couldn't open keyfile alice for writing\n");
 		fclose(fp_file);
-		otp_conf_set_keycount(key_data.config, -1);
+		otp_conf_decrement_number_of_keys_in_production(key_data.config);
 		return NULL;
 	}
 
@@ -374,7 +374,7 @@ gpointer key_from_file(gpointer data)
 		keygen_loop_invert(key_data.alice);
 	} else keygen_invert(key_data.alice, key_data.bob);
 	
-	if(otp_conf_set_keycount(key_data.config, -1) != 0) g_printerr("error writing keycount\n");
+	otp_conf_decrement_number_of_keys_in_production(key_data.config);
 	return 0;
 }
 
@@ -393,7 +393,7 @@ GThread *keygen_keys_generate(char *alice_file, char *bob_file,
 // check if the function inputs are correct
 	if(alice_file == NULL || bob_file == NULL || config == NULL) {
 		g_printerr("input error\n");
-		otp_conf_set_keycount(key_data.config, -1);
+		otp_conf_decrement_number_of_keys_in_production(key_data.config);
 		return NULL;
 	}
 
@@ -411,7 +411,7 @@ GThread *keygen_keys_generate(char *alice_file, char *bob_file,
 
 	if((key_thread = g_thread_create(start_generation, NULL, TRUE, NULL)) == NULL) {
 		g_printerr("couldn't start keygen\n");
-		otp_conf_set_keycount(key_data.config, -1);
+		otp_conf_decrement_number_of_keys_in_production(key_data.config);
 	}
 
 	return key_thread;
@@ -458,7 +458,7 @@ gpointer start_generation(gpointer data)
 	if(key_data.size != 0) {
 		g_printerr("could not finish writing process\n");
 		key_data.size = 0;
-		otp_conf_set_keycount(key_data.config, -1);
+		otp_conf_decrement_number_of_keys_in_production(key_data.config);
 		return 0;
 	}
 
@@ -471,7 +471,7 @@ gpointer start_generation(gpointer data)
 	g_free(key_data.alice);
 	g_free(key_data.bob);
 
-	if(otp_conf_set_keycount(key_data.config, -1) != 0) g_printerr("error writing keycount\n");
+	otp_conf_decrement_number_of_keys_in_production(key_data.config);
 	return 0;
 } // end start_generation();
 
