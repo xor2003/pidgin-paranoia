@@ -25,6 +25,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 
 //#define USEDESKTOP
 /* Requires GNOMElib 2.14! Bob's
@@ -38,7 +39,8 @@
 /* great stuff */
 #include "../libotp.h"
 
-#define PARANOIA_PATH "/.paranoia/"
+#define PARANOIA_PATH "otptester-keys/"
+#define DESKTOP_PATH "otptester-desktop/"
 
 char* programname;
 int* argnumber;
@@ -100,7 +102,7 @@ int something() {
 	
 	//printf("%.8X\n",otp_conf_set_path(config, "testtest"));
 	//printf("%.8X\n",otp_conf_set_export_path(config, "testtest"));
-	//printf("%s\n",otp_conf_get_path(config));
+	printf("%s\n",otp_conf_get_path(config));
 	//printf("%s\n",otp_conf_get_export_path(config));
 	//printf("%.8X\n",otp_conf_set_random_msg_tail_max_len(config,88));
 	//printf("%i\n",otp_conf_get_random_msg_tail_max_len(config));
@@ -115,16 +117,8 @@ int create_config() {
 	if(*argpos+takes-1 >= *argnumber) {
 		return FALSE;
 	}
-	
-	const gchar* home = g_get_home_dir();
-	char* path = g_strconcat(home, PARANOIA_PATH, NULL);
-#ifdef USEDESKTOP
-	const char *desktoppath = g_get_user_special_dir(G_USER_DIRECTORY_DESKTOP);
-#else
-	const char *desktoppath = g_get_home_dir();
-#endif
 	config = otp_conf_create("otptester", 
-		path, desktoppath);
+		PARANOIA_PATH, DESKTOP_PATH);
 	if (config == NULL) {
 		printf("Error creating the otp_config!\n");
 		return FALSE;
@@ -152,6 +146,7 @@ int destroy_config() {
 
 int genkey() {
 	int takes = 4;
+	int i;
 	if(*argpos+takes-1 >= *argnumber) {
 		return FALSE;
 	}
@@ -181,7 +176,11 @@ int genkey() {
 	if (debuglevel) {
 		printf("* Syndrome:\t%.8X\n",syndrome);
 	}
-	
+	printf("Waiting for keygen (1s per 1kB)...\n" );
+	for (i = 1; i <= size/1000; i++) {
+			usleep(1000*1000);
+			printf("%i/%i\n",i,size/1000);
+		}
 	*argpos = *argpos+takes;
 	return TRUE;	
 }
