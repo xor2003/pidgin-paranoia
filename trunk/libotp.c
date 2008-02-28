@@ -876,6 +876,7 @@ struct otp_config* otp_conf_create(
  * Sets msg_key_improbability_limit = DEFAULT_IMPROBABILITY
  * Sets random_msg_tail_max_len = DEFAULT_RNDLENMAX */
 {
+	DIR *dp;
 	if (client_id == NULL || path == NULL || export_path == NULL) return NULL;
 
 	struct otp_config* config;
@@ -893,6 +894,27 @@ struct otp_config* otp_conf_create(
 			config->path, config->export_path, config->msg_key_improbability_limit,
 			config->random_msg_tail_max_len);
 #endif
+	/* check for paranoia dir and exportdir*/
+	dp = opendir(config->path);
+	if (dp == NULL) {
+		/* Create the directory because it does not exist */
+		mkdir(config->path, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP );
+#ifdef DEBUG 
+		printf("%s: created directory %s\n", config->client_id,config->path);
+#endif
+	} else {
+		closedir(dp);
+	}
+	dp = opendir(config->export_path);
+	if (dp == NULL) {
+		/* Create the directory because it does not exist */
+		mkdir(config->export_path, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP );
+#ifdef DEBUG 
+		printf("%s: created directory %s\n", config->client_id,config->export_path);
+#endif
+	} else {
+		closedir(dp);
+	}
 
 return config;
 }
