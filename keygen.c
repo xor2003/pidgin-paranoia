@@ -281,6 +281,16 @@ gpointer key_from_device(gpointer data)
 		keygen_invert(key_data.alice, key_data.bob);
 	}
 	
+	char *alice_done = g_strdup_printf("%s.entropy", key_data.alice);
+	char *bob_done = g_strdup_printf("%s.entropy", key_data.bob);
+	
+	rename(key_data.alice, alice_done);
+	rename(key_data.bob, bob_done);
+
+	g_free(alice_done);
+	g_free(bob_done);
+
+	
 	g_free(key_data.alice);
 	g_free(key_data.bob);
 	g_free(key_data.file);
@@ -373,6 +383,18 @@ gpointer key_from_file(gpointer data)
 	if(key_data.is_loopkey) {
 		keygen_loop_invert(key_data.alice);
 	} else keygen_invert(key_data.alice, key_data.bob);
+	
+	char *alice_done = g_strdup_printf("%s.entropy", key_data.alice);
+	char *bob_done = g_strdup_printf("%s.entropy", key_data.bob);
+	
+	rename(key_data.alice, alice_done);
+	rename(key_data.bob, bob_done);
+
+	g_free(alice_done);
+	g_free(bob_done);
+	
+	g_free(key_data.alice);
+	g_free(key_data.bob);
 	
 	otp_conf_decrement_number_of_keys_in_production(key_data.config);
 	return 0;
@@ -467,6 +489,16 @@ gpointer start_generation(gpointer data)
 	} else {
 		keygen_invert(key_data.alice, key_data.bob);
 	}
+	
+	char *alice_done = g_strdup_printf("%s.entropy", key_data.alice);
+	char *bob_done = g_strdup_printf("%s.entropy", key_data.bob);
+	
+	rename(key_data.alice, alice_done);
+	rename(key_data.bob, bob_done);
+
+	g_free(alice_done);
+	g_free(bob_done);
+	
 
 	g_free(key_data.alice);
 	g_free(key_data.bob);
