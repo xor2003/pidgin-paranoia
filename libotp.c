@@ -19,15 +19,9 @@
 /*  ------------------- Constants (don't change) -------------------
  * Changing this makes your one-time-pad incompatible */
 
-#define FILE_DELI " "            /* Delimiter in the filename, separating alice, bob and id*/
-#define MSG_DELI "|"             /* Delimiter in the encrypted message */
 #define PAD_EMPTYCHAR '\0'        /* Char that is used to mark the pad as used. */
-#define FILE_SUFFIX "entropy"   /* The keyfiles have to end with
-				 * this string to be valid. . */
-#define FILE_SUFFIX_DELI "."	/* Separates FILE_SUFFIX from the rest */
 #define NOENTROPY_SIGNAL "*** I'm out of entropy!"       /* The message that
 							 * is send in case the sender is out of entropy */
-#define ID_SIZE		4	/* The size in bytes of the ID. */
 
 /*  ------------------- Constants (you can change them) ------------ */
 

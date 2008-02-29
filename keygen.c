@@ -281,8 +281,8 @@ gpointer key_from_device(gpointer data)
 		keygen_invert(key_data.alice, key_data.bob);
 	}
 	
-	char *alice_done = g_strdup_printf("%s.entropy", key_data.alice);
-	char *bob_done = g_strdup_printf("%s.entropy", key_data.bob);
+	char *alice_done = g_strdup_printf("%s%s%s", key_data.alice, FILE_SUFFIX_DELI, FILE_SUFFIX);
+	char *bob_done = g_strdup_printf("%s%s%s", key_data.bob, FILE_SUFFIX_DELI, FILE_SUFFIX);
 	
 	rename(key_data.alice, alice_done);
 	rename(key_data.bob, bob_done);
@@ -384,8 +384,8 @@ gpointer key_from_file(gpointer data)
 		keygen_loop_invert(key_data.alice);
 	} else keygen_invert(key_data.alice, key_data.bob);
 	
-	char *alice_done = g_strdup_printf("%s.entropy", key_data.alice);
-	char *bob_done = g_strdup_printf("%s.entropy", key_data.bob);
+	char *alice_done = g_strdup_printf("%s%s%s", key_data.alice, FILE_SUFFIX_DELI, FILE_SUFFIX);
+	char *bob_done = g_strdup_printf("%s%s%s", key_data.bob, FILE_SUFFIX_DELI, FILE_SUFFIX);
 	
 	rename(key_data.alice, alice_done);
 	rename(key_data.bob, bob_done);
@@ -490,8 +490,8 @@ gpointer start_generation(gpointer data)
 		keygen_invert(key_data.alice, key_data.bob);
 	}
 	
-	char *alice_done = g_strdup_printf("%s.entropy", key_data.alice);
-	char *bob_done = g_strdup_printf("%s.entropy", key_data.bob);
+	char *alice_done = g_strdup_printf("%s%s%s", key_data.alice, FILE_SUFFIX_DELI, FILE_SUFFIX);
+	char *bob_done = g_strdup_printf("%s%s%s", key_data.bob, FILE_SUFFIX_DELI, FILE_SUFFIX);
 	
 	rename(key_data.alice, alice_done);
 	rename(key_data.bob, bob_done);
