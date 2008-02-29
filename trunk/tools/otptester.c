@@ -87,7 +87,7 @@ int usage() {
 					"--destroy_config\n"
 					"\n"
 					" * To create keys: (write 'NULL' as source to use the keygen)\n"
-					"%s --create_config --genkey alice bob /dev/urandom 100000\n"
+					"%s --create_config --genkey alice bob NULL 10000\n"
 					,programname, programname);
 	return TRUE;
 }
@@ -102,7 +102,7 @@ int something() {
 	
 	//printf("%.8X\n",otp_conf_set_path(config, "testtest"));
 	//printf("%.8X\n",otp_conf_set_export_path(config, "testtest"));
-	printf("%s\n",otp_conf_get_path(config));
+	//printf("%s\n",otp_conf_get_path(config));
 	//printf("%s\n",otp_conf_get_export_path(config));
 	//printf("%.8X\n",otp_conf_set_random_msg_tail_max_len(config,88));
 	//printf("%i\n",otp_conf_get_random_msg_tail_max_len(config));
@@ -156,7 +156,8 @@ int genkey() {
 		printf("* Username1:\t%s\n",argvalue[*argpos]);
 		printf("* Username2:\t%s\n",argvalue[*argpos+1]);
 		printf("* Sourcefile:\t%s\n",argvalue[*argpos+2]);
-		printf("* Keypath:\t%s\n",path);
+		printf("* Keypath:\t%s\n",otp_conf_get_path(config));
+		printf("* Exportpath:\t%s\n",otp_conf_get_export_path(config));
 		printf("* Keysize:\t%u\n",size);
 	}
 	OtpError syndrome;
@@ -164,10 +165,20 @@ int genkey() {
 		syndrome = otp_generate_key_pair(config,
 				argvalue[*argpos], argvalue[*argpos+1],
 				NULL, size);
+		printf("Waiting for keygen...\n" );
+		for (i = 1; i <= size/50+2; i++) {
+			usleep(1000*1000);
+			printf("%i/%i\n",i,size/50+2);
+		}
 	} else {
 		syndrome = otp_generate_key_pair(config,
 				argvalue[*argpos], argvalue[*argpos+1],
 				argvalue[*argpos+2], size);
+		printf("Waiting for keygen...\n" );
+		for (i = 1; i <= size/500000+1; i++) {
+			usleep(1000*1000);
+			printf("%i/%i\n",i,size/500000+1);
+		}
 	}
 	if (syndrome > OTP_WARN) {
 		printf("Error creating keys %.8X\n",syndrome);
@@ -176,11 +187,6 @@ int genkey() {
 	if (debuglevel) {
 		printf("* Syndrome:\t%.8X\n",syndrome);
 	}
-	printf("Waiting for keygen (1s per 1kB)...\n" );
-	for (i = 1; i <= size/1000; i++) {
-			usleep(1000*1000);
-			printf("%i/%i\n",i,size/1000);
-		}
 	*argpos = *argpos+takes;
 	return TRUE;	
 }

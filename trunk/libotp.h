@@ -21,6 +21,12 @@
 
 #define OTP_ID_LENGTH 8			/* Size of the ID-string. 4 bytes --> 8 bytes base 16*/
 #define OTP_PROTECTED_ENTROPY 100	/* The amount of entropy that is only used for "out of entropy" messages */
+#define ID_SIZE		4	/* The size in bytes of the ID. */
+#define FILE_DELI " "            /* Delimiter in the filename, separating alice, bob and id*/
+#define MSG_DELI "|"             /* Delimiter in the encrypted message */
+#define FILE_SUFFIX "entropy"   /* The keyfiles have to end with
+				 * this string to be valid. . */
+#define FILE_SUFFIX_DELI "."	/* Separates FILE_SUFFIX from the rest */
 
 /* ------------------ Error Syndrome System  ---------------------- */
 #include "otperror.h"
