@@ -77,8 +77,8 @@ void par_add_header(char** message)
 	return;
 }
 
-static gboolean par_remove_header(char** message)
-/* checks the header and removes it if found */
+static gboolean par_has_header(char** message)
+/* checks for a paranoia header and removes it if found */
 {
 	if (strlen(*message) > strlen(PARANOIA_HEADER)) {
 		if (strncmp(*message, PARANOIA_HEADER, 
@@ -779,17 +779,76 @@ static void par_cli_show_keys(PurpleConversation *conv)
 	return;
 }
 
+static void par_cli_generate_keys(PurpleConversation* conv, int size, gchar** param_array)
+/* generates two keyfiles */
+{
+	const char* my_acc = purple_account_get_username(
+			purple_conversation_get_account(conv));
+	const char* other_acc = purple_conversation_get_name(conv);
+	
+	char* my_acc_stp = par_strip_jabber_ressource(my_acc);
+	char* other_acc_stp = par_strip_jabber_ressource(other_acc);
+	OtpError syndrome;
+	
+	purple_conversation_write(conv, NULL, 
+			"Please wait. Generating keys...", 
+			PURPLE_MESSAGE_NO_LOG, time(NULL));
+	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+			"Generate new key: my_acc: %s, other_acc: %s, size: %ikiB\n",
+			my_acc_stp, other_acc_stp, size);
+
+	if (param_array[1] == NULL) {
+		/* default entropy source */
+		syndrome = otp_generate_key_pair(
+				otp_conf, my_acc_stp, other_acc_stp, 
+				NULL,
+				size*1024);
+		
+	} else {
+		syndrome = otp_generate_key_pair(
+				otp_conf, my_acc_stp, other_acc_stp,
+				g_strstrip(param_array[1]),
+				size*1024);
+	}
+	g_free(my_acc_stp);
+	g_free(other_acc_stp);
+	
+	if (syndrome > OTP_WARN) {
+		// TODO: tell the exact error
+		purple_conversation_write(conv, NULL, 
+				"Key files could not be generated!",
+				PURPLE_MESSAGE_NO_LOG, time(NULL));
+				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+				"Key files could not be generated! %.8X\n", syndrome);
+	} else {
+		purple_conversation_write(conv, NULL, 
+				"Key files successfully generated.\n"
+				"Your own key was stored in the directory '~/.paranoia'.\n"
+				"Your buddy's key is stored in your home directory.\n"
+				"Please send this key in a secure way to your partner.\n",
+				PURPLE_MESSAGE_NO_LOG, time(NULL));
+		if (syndrome == OTP_OK) {
+			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+					"Generated two entropy files of %ikiB size.\n", size);
+		} else {
+			purple_conversation_write(conv, NULL,
+					"There was a warning issued!\n",
+					PURPLE_MESSAGE_NO_LOG, time(NULL));
+			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+					"Generated two entropy files of %ikiB size with a warning! %.8X\n",
+					size, syndrome);
+		}
+		// TODO: add the key to the list
+	}
+	return;
+}
+
 static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv, 
 		const gchar *cmd, gchar **args, gchar **error, void *data)
 /* checks and executes all otp commads */
 {
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 			"An otp command was received. sweet!\n");
-	
-	OtpError syndrome;
-	const char* my_acc = purple_account_get_username(
-				purple_conversation_get_account(conv));
-	const char* other_acc = purple_conversation_get_name(conv);
 	
 	if (args[0] == NULL) {
 		par_cli_set_default_error(error);
@@ -808,6 +867,9 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 	}
 	else if (strcmp("drop", *args) == 0) {
 	// REMOVE ME (just for testing!)
+		const char* my_acc = purple_account_get_username(
+				purple_conversation_get_account(conv));
+		const char* other_acc = purple_conversation_get_name(conv);
 		struct key* used_key = par_search_key(my_acc, other_acc);
 		if (used_key != NULL) {
 			if (used_key->opt->otp_enabled) {
@@ -866,67 +928,9 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 			par_cli_set_default_error(error);
 			return PURPLE_CMD_RET_FAILED;
 		}
-		/* found a positive int */
+		/* found a positive int, do it! */
 		// FIXME: additional garbage after the int is just ignored(?)
-		purple_conversation_write(conv, NULL, 
-				"Please wait. Generating keys...", 
-				PURPLE_MESSAGE_NO_LOG, time(NULL));
-		char* my_acc_stp = par_strip_jabber_ressource(my_acc);
-		char* other_acc_stp = par_strip_jabber_ressource(other_acc);
-
-		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-				"Generate new key: my_acc: %s, other_acc: %s, size: %ikiB\n",
-				my_acc_stp, other_acc_stp, size);
-
-		if (param_array[1] == NULL) {
-			/* default entropy source */
-			syndrome = otp_generate_key_pair(
-					otp_conf, my_acc_stp, other_acc_stp, 
-					NULL,
-					size*1024);
-			
-		} else {
-			syndrome = otp_generate_key_pair(
-					otp_conf, my_acc_stp, other_acc_stp,
-					g_strstrip(param_array[1]),
-					size*1024);
-		}
-		g_free(my_acc_stp);
-		g_free(other_acc_stp);
-		
-		if (syndrome > OTP_WARN) {
-			purple_conversation_write(conv, NULL, 
-					"Key files could not be generated!",
-					PURPLE_MESSAGE_NO_LOG, time(NULL));
-					purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-					"Key files could not be generated! %.8X\n", syndrome);
-			// TODO: notify the user
-		} else {
-			if (syndrome == OTP_OK) {
-				purple_conversation_write(conv, NULL, 
-						"Key files successfully generated.\n"
-						"Your own key was stored in the directory '~/.paranoia'.\n"
-						"Your buddy's key is stored in your home directory.\n"
-						"Please send this key in a secure way to your partner.\n"
-						"Please reload the plugin to add your key.\n",
-						PURPLE_MESSAGE_NO_LOG, time(NULL));
-				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-						"Generated two entropy files of %ikiB size.\n", size);
-			} else {
-				purple_conversation_write(conv, NULL, 
-				"Key files successfully generated.\n"
-				"Your own key was stored in the directory '~/.paranoia'.\n"
-				"Your buddy's key is stored in your home directory.\n"
-				"Please send this key in a secure way to your partner.\n"
-				"Please reload the plugin to add your key.\n"
-				"There was a warning issued!\n",
-				PURPLE_MESSAGE_NO_LOG, time(NULL));
-				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-						"Generated two entropy files of %ikiB size with a warning! %.8X\n",
-						size, syndrome);
-			}
-			// TODO: add key to the list
-		}
+		par_cli_generate_keys(conv, size, param_array);
 		g_strfreev(param_array);
 	} else { /* checked for 'genkey' */
 		/* unknown arg */
@@ -1061,7 +1065,7 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Stripped Msg: %s\n", *stripped_message);
 
 	/* checks for the Paranoia Header and removes it if found */
-	if (!par_remove_header(stripped_message)) {
+	if (!par_has_header(stripped_message)) {
 		if (par_session_check_req(my_acc_name, *sender, conv, 
 				stripped_message)) {
 			g_free(*stripped_message);
@@ -1243,7 +1247,7 @@ static void par_im_msg_sending(PurpleAccount *account,
 				if (syndrome > OTP_WARN) {
 					purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
 							"Could not send an entropy warning. That's a serious error! %.8X\n", syndrome);
-				// TODO: notify the user
+				// TODO: notify the user?
 				} else {
 					if (syndrome != OTP_OK) {
 						purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
