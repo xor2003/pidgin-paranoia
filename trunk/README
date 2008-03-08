@@ -38,7 +38,8 @@ Commands are entered by typing a message beginning with /otp.
 The source parameter is optional.
 /otp on - tries to start the encryption
 /otp off - stops the encryption
-/otp info - shows details about the used key
+/otp info - shows details about the active key
+/otp list - shows all your keys
 
 
 5. Usage of the otptester
@@ -49,6 +50,5 @@ Start "otptester --help" for more information.
 
 6. Known bugs, limitations and planned features
 --------------------------------------------------------------------------------
-
 
 Please read the file TODO

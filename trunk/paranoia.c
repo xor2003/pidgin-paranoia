@@ -399,35 +399,6 @@ static struct key* par_search_key(const char* src, const char* dest)
 	return NULL;
 }
 
-static struct key* par_search_key_weak(const char* src, const char* dest)
-/* searches a matching key in the keylist, preferably an active one
- * */
-{
-	char* src_copy = par_strip_jabber_ressource(src);
-	char* dest_copy = par_strip_jabber_ressource(dest);
-
-	struct key* tmp_ptr = keylist;
-	struct key* good_key = NULL;
-
-	while (tmp_ptr != NULL) {
-		if ((strcmp(otp_pad_get_src(tmp_ptr->pad), src_copy) == 0) 
-				&& (strcmp(otp_pad_get_dest(tmp_ptr->pad), dest_copy) == 0)) {
-			if(tmp_ptr->opt->active) {
-				g_free(src_copy);
-				g_free(dest_copy);
-				return tmp_ptr;
-			}
-			if (good_key == NULL) {
-				good_key = tmp_ptr;
-			}
-		}
-		tmp_ptr = tmp_ptr->next;
-	}
-	g_free(src_copy);
-	g_free(dest_copy);
-	return good_key;
-}
-
 /* ----------------- Session Management ------------------ */
 
 static gboolean par_session_send_request(const char* my_acc_name, 
@@ -443,7 +414,7 @@ static gboolean par_session_send_request(const char* my_acc_name,
 	g_free(ids);
 
 	purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), request, 
-			PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_RAW); //PURPLE_MESSAGE_SYSTEM
+			PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_RAW);
 	
 	free(request);
 	return TRUE;
@@ -456,7 +427,7 @@ void par_session_ack(PurpleConversation *conv) {
 	// send PARANOIA_ACK
 
 	purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), PARANOIA_ACK, 
-		PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_RAW); //PURPLE_MESSAGE_SYSTEM | 
+		PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_RAW);
 
 	return;
 } */
@@ -823,7 +794,8 @@ static void par_cli_generate_keys(PurpleConversation* conv, int size, gchar** pa
 				"Key files successfully generated.\n"
 				"Your own key was stored in the directory '~/.paranoia'.\n"
 				"Your buddy's key is stored in your home directory.\n"
-				"Please send this key in a secure way to your partner.\n",
+				"Please send this key in a secure way to your partner.\n"
+				"Please reload the plugin to add your key.\n",
 				PURPLE_MESSAGE_NO_LOG, time(NULL));
 		if (syndrome == OTP_OK) {
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
@@ -1177,18 +1149,16 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 		// TODO: detect ACK message
 
 		/* (Auto) enable the encryption? */
-		if (!used_key->opt->otp_enabled) {
-			if(used_key->opt->auto_enable) {
-				used_key->opt->otp_enabled = TRUE;
-				purple_conversation_write(conv, NULL, 
-						"Encryption enabled.", 
-						PURPLE_MESSAGE_NO_LOG, time(NULL));
-				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "This conversation was already initialized! otp_enabled is now TRUE\n");
-				/* detect REQUEST; needed for a auto-init */
-				if(strncmp(*message, PARANOIA_REQUEST, PARANOIA_REQUEST_LEN) == 0) {
-					purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "He sends us an encrypted REQUEST message. otp_enabled is now TRUE\n");
-					return TRUE;
-				}
+		if (!used_key->opt->otp_enabled && used_key->opt->auto_enable) {
+			used_key->opt->otp_enabled = TRUE;
+			purple_conversation_write(conv, NULL, 
+					"Encryption enabled.", 
+					PURPLE_MESSAGE_NO_LOG, time(NULL));
+			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "This conversation was already initialized! otp_enabled is now TRUE\n");
+			/* detect REQUEST; needed for a auto-init */
+			if(strncmp(*message, PARANOIA_REQUEST, PARANOIA_REQUEST_LEN) == 0) {
+				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "He sends us an encrypted REQUEST message. otp_enabled is now TRUE\n");
+				return TRUE;
 			}
 		}
 
@@ -1310,7 +1280,6 @@ static void par_im_msg_sending(PurpleAccount *account,
 			}
 		}
 #endif
-
 		/* add the paranoia header string */
 		par_add_header(message);
 
