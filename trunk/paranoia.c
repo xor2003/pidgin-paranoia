@@ -131,11 +131,10 @@ static char* par_strip_jabber_ressource(const char* acc)
 
 /* key options struct */
 struct options {
-	//gboolean waiting_for_ack; /* TRUE if a I have to wait fo an incomming message */
 	gboolean otp_enabled; /* otp on/off */
 	gboolean auto_enable; /* false to force disable */
 	gboolean no_entropy; /* all entropy of one user was used up completely */
-	gboolean handshake_done;
+	gboolean handshake_done; /* key ids have been exchanged */
 	gboolean active; /* an initialised key */
 };
 
@@ -164,7 +163,6 @@ static struct key* par_create_key(const char* filename)
 	/* default option struct */
 	static struct options* a_opt;
 	a_opt = (struct options *) g_malloc(sizeof(struct options));
-	//test_opt->waiting_for_ack = FALSE;
 	a_opt->otp_enabled = FALSE;
 	a_opt->auto_enable = TRUE;
 	a_opt->handshake_done = FALSE;
@@ -221,7 +219,6 @@ static void par_add_key(struct otp* a_pad)
 	/* default option struct */
 	static struct options* a_opt;
 	a_opt = (struct options *) g_malloc(sizeof(struct options));
-	//test_opt->waiting_for_ack = FALSE;
 	a_opt->otp_enabled = FALSE;
 	a_opt->auto_enable = TRUE;
 	a_opt->handshake_done = FALSE;
@@ -504,7 +501,6 @@ static gboolean par_session_check_req(const char* alice, const char* bob,
 				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Conversation pointer saved! (D).\n");
 			}
 			if (temp_key->opt->auto_enable && !temp_key->opt->no_entropy) {
-				//temp_key->opt->waiting_for_ack = TRUE;
 				temp_key->opt->otp_enabled = TRUE;
 				purple_conversation_write(conv, NULL, 
 						"Encryption enabled.", 
@@ -654,7 +650,6 @@ static gboolean par_cli_try_enable_enc(PurpleConversation *conv)
 		}			
 		if (!used_key->opt->otp_enabled) {
 			used_key->opt->otp_enabled = TRUE;
-			//used_key->opt->waiting_for_ack = TRUE;
 			purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), 
 					PARANOIA_START, 
 					PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
@@ -731,14 +726,13 @@ static void par_cli_show_key_details(PurpleConversation *conv)
 		disp_string = g_strdup_printf("There are %i keys available for this"
 				" conversation.\nCurrently active key infos:\nSource:\t\t%s\n"
 				"Destination:\t%s\nID:\t\t\t%s\nSize:\t\t\t%i\nPosition:\t\t%i\n"
-				"Entropy:\t\t%i\n" //Waiting for ack:\t\t%i\n
+				"Entropy:\t\t%i\n"
 				"OTP enabled:\t%i\nAuto enable:\t%i\nNo entropy:\t%i", num,
 				otp_pad_get_src(used_key->pad), otp_pad_get_dest(used_key->pad), 
 				otp_pad_get_id(used_key->pad), 
 				(unsigned int) otp_pad_get_filesize(used_key->pad), 
 				(unsigned int) otp_pad_get_position(used_key->pad), 
 				(unsigned int) otp_pad_get_entropy(used_key->pad), 
-				//used_key->opt->waiting_for_ack,
 				used_key->opt->otp_enabled, used_key->opt->auto_enable, 
 				used_key->opt->no_entropy); //FIXME: it's redundant!
 	} else {
@@ -1053,8 +1047,7 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 			"Recived Msg: %s\n", *message);
 
-	// --- Strip all the HTML crap (Jabber, MSN)
-	// TODO: only strip, if jabber or msn or ???
+	// TODO: only strip all the (X)HTML crap on specific protocols (Jabber, MSN. ???)
 	// detect the protcol id:
 	// purple_account_get_protocol_id(account)
 
@@ -1083,7 +1076,7 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 			}
 
 			/* disable encryption if unencrypted message received */
-			if (used_key->opt->otp_enabled) { //&& !used_key->opt->waiting_for_ack
+			if (used_key->opt->otp_enabled) {
 				used_key->opt->otp_enabled = FALSE;
 				purple_conversation_write(conv, NULL, 
 						"Encryption disabled.", 
@@ -1147,7 +1140,7 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 			return TRUE;
 		}
 		
-		/* activete this key? */
+		/* activate this key? */
 		if(!used_key->opt->handshake_done) {
 			used_key->opt->handshake_done = TRUE;
 			used_key->opt->active = TRUE;
@@ -1203,8 +1196,6 @@ static void par_im_msg_sending(PurpleAccount *account,
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 				"Found an active key with pad ID: %s\n", otp_pad_get_id(used_key->pad));
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "otp_enabled == %i\n", used_key->opt->otp_enabled);
-
-		//used_key->opt->waiting_for_ack = FALSE;
 
 		/* encryption enabled? */
 		if (!used_key->opt->otp_enabled) {
@@ -1371,7 +1362,7 @@ static gboolean par_im_msg_change_display(PurpleAccount *account,
 	/* System messages and warnings are not labelled */
 	if (!(flags & PURPLE_MESSAGE_NO_LOG || flags & PURPLE_MESSAGE_SYSTEM)) {	
 		if (used_key != NULL) {
-			if (used_key->opt->otp_enabled) { //&& !used_key->opt->waiting_for_ack
+			if (used_key->opt->otp_enabled) {
 				par_add_status_str(message);
 			}
 		}
