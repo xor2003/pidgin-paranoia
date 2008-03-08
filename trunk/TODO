@@ -2,34 +2,31 @@
                               TODO list
 -----------------------------------------------------------------------
 
-Version 0.2
-============
- 	libotp
-	 * keyfile entropy really checked for patterns 
-
- 	paranoia
-	 * add generated key to keylist
-	 * /otp scan, to read in new keys
-
 Version 0.3
 ============
 	paranoia
-	 * string freeze
+	 * add generated key to keylist
+	 * /otp scan, to read in new keys
 	 * add a message queue thread
 	 	* enhanced session management (auto ack)
 	 	* send entropy warnings
-	 * optimize key list (sort it intelligent)
+	 * modular key management (par_key_list.h)
+	 * string freeze
 
 	libotp
 	 * checking for \0\0\0 on decrypt to check if the message is valid 
+	 * keyfile entropy really checked for patterns
+	 * a signal for the key status
 
 	other
 	 * commandline program that can use libotp for general usage
+	 * libotp test framework
 
 Version 0.4
 ============
  	paranoia
  	 * gettext support (translations)
+	 * optimize key list (hashtable or tree)
 
 Version 1.0
 ============

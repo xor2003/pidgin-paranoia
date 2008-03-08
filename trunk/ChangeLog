@@ -11,6 +11,7 @@ Simon Wenner:
  * Paranoia: Use the new libotp api (set/get and config)
  * Paranoia: Key settings are resetted if a buddy goes offline
  * Paranoia: '/otp list' added to list all available keys
+ * Paranoia: no more request messages for offline buddies
 
 Christian Wäckerlin:
  * Libotp: System of error syndromes (OtpError) implemented
@@ -19,8 +20,9 @@ Christian Wäckerlin:
  * Libotp: otp_conf system implemented, libotp is multi-application aware
  * Libotp keeps filehandles and mmap open to save CPU cycles.
  * Libotp locks the keyfiles that are in use.
- * Libotp: A tailing minimal padding is added to the messages on encryption (and also
-   random length padding) (allows future feature without breakage of the spec.)
+ * Libotp: A tailing minimal padding is added to the messages on encryption 
+   (and also random length padding) (allows future feature without breakage 
+   of the spec.)
  * Debian/Ubuntu package support added
 
 Pascal Sachs:
