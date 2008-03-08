@@ -560,6 +560,10 @@ static gboolean par_session_check_msg(struct key* used_key,
 					PURPLE_MESSAGE_NO_LOG, time(NULL));
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 					"PARANOIA_START detected. otp_enabled = TRUE\n");
+			/* if the other sider has an active key and we don't (FIXME maybe removeable in 0.3) */
+			if (!used_key->opt->active) {
+				used_key->opt->active = TRUE;
+			}
 		} else {
 			purple_conversation_write(conv, NULL, 
 					"This buddy would like to chat encrypted.", 
@@ -939,22 +943,28 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 static void par_conversation_created(PurpleConversation *conv)
 /* signal handler for "conversation-created" */
 {
-	const char* my_acc_name = purple_account_get_username(
-				purple_conversation_get_account(conv));
+	PurpleAccount* account = purple_conversation_get_account(conv);
+	const char* my_acc_name = purple_account_get_username(account);
 	const char* receiver = purple_conversation_get_name(conv);
 	
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "REQ Debug: my_acc: %s, other_acc: %s\n", my_acc_name, receiver);
 	
-	/* display a nice message if already active */
+	/* check buddy status */
+	PurplePresence *pres = purple_buddy_get_presence (
+			purple_find_buddy (account, receiver));
+	gboolean online = purple_presence_is_online (pres);
+	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "This buddy, online == %i\n", online);
+	
 	struct key* active_key = par_search_key(my_acc_name, receiver);
 	if (active_key != NULL) {
+		/* display a nice message if already active */
 		if (active_key->opt->otp_enabled) {
 			purple_conversation_write(conv, NULL, 
 					"Encryption enabled.", 
 					PURPLE_MESSAGE_NO_LOG, time(NULL));
 		}
-		if (!active_key->opt->handshake_done) {
-			/* send a request message */
+		if (!active_key->opt->handshake_done && online) {
+			/* send a request message (encrypted) */
 			if(par_session_send_request(my_acc_name, receiver, conv)) {
 				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 						"Matching key(s) found. REQUEST sent.\n");
@@ -965,12 +975,14 @@ static void par_conversation_created(PurpleConversation *conv)
 		}
 	} else {
 		/* send a request message */
-		if(par_session_send_request(my_acc_name, receiver, conv)) {
-			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-					"Matching key(s) found. REQUEST sent.\n");
-		} else {
-			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-					"Found no matching key. Won't sent REQUEST.\n");
+		if (online) {
+			if(par_session_send_request(my_acc_name, receiver, conv)) {
+				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+						"Matching key(s) found. REQUEST sent.\n");
+			} else {
+				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+						"Found no matching key. Won't sent REQUEST.\n");
+			}
 		}
 	}
 	
