@@ -1064,30 +1064,45 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 			g_free(*stripped_message);
 			return FALSE;
 		}
-		// FIXME: problematic code! Disable all keys? Search weak?
-		struct key* used_key = par_search_key(my_acc_name, *sender);
-		if (used_key != NULL) {
-			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-					"Found an active key with ID: %s\n", otp_pad_get_id(used_key->pad));
-			/* save conversation ptr */
-			if (used_key->conv != NULL) {
-				used_key->conv = conv;
-				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Conversation pointer saved! (A)\n");
-			}
+		
+		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Unencrypted message received.\n");
+		
+		/* we received an unencrypted message -> disable the encryption */
+		char* src_copy = par_strip_jabber_ressource(my_acc_name);
+		char* dest_copy = par_strip_jabber_ressource(*sender);
 
-			/* disable encryption if unencrypted message received */
-			if (used_key->opt->otp_enabled) {
-				used_key->opt->otp_enabled = FALSE;
-				purple_conversation_write(conv, NULL, 
-						"Encryption disabled.", 
-						PURPLE_MESSAGE_NO_LOG, time(NULL));
-				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Unencrypted message received. otp_enabled = FALSE\n");
+		struct key* tmp_ptr = keylist;
+		
+		while (tmp_ptr != NULL) {
+			if ((strcmp(otp_pad_get_src(tmp_ptr->pad), src_copy) == 0) 
+						&& (strcmp(otp_pad_get_dest(tmp_ptr->pad), dest_copy) == 0)) {
+							
+				// TODO: Maybe just check active keys?
+					
+				//if (tmp_ptr->conv == NULL) {
+					/* save conversation ptr */
+				//	tmp_ptr->conv = conv;
+				//	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Conversation pointer saved! (A)\n");
+				//}
+				if (tmp_ptr->opt->otp_enabled) {
+					purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+							"Found an enabled key with ID: %s. otp_enabled = FALSE\n", 
+							otp_pad_get_id(tmp_ptr->pad));
+					tmp_ptr->opt->otp_enabled = FALSE;
+					purple_conversation_write(conv, NULL, 
+							"Encryption disabled.", 
+							PURPLE_MESSAGE_NO_LOG, time(NULL));
+				}
 			}
+			tmp_ptr = tmp_ptr->next;
 		}
+
+		g_free(src_copy);
+		g_free(dest_copy);
+		
 		/* free the jabber/msn strip! */
 		g_free(*stripped_message);
-		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-				"This is not a paranoia message.\n");
+
 		return FALSE;
 	}
 
@@ -1109,7 +1124,7 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "otp_enabled == %i\n", used_key->opt->otp_enabled);
 
 		/* save conversation ptr */
-		if (used_key->conv != NULL) {
+		if (used_key->conv == NULL) {
 			used_key->conv = conv;
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Conversation pointer saved! (B)\n");
 		}
