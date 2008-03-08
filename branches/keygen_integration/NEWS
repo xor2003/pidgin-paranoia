@@ -1,6 +1,0 @@
-Pidgin-Paranoia - The one-time pad plugin for people who really care about privacy
-
-0.1.0 (30-12-2007):
-	Enjoy our first release! Basic functionality of information-theoretically 
-	secure encrypted instant messaging and key generation is provided. We 
-	consider it alpha quality, but it should not SIGSEGV :-)
