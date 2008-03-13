@@ -16,17 +16,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
 
+/* --------------------------- Note -----------------------------------
+ * This is the public ABI of libotp. This is what you need to include in 
+ * your application.
+ * */
+
 /*  ------------------- Public Constants (don't change) -------------------
  * Changing this makes your one-time-pad incompatible */
 
 #define OTP_ID_LENGTH 8			/* Size of the ID-string. 4 bytes --> 8 bytes base 16*/
-#define OTP_PROTECTED_ENTROPY 100	/* The amount of entropy that is only used for "out of entropy" messages */
-#define ID_SIZE		4	/* The size in bytes of the ID. */
-#define FILE_DELI " "            /* Delimiter in the filename, separating alice, bob and id*/
-#define MSG_DELI "|"             /* Delimiter in the encrypted message */
-#define FILE_SUFFIX "entropy"   /* The keyfiles have to end with
-				 * this string to be valid. . */
-#define FILE_SUFFIX_DELI "."	/* Separates FILE_SUFFIX from the rest */
 
 /* ------------------ Error Syndrome System  ---------------------- */
 #include "otperror.h"
@@ -167,12 +165,3 @@ OtpError otp_conf_set_random_msg_tail_max_len(struct otp_config* myconfig,
  * 					Disabled if 0.0. Default is already set to DEFAULT_IMPROBABILITY. */
 OtpError otp_conf_set_msg_key_improbability_limit(struct otp_config* myconfig,
 				 double msg_key_improbability_limit);
-
-/* Increments the number of keys in production in the keygen
- * This function makes only sense if used in the keygen itself */
-OtpError otp_conf_increment_number_of_keys_in_production(struct otp_config* config);
-
-/* Increments the number of keys in production in the keygen
- * This function makes only sense if used in the keygen itself */
-OtpError otp_conf_decrement_number_of_keys_in_production(struct otp_config* config);
-

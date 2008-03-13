@@ -16,12 +16,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
 
+/* --------------------------- Note -----------------------------------
+ * This is the libotp code. 
+ * */
+
 /*  ------------------- Constants (don't change) -------------------
  * Changing this makes your one-time-pad incompatible */
 
 #define PAD_EMPTYCHAR '\0'        /* Char that is used to mark the pad as used. */
-#define NOENTROPY_SIGNAL "*** I'm out of entropy!"       /* The message that
-							 * is send in case the sender is out of entropy */
 
 /*  ------------------- Constants (you can change them) ------------ */
 
@@ -94,6 +96,7 @@
 
 /* The public functions of this library */
 #include "libotp.h"
+#include "libotp-internal.h"
 
 /* Key generation functions*/
 #include "keygen.h"

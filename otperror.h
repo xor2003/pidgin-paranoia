@@ -16,6 +16,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
 
+/* --------------------------- Note -----------------------------------
+ * This header defines the meaning of the error numbers. It is included 
+ * in libotp.h.
+ * */
+
 
 /* ------------------ Error Syndrome System  ---------------------- */
 

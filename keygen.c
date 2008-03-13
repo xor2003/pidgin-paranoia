@@ -27,6 +27,7 @@
 
 #include "keygen.h"
 #include "libotp.h"
+#include "libotp-internal.h"
 
 // buffer which is stores the bytes before they are written into the keyfile
 #define BUFFSIZE 20

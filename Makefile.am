@@ -13,6 +13,7 @@ paranoia_la_SOURCES = \
 	keygen.c \
 	otperror.h \
 	libotp.h \
+	libotp-internal.h \
 	libotp.c \
 	paranoia.c
 

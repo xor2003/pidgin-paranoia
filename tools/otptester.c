@@ -16,7 +16,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
 
-/* ### gcc `pkg-config --cflags --libs glib-2.0` o.c && ./a.out  */
+/* --------------------------- Note -----------------------------------
+ * This is a test application for libotp and the keygen.
+ * */
 
 /* GNOMElib */
 #include <glib.h>
