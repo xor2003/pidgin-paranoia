@@ -11,6 +11,7 @@ nodist_otptester_SOURCES = \
 	../keygen.h \
 	../libotp.c \
 	../libotp.h
+	../libotp-internal.h
 
 otptester_CPPFLAGS = $(GLIB_CFLAGS)
 
