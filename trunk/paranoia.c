@@ -1423,9 +1423,7 @@ static gboolean plugin_load(PurplePlugin *plugin)
 			PURPLE_CALLBACK(par_conversation_deleting), NULL);
 	purple_signal_connect(blist_handle, "buddy-signed-off", plugin, 
 			PURPLE_CALLBACK(par_buddy_signed_off), NULL);
-	g_signal_connect(G_OBJECT(otp_conf_get_trigger(otp_conf)), "keygen_key_done_signal", 
-			G_CALLBACK(par_keygen_key_generation_done), NULL);
-
+	otp_signal_connect(otp_conf, "keygen_key_done_signal", &par_keygen_key_generation_done);
 
 	/* register commands ("/otp" + a string of args) */
 	par_cmd_id = purple_cmd_register ("otp", "s", PURPLE_CMD_P_DEFAULT,
