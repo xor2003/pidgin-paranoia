@@ -1205,3 +1205,13 @@ OtpError otp_conf_create_signal(struct otp_config *config)
 						
 	return OTP_OK;						
 }
+
+
+OtpError otp_signal_connect(struct otp_config* config, gchar *signal_name, gpointer function)
+/* connect to signal with name signal_name */
+{
+	g_signal_connect(G_OBJECT(otp_conf_get_trigger(config)), signal_name, 
+					G_CALLBACK(function), NULL);
+					
+	return OTP_OK;
+}
