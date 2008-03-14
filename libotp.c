@@ -1184,3 +1184,24 @@ void otp_pad_use_less_memory(struct otp* pad)
 #endif
 	}
 }
+
+/* signal handling */
+OtpError otp_conf_create_signal(struct otp_config *config)
+/* create the signal 'keygen_key_done_signal' and write trigger into otp_config */
+{
+	guint sid;
+	GObject *trigger;
+
+/* initialize g_typ */	
+	g_type_init();
+
+/* create trigger and add it to config */	
+	trigger = g_object_new(G_TYPE_OBJECT, NULL);
+	otp_conf_set_trigger(config, trigger);
+	
+/* create signal */
+	sid = g_signal_new("keygen_key_done_signal", G_TYPE_OBJECT, G_SIGNAL_RUN_LAST | G_SIGNAL_ACTION, 
+						0, NULL, NULL, g_cclosure_marshal_VOID__DOUBLE, G_TYPE_NONE, 1, G_TYPE_DOUBLE);
+						
+	return OTP_OK;						
+}

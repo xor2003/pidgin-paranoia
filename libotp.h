@@ -166,6 +166,9 @@ OtpError otp_conf_set_random_msg_tail_max_len(struct otp_config* myconfig,
 OtpError otp_conf_set_msg_key_improbability_limit(struct otp_config* myconfig,
 				 double msg_key_improbability_limit);
 
-/*	Sets trigger on which a signal can be emitted to inform the plugin about the current
-*	state of the key generator */				 
-OtpError otp_conf_set_trigger(struct otp_config* config, void* trigger);
+/*	Create the 'keygen_key_done_signal' to which one can attach a function of
+*	the form my_function(GObject *object, double percentage_done)*/
+OtpError otp_conf_create_signal(struct otp_config *config);
+
+/* gets the trigger to emit a signal for the plugin */
+void* otp_conf_get_trigger(const struct otp_config* config);
