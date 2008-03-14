@@ -41,3 +41,6 @@ OtpError otp_conf_increment_number_of_keys_in_production(struct otp_config* conf
  * This function makes only sense if used in the keygen itself */
 OtpError otp_conf_decrement_number_of_keys_in_production(struct otp_config* config);
 
+/* gets the trigger to emit a signal for the plugin */
+void* otp_conf_get_trigger(const struct otp_config* config);
+

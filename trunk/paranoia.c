@@ -18,6 +18,7 @@
 
 /* GNOMElib */
 #include <glib.h>
+#include <glib-object.h>
 
 /* GNUlibc */
 #include <string.h>
@@ -192,6 +193,11 @@ static int par_count_keys()
 		tmp_ptr = tmp_ptr->next;
 	}
 	return sum;
+}
+
+static void par_keygen_key_generation_done(GObject *my_object, gdouble percent) {
+	g_print("%f Percent of the key done\n", percent);
+	return;
 }
 
 static int par_count_matching_keys(const char* src, const char* dest)
@@ -1371,6 +1377,8 @@ static gboolean par_im_msg_change_display(PurpleAccount *account,
 static gboolean plugin_load(PurplePlugin *plugin)
 /* gets called when the plugin gets loaded */
 {
+	guint sid;
+	GObject *trigger;
 
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID,
 			"Compiled with Purple '%d.%d.%d', running with Purple '%s'.\n",
@@ -1401,6 +1409,14 @@ static gboolean plugin_load(PurplePlugin *plugin)
 
 	/* setup the key list */
 	par_init_key_list();
+	
+	/* generate new signal for key generation information */
+	g_type_init();
+	trigger = g_object_new(G_TYPE_OBJECT, NULL);
+	otp_conf_set_trigger(otp_conf, trigger);
+	sid = g_signal_new("keygen_key_done_signal", G_TYPE_OBJECT, G_SIGNAL_RUN_LAST | G_SIGNAL_ACTION, 
+						0, NULL, NULL, g_cclosure_marshal_VOID__DOUBLE, G_TYPE_NONE, 1, G_TYPE_DOUBLE);
+						
 
 	/* connect to signals */
 	purple_signal_connect(conv_handle, "receiving-im-msg", plugin,
@@ -1415,6 +1431,9 @@ static gboolean plugin_load(PurplePlugin *plugin)
 			PURPLE_CALLBACK(par_conversation_deleting), NULL);
 	purple_signal_connect(blist_handle, "buddy-signed-off", plugin, 
 			PURPLE_CALLBACK(par_buddy_signed_off), NULL);
+	g_signal_connect(G_OBJECT(trigger), "keygen_key_done_signal", 
+			G_CALLBACK(par_keygen_key_generation_done), NULL);
+
 
 	/* register commands ("/otp" + a string of args) */
 	par_cmd_id = purple_cmd_register ("otp", "s", PURPLE_CMD_P_DEFAULT,

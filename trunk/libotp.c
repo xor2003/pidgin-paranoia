@@ -93,6 +93,7 @@
 
 /* GNOMElib */
 #include <glib.h>
+#include <glib-object.h>
 
 /* The public functions of this library */
 #include "libotp.h"
@@ -141,6 +142,7 @@ struct otp_config {
 	double msg_key_improbability_limit;	/* entropy for message encryption with 
  * less probable content will be rejected */
  	unsigned int number_of_keys_in_production;		/* The Number of keys currently in production */
+ 	GObject* keygen_signal_trigger;		/* Trigger to emit signal on */
 };
 
 /*  ----------------- Private Functions of the Library------------ */
@@ -992,6 +994,13 @@ unsigned int otp_conf_get_number_of_keys_in_production(const struct otp_config* 
 	return config->number_of_keys_in_production;
 }
 
+void* otp_conf_get_trigger(const struct otp_config* config)
+/* gets the trigger to emit a signal for the plugin */
+{
+	if(config == NULL) return NULL;
+	return (void *)config->keygen_signal_trigger;
+}
+
 /* ------------------ otp_config set functions ------------------- */
 
 OtpError otp_conf_set_path(struct otp_config* config, const char* path)
@@ -1079,6 +1088,16 @@ OtpError otp_conf_decrement_number_of_keys_in_production(struct otp_config* conf
 #ifdef DEBUG
 		printf("%s: Number of keys in generation: %i\n",config->client_id, config->number_of_keys_in_production);
 #endif
+	return OTP_OK;
+}
+
+OtpError otp_conf_set_trigger(struct otp_config* config, void* trigger)
+/*	Set the trigger in the config file, which is needed to
+*	to emit a signal for key generation information */
+{
+	if(trigger == NULL || config == NULL) return OTP_ERR_INPUT;
+	
+	config->keygen_signal_trigger = (GObject *)trigger;
 	return OTP_OK;
 }
 
