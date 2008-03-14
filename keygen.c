@@ -17,6 +17,8 @@
 */
 
 #include <glib.h>
+#include <glib-object.h>
+
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/resource.h>
@@ -503,8 +505,11 @@ gpointer start_generation(gpointer data)
 
 	g_free(key_data.alice);
 	g_free(key_data.bob);
-
+	
 	otp_conf_decrement_number_of_keys_in_production(key_data.config);
+
+	g_signal_emit_by_name(G_OBJECT(otp_conf_get_trigger(key_data.config)), "keygen_key_done_signal", 100.0);
+	
 	return 0;
 } // end start_generation();
 

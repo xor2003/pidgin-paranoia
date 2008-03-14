@@ -165,3 +165,7 @@ OtpError otp_conf_set_random_msg_tail_max_len(struct otp_config* myconfig,
  * 					Disabled if 0.0. Default is already set to DEFAULT_IMPROBABILITY. */
 OtpError otp_conf_set_msg_key_improbability_limit(struct otp_config* myconfig,
 				 double msg_key_improbability_limit);
+
+/*	Sets trigger on which a signal can be emitted to inform the plugin about the current
+*	state of the key generator */				 
+OtpError otp_conf_set_trigger(struct otp_config* config, void* trigger);
