@@ -1377,9 +1377,6 @@ static gboolean par_im_msg_change_display(PurpleAccount *account,
 static gboolean plugin_load(PurplePlugin *plugin)
 /* gets called when the plugin gets loaded */
 {
-	guint sid;
-	GObject *trigger;
-
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID,
 			"Compiled with Purple '%d.%d.%d', running with Purple '%s'.\n",
 			PURPLE_MAJOR_VERSION, PURPLE_MINOR_VERSION, 
@@ -1399,7 +1396,7 @@ static gboolean plugin_load(PurplePlugin *plugin)
 	
 	/* Create global libotp config */
 	otp_conf = otp_conf_create(PARANOIA_ID, otp_path, desktoppath);
-	g_free(otp_path);
+	g_free (otp_path);
 
 	/* get the conversation handle */
 	void *conv_handle = purple_conversations_get_handle();
@@ -1410,13 +1407,8 @@ static gboolean plugin_load(PurplePlugin *plugin)
 	/* setup the key list */
 	par_init_key_list();
 	
-	/* generate new signal for key generation information */
-	g_type_init();
-	trigger = g_object_new(G_TYPE_OBJECT, NULL);
-	otp_conf_set_trigger(otp_conf, trigger);
-	sid = g_signal_new("keygen_key_done_signal", G_TYPE_OBJECT, G_SIGNAL_RUN_LAST | G_SIGNAL_ACTION, 
-						0, NULL, NULL, g_cclosure_marshal_VOID__DOUBLE, G_TYPE_NONE, 1, G_TYPE_DOUBLE);
-						
+	/* create signal*/
+	otp_conf_create_signal(otp_conf);
 
 	/* connect to signals */
 	purple_signal_connect(conv_handle, "receiving-im-msg", plugin,
@@ -1431,7 +1423,7 @@ static gboolean plugin_load(PurplePlugin *plugin)
 			PURPLE_CALLBACK(par_conversation_deleting), NULL);
 	purple_signal_connect(blist_handle, "buddy-signed-off", plugin, 
 			PURPLE_CALLBACK(par_buddy_signed_off), NULL);
-	g_signal_connect(G_OBJECT(trigger), "keygen_key_done_signal", 
+	g_signal_connect(G_OBJECT(otp_conf_get_trigger(otp_conf)), "keygen_key_done_signal", 
 			G_CALLBACK(par_keygen_key_generation_done), NULL);
 
 
