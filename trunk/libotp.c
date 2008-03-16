@@ -862,6 +862,40 @@ OtpError otp_decrypt(struct otp* pad, char** message)
 	return syndrome;
 }
 
+OtpError otp_conf_set_trigger(struct otp_config* config, void* trigger)
+/*	Set the trigger in the config file, which is needed to
+*	to emit a signal for key generation information */
+{
+	if(trigger == NULL || config == NULL) return OTP_ERR_INPUT;
+	
+	config->keygen_signal_trigger = (GObject *)trigger;
+	return OTP_OK;
+}
+
+/* signal handling */
+OtpError otp_conf_create_signal(struct otp_config *config)
+/* create the signal 'keygen_key_done_signal' and write trigger into otp_config 
+ * Create the 'keygen_key_done_signal' to which one can attach a function of
+ *	the form my_function(GObject *object, double percent_done)*/
+{
+	guint sid;
+	GObject *trigger;
+
+/* initialize g_typ */	
+	g_type_init();
+
+/* create trigger and add it to config */	
+	trigger = g_object_new(G_TYPE_OBJECT, NULL);
+	otp_conf_set_trigger(config, trigger);
+	
+/* create signal */
+	sid = g_signal_new("keygen_key_done_signal", G_TYPE_OBJECT, G_SIGNAL_RUN_LAST | G_SIGNAL_ACTION, 
+						0, NULL, NULL, g_cclosure_marshal_VOID__DOUBLE, G_TYPE_NONE, 1, G_TYPE_DOUBLE);
+						
+	return OTP_OK;						
+}
+
+
 /* ------------------ otp_config ------------------------------ */
 
 struct otp_config* otp_conf_create(
@@ -912,8 +946,9 @@ struct otp_config* otp_conf_create(
 	} else {
 		closedir(dp);
 	}
-
-return config;
+	/* Create the signal for the keygen */
+	otp_conf_create_signal(config);
+	return config;
 }
 
 OtpError otp_conf_destroy(struct otp_config* config)
@@ -934,6 +969,7 @@ OtpError otp_conf_destroy(struct otp_config* config)
 	if (config->client_id != NULL) g_free(config->client_id);
 	if (config->path != NULL) g_free(config->path);
 	if (config->export_path != NULL) g_free(config->export_path);
+	if (config->keygen_signal_trigger != NULL) g_object_unref(config->keygen_signal_trigger);
 	g_free(config);
 	return OTP_OK;
 }
@@ -1089,18 +1125,6 @@ OtpError otp_conf_decrement_number_of_keys_in_production(struct otp_config* conf
 	return OTP_OK;
 }
 
-OtpError otp_conf_set_trigger(struct otp_config* config, void* trigger)
-/*	Set the trigger in the config file, which is needed to
-*	to emit a signal for key generation information */
-{
-	if(trigger == NULL || config == NULL) return OTP_ERR_INPUT;
-	
-	config->keygen_signal_trigger = (GObject *)trigger;
-	return OTP_OK;
-}
-
-
-
 /* ------------------ otp_pad get functions ------------------- */
 
 const char* otp_pad_get_src(struct otp* mypad)
@@ -1182,28 +1206,6 @@ void otp_pad_use_less_memory(struct otp* pad)
 #endif
 	}
 }
-
-/* signal handling */
-OtpError otp_conf_create_signal(struct otp_config *config)
-/* create the signal 'keygen_key_done_signal' and write trigger into otp_config */
-{
-	guint sid;
-	GObject *trigger;
-
-/* initialize g_typ */	
-	g_type_init();
-
-/* create trigger and add it to config */	
-	trigger = g_object_new(G_TYPE_OBJECT, NULL);
-	otp_conf_set_trigger(config, trigger);
-	
-/* create signal */
-	sid = g_signal_new("keygen_key_done_signal", G_TYPE_OBJECT, G_SIGNAL_RUN_LAST | G_SIGNAL_ACTION, 
-						0, NULL, NULL, g_cclosure_marshal_VOID__DOUBLE, G_TYPE_NONE, 1, G_TYPE_DOUBLE);
-						
-	return OTP_OK;						
-}
-
 
 OtpError otp_signal_connect(struct otp_config* config, gchar *signal_name, gpointer function)
 /* connect to signal with name signal_name */

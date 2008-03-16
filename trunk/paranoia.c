@@ -196,7 +196,8 @@ static int par_count_keys()
 }
 
 static void par_keygen_key_generation_done(GObject *my_object, gdouble percent) {
-	g_print("%f Percent of the key done\n", percent);
+	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+			"%5.2f Percent of the key done\n", percent);
 	return;
 }
 
@@ -1407,9 +1408,6 @@ static gboolean plugin_load(PurplePlugin *plugin)
 	/* setup the key list */
 	par_init_key_list();
 	
-	/* create signal*/
-	otp_conf_create_signal(otp_conf);
-
 	/* connect to signals */
 	purple_signal_connect(conv_handle, "receiving-im-msg", plugin,
 			PURPLE_CALLBACK(par_im_msg_receiving), NULL);
