@@ -20,6 +20,10 @@
  * This is the public ABI of libotp. This is what you need to include in 
  * your application.
  * */
+ 
+/* ------------------- Public Constans (you can change them) ----------------- */
+#define PATH_DELI "/"					/* For some reason some strange
+				 * operatingsystems use "\" */
 
 /*  ------------------- Public Constants (don't change) -------------------
  * Changing this makes your one-time-pad incompatible */
