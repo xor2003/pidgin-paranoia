@@ -170,10 +170,6 @@ OtpError otp_conf_set_random_msg_tail_max_len(struct otp_config* myconfig,
 OtpError otp_conf_set_msg_key_improbability_limit(struct otp_config* myconfig,
 				 double msg_key_improbability_limit);
 
-/*	Create the 'keygen_key_done_signal' to which one can attach a function of
-*	the form my_function(GObject *object, double percent_done)*/
-OtpError otp_conf_create_signal(struct otp_config *config);
-
 /*	connect to signal with name signal_name. Following a list with available signal names and the 
 *	corresponding function structures:
 *	"keygen_key_done_signal"  -> my_function(GObject* object, double percent_done) */
