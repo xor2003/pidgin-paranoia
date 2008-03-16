@@ -27,8 +27,6 @@
 
 /*  ------------------- Constants (you can change them) ------------ */
 
-#define PATH_DELI "/"					/* For some reason some strange
-				 * operatingsystems use "\" */
 #define BLOCKSIZE 1000					/* The blocksize used in the keyfile
 				 * creation function */
 #define ERASEBLOCKSIZE 1024				/* The blocksize used in the key
@@ -563,12 +561,12 @@ OtpError otp_generate_key_pair(struct otp_config *config,
 	/* create filenames with the correct path*/
 	id = keygen_id_get();
 	
-	alice_file = (char *)g_strdup_printf("%s%s%s%s%s%s%.8X", 
+	alice_file = (char *)g_strdup_printf("%s%s%s%s%s%.8X", 
 			otp_conf_get_path(config), 
-			PATH_DELI, alice, FILE_DELI, bob, FILE_DELI, id);
-	bob_file = (char *)g_strdup_printf("%s%s%s%s%s%s%.8X", 
+			alice, FILE_DELI, bob, FILE_DELI, id);
+	bob_file = (char *)g_strdup_printf("%s%s%s%s%s%.8X", 
 			otp_conf_get_export_path(config), 
-			PATH_DELI, bob, FILE_DELI, alice, FILE_DELI, id);
+			bob, FILE_DELI, alice, FILE_DELI, id);
 	
 	if(stat(alice_file, &rfstat) == 0) {
 		g_free(alice_file);

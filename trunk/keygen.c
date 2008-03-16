@@ -41,6 +41,7 @@
 // Definition for the funcions and global variables.
 OtpError keygen_invert(char *src, char *dest);
 OtpError keygen_loop_invert(char *src);
+struct otp *keygen_get_pad(char *filename);
 unsigned char bit2char(short buf[8]);
 gpointer key_from_device(gpointer data);
 gpointer key_from_file(gpointer data);
@@ -180,6 +181,30 @@ unsigned int keygen_id_get()
 	return id;
 } // end keygen_id_get()
 
+struct otp *keygen_get_pad(char *filename) {
+	struct otp *pad;
+	char *alice_relative;
+	char **splited;
+	int i = 0;
+	
+	if(filename == NULL) {
+		g_printerr("Input NULL\n");
+		return NULL;
+	}
+	
+	splited = g_strsplit(filename, PATH_DELI, -1);
+	
+	/* get the relative filename*/
+	while(splited[i] != NULL) i++;
+	alice_relative = splited[i-1];
+	
+	/* generate pad from file */	
+	pad = otp_pad_create_from_file(key_data.config, alice_relative);
+	
+	g_strfreev(splited);
+	
+	return pad;
+}
 
 GThread *keygen_keys_generate_from_device(const char *alice_file, 
 		const char *bob_file, const char *device, gsize size, 
@@ -290,9 +315,11 @@ gpointer key_from_device(gpointer data)
 	rename(key_data.alice, alice_done);
 	rename(key_data.bob, bob_done);
 
+	struct otp *pad = keygen_get_pad(alice_done);
+	if(pad == NULL) g_printerr("pad NULL\n");
+
 	g_free(alice_done);
 	g_free(bob_done);
-
 	
 	g_free(key_data.alice);
 	g_free(key_data.bob);
@@ -396,6 +423,9 @@ gpointer key_from_file(gpointer data)
 	rename(key_data.alice, alice_done);
 	rename(key_data.bob, bob_done);
 
+	struct otp *pad = keygen_get_pad(alice_done);
+	if(pad == NULL) g_printerr("pad NULL\n");
+	
 	g_free(alice_done);
 	g_free(bob_done);
 	
@@ -504,11 +534,13 @@ gpointer start_generation(gpointer data)
 	
 	rename(key_data.alice, alice_done);
 	rename(key_data.bob, bob_done);
-
+	
+	struct otp *pad = keygen_get_pad(alice_done);
+	if(pad == NULL) g_printerr("pad NULL\n");
+	
 	g_free(alice_done);
 	g_free(bob_done);
 	
-
 	g_free(key_data.alice);
 	g_free(key_data.bob);
 	
