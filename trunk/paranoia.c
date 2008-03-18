@@ -461,24 +461,29 @@ static gboolean par_session_check_req(const char* alice, const char* bob,
 		/* set the ptr to the first id */
 		char* tmp_ptr = *message_no_header + PARANOIA_REQUEST_LEN + 2;
 		struct key* temp_key = NULL;
+		struct key* a_key = NULL;
 		int totlen = strlen(*message_no_header);
 		
 		/* search for all requested IDs */
 		while (*tmp_ptr != ':' && temp_key == NULL && totlen > tmp_ptr - *message_no_header) {
 			char* id = g_strndup(tmp_ptr, OTP_ID_LENGTH);
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Searching for requested ID: %s\n", id);
-			temp_key = par_search_key_by_id(id, alice, bob);
+			a_key = par_search_key_by_id(id, alice, bob);
+			if (!a_key->opt->no_entropy) {
+					temp_key = a_key;
+			}
 			g_free(id);
 			tmp_ptr += OTP_ID_LENGTH + 1;
 		}
 		if (temp_key != NULL) {
-			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Found a matching ID: %s, active = TRUE\n", otp_pad_get_id(temp_key->pad));
+			/* here we have a matching key with entropy */
+			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Found a matching ID with entropy: %s, active = TRUE\n", otp_pad_get_id(temp_key->pad));
 			temp_key->opt->active = TRUE;
 			if(temp_key->conv == NULL) {
 				temp_key->conv = conv;
 				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Conversation pointer saved! (D).\n");
 			}
-			if (temp_key->opt->auto_enable && !temp_key->opt->no_entropy) {
+			if (temp_key->opt->auto_enable) {
 				temp_key->opt->otp_enabled = TRUE;
 				purple_conversation_write(conv, NULL, 
 						"Encryption enabled.", 
