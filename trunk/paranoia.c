@@ -195,7 +195,7 @@ static int par_count_keys()
 	return sum;
 }
 
-static void par_keygen_key_generation_done(GObject *my_object, gdouble percent) {
+static void par_keygen_key_generation_done(GObject *my_object, gdouble percent, struct otp* a_pad) {
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 			"%5.2f Percent of the key done\n", percent);
 	return;
