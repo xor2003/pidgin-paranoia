@@ -770,8 +770,8 @@ static void par_cli_show_keys(PurpleConversation *conv)
 	return;
 }
 
-static void par_cli_generate_keys(PurpleConversation* conv, int size, gchar** param_array)
-/* generates two keyfiles */
+static void par_cli_init_keygen(PurpleConversation* conv, int size, gchar** param_array)
+/* starts the generation of two keyfiles */
 {
 	const char* my_acc = purple_account_get_username(
 			purple_conversation_get_account(conv));
@@ -782,7 +782,7 @@ static void par_cli_generate_keys(PurpleConversation* conv, int size, gchar** pa
 	OtpError syndrome;
 	
 	purple_conversation_write(conv, NULL, 
-			"Please wait. Generating keys...", 
+			"Generating keys. Please wait...", 
 			PURPLE_MESSAGE_NO_LOG, time(NULL));
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 			"Generate new key: my_acc: %s, other_acc: %s, size: %ikiB\n",
@@ -921,7 +921,7 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 		}
 		/* found a positive int, do it! */
 		// FIXME: additional garbage after the int is just ignored(?)
-		par_cli_generate_keys(conv, size, param_array);
+		par_cli_init_keygen(conv, size, param_array);
 		g_strfreev(param_array);
 	} else { /* checked for 'genkey' */
 		/* unknown arg */
