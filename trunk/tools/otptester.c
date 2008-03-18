@@ -23,6 +23,7 @@
 /* GNOMElib */
 #include <glib.h>
 #include <glib-object.h>
+#include <glib/gstdio.h>
 
 /* GNUlibc stuff */
 #include <string.h>
@@ -37,6 +38,7 @@
 
 /* great stuff */
 #include "../libotp.h"
+#include "../libotp-internal.h"
 
 #define LINE "-----------------------------------------------------------------------\n"
 #define PARANOIA_PATH "otptester-keys/"
@@ -60,10 +62,23 @@ struct otp* encryptpad = NULL;
 struct otp* decryptpad = NULL;
 
 /* Signal */
-static void keygen_key_generation_done(GObject *my_object, gdouble percent) 
+static void key_generation_done(GObject *my_object, gdouble percent, struct otp* a_pad) 
 {
-	if (results) g_print(" + %5.2f percent of the key done\n", percent);
+	if (a_pad != NULL) {
+		if (results) g_print(" + %5.2f percent of the key done\n", percent);
+		if (encryptpad != NULL) otp_pad_destroy(encryptpad);
+		encryptpad = a_pad;
+		if (*pbobfile != NULL) g_free(*pbobfile);
+		*pbobfile = g_strconcat(otp_pad_get_dest(encryptpad), FILE_DELI, otp_pad_get_src(encryptpad), FILE_DELI, otp_pad_get_id(encryptpad), FILE_SUFFIX_DELI, FILE_SUFFIX, NULL);
+		gchar *fullbobfile = g_strconcat(otp_conf_get_export_path(config), *pbobfile, NULL);
+		gchar *newbobfile = g_strconcat(otp_conf_get_path(config), *pbobfile, NULL);
+		g_rename(fullbobfile, newbobfile);
+		g_free(fullbobfile);
+		g_free(newbobfile);
+	} else
+		g_print(" ! keygen\n");
 	block_genkey = FALSE;
+	return;
 }
 
 
@@ -74,7 +89,7 @@ OtpError create_config()
 	config = otp_conf_create("otptester", 
 			PARANOIA_PATH, DESKTOP_PATH);
 	otp_signal_connect(config, 
-			"keygen_key_done_signal", &keygen_key_generation_done);
+			"keygen_key_done_signal", &key_generation_done);
 	return OTP_OK;
 }
 
@@ -114,8 +129,21 @@ OtpError genkey()
 	} else
 		if ( verbose && syndrome >  OTP_OK) 
 				g_print(" * Syndrome             : %.8X\n",syndrome);
+				
 	while (block_genkey) usleep(10000);
 	block_genkey = TRUE;
+	
+	if (verbose) {
+			g_print(" * Pad:    Pos          : %u\n",otp_pad_get_position(encryptpad));
+			g_print(" * Pad:    Entropy      : %u\n",otp_pad_get_entropy(encryptpad));
+			g_print(" * Pad:    src          : '%s'\n",otp_pad_get_src(encryptpad));
+			g_print(" * Pad:    dest         : '%s'\n",otp_pad_get_dest(encryptpad));
+			g_print(" * Pad:    id           : '%s'\n",otp_pad_get_id(encryptpad));
+			g_print(" * Pad:    filesize:    : %u\n",otp_pad_get_filesize(encryptpad));
+		}
+	if (results) g_print(" + Key generated       : '%s'\n", otp_pad_get_filename(encryptpad));
+
+	
 	return syndrome;
 }
 
@@ -129,13 +157,13 @@ OtpError encrypt()
 			return OTP_ERR_OTPTESTER;
 		}
 		if (verbose) {
-			printf(" * Pad:    Filename     : '%s'\n",otp_pad_get_filename(encryptpad));
-			printf(" * Pad:    Pos          : %u\n",otp_pad_get_position(encryptpad));
-			printf(" * Pad:    Entropy      : %u\n",otp_pad_get_entropy(encryptpad));
-			printf(" * Pad:    src          : '%s'\n",otp_pad_get_src(encryptpad));
-			printf(" * Pad:    dest         : '%s'\n",otp_pad_get_dest(encryptpad));
-			printf(" * Pad:    id           : '%s'\n",otp_pad_get_id(encryptpad));
-			printf(" * Pad:    filesize:    : %u\n",otp_pad_get_filesize(encryptpad));
+			g_print(" * Pad:    Filename     : '%s'\n",otp_pad_get_filename(encryptpad));
+			g_print(" * Pad:    Pos          : %u\n",otp_pad_get_position(encryptpad));
+			g_print(" * Pad:    Entropy      : %u\n",otp_pad_get_entropy(encryptpad));
+			g_print(" * Pad:    src          : '%s'\n",otp_pad_get_src(encryptpad));
+			g_print(" * Pad:    dest         : '%s'\n",otp_pad_get_dest(encryptpad));
+			g_print(" * Pad:    id           : '%s'\n",otp_pad_get_id(encryptpad));
+			g_print(" * Pad:    filesize:    : %u\n",otp_pad_get_filesize(encryptpad));
 		}
 	}
 	OtpError syndrome = otp_encrypt(encryptpad, pmessage);
@@ -161,13 +189,13 @@ OtpError warning_encrypt()
 			return OTP_ERR_OTPTESTER;
 		}
 		if (verbose) {
-			printf(" * Pad:    Filename     : '%s'\n",otp_pad_get_filename(encryptpad));
-			printf(" * Pad:    Pos          : %u\n",otp_pad_get_position(encryptpad));
-			printf(" * Pad:    Entropy      : %u\n",otp_pad_get_entropy(encryptpad));
-			printf(" * Pad:    src          : '%s'\n",otp_pad_get_src(encryptpad));
-			printf(" * Pad:    dest         : '%s'\n",otp_pad_get_dest(encryptpad));
-			printf(" * Pad:    id           : '%s'\n",otp_pad_get_id(encryptpad));
-			printf(" * Pad:    filesize:    : %u\n",otp_pad_get_filesize(encryptpad));
+			g_print(" * Pad:    Filename     : '%s'\n",otp_pad_get_filename(encryptpad));
+			g_print(" * Pad:    Pos          : %u\n",otp_pad_get_position(encryptpad));
+			g_print(" * Pad:    Entropy      : %u\n",otp_pad_get_entropy(encryptpad));
+			g_print(" * Pad:    src          : '%s'\n",otp_pad_get_src(encryptpad));
+			g_print(" * Pad:    dest         : '%s'\n",otp_pad_get_dest(encryptpad));
+			g_print(" * Pad:    id           : '%s'\n",otp_pad_get_id(encryptpad));
+			g_print(" * Pad:    filesize:    : %u\n",otp_pad_get_filesize(encryptpad));
 		}
 	}
 	OtpError syndrome = otp_encrypt_warning(encryptpad, pwarning,0);
@@ -192,13 +220,13 @@ OtpError decrypt()
 			return OTP_ERR_INPUT;
 		}
 		if (verbose) {
-			printf(" * Pad:    Filename     : '%s'\n",otp_pad_get_filename(decryptpad));
-			printf(" * Pad:    Pos          : %u\n",otp_pad_get_position(decryptpad));
-			printf(" * Pad:    Entropy      : %u\n",otp_pad_get_entropy(decryptpad));
-			printf(" * Pad:    src          : '%s'\n",otp_pad_get_src(decryptpad));
-			printf(" * Pad:    dest         : '%s'\n",otp_pad_get_dest(decryptpad));
-			printf(" * Pad:    id           : '%s'\n",otp_pad_get_id(decryptpad));
-			printf(" * Pad:    filesize:    : %u\n",otp_pad_get_filesize(decryptpad));
+			g_print(" * Pad:    Filename     : '%s'\n",otp_pad_get_filename(decryptpad));
+			g_print(" * Pad:    Pos          : %u\n",otp_pad_get_position(decryptpad));
+			g_print(" * Pad:    Entropy      : %u\n",otp_pad_get_entropy(decryptpad));
+			g_print(" * Pad:    src          : '%s'\n",otp_pad_get_src(decryptpad));
+			g_print(" * Pad:    dest         : '%s'\n",otp_pad_get_dest(decryptpad));
+			g_print(" * Pad:    id           : '%s'\n",otp_pad_get_id(decryptpad));
+			g_print(" * Pad:    filesize:    : %u\n",otp_pad_get_filesize(decryptpad));
 		}
 	}
 	OtpError syndrome = otp_decrypt(decryptpad, pmessage);
@@ -223,13 +251,13 @@ OtpError erasekey()
 			return OTP_ERR_OTPTESTER;
 		}
 		if (verbose) {
-			printf(" * Pad:    Filename     : '%s'\n",otp_pad_get_filename(encryptpad));
-			printf(" * Pad:    Pos          : %u\n",otp_pad_get_position(encryptpad));
-			printf(" * Pad:    Entropy      : %u\n",otp_pad_get_entropy(encryptpad));
-			printf(" * Pad:    src          : '%s'\n",otp_pad_get_src(encryptpad));
-			printf(" * Pad:    dest         : '%s'\n",otp_pad_get_dest(encryptpad));
-			printf(" * Pad:    id           : '%s'\n",otp_pad_get_id(encryptpad));
-			printf(" * Pad:    filesize:    : %u\n",otp_pad_get_filesize(encryptpad));
+			g_print(" * Pad:    Filename     : '%s'\n",otp_pad_get_filename(encryptpad));
+			g_print(" * Pad:    Pos          : %u\n",otp_pad_get_position(encryptpad));
+			g_print(" * Pad:    Entropy      : %u\n",otp_pad_get_entropy(encryptpad));
+			g_print(" * Pad:    src          : '%s'\n",otp_pad_get_src(encryptpad));
+			g_print(" * Pad:    dest         : '%s'\n",otp_pad_get_dest(encryptpad));
+			g_print(" * Pad:    id           : '%s'\n",otp_pad_get_id(encryptpad));
+			g_print(" * Pad:    filesize:    : %u\n",otp_pad_get_filesize(encryptpad));
 		}
 	}
 	OtpError syndrome = otp_pad_erase_entropy(encryptpad);
@@ -278,6 +306,12 @@ OtpError usekeyup()
 	return syndrome;
 }
 
+OtpError genusekeyup() {
+	if ( genkey() > OTP_WARN ) return 1;
+	if (usekeyup() > OTP_WARN) return 1;
+	return OTP_OK;
+}
+
 
 OtpError testlibotp()
 {
@@ -301,6 +335,7 @@ int main(int argc, char *argv[])
 	gchar *commands = NULL;
 	gboolean doalltests = FALSE;
 	gboolean dousekeyup = FALSE;
+	gboolean dogenusekeyup = FALSE;
 	
 	GOptionEntry values[] = {
 			{ "source", 0, 0, G_OPTION_ARG_STRING, &source, "The name of the source file for keygeneration", "filename" },
@@ -332,7 +367,8 @@ int main(int argc, char *argv[])
 	
 	GOptionEntry tests[] = {
 			{ "alltests", 0, 0, G_OPTION_ARG_NONE, &doalltests, "Run all tests" },
-			{ "usekeyup", 0, 0, G_OPTION_ARG_NONE, &dousekeyup, "Use the key up" },
+			{ "usekey", 0, 0, G_OPTION_ARG_NONE, &dousekeyup, "Use the key up" },
+			{ "genusekey", 0, 0, G_OPTION_ARG_NONE, &dogenusekeyup, "Generate, Use the key up" },
 			{ NULL }
 	};
 	GOptionContext *ctx;
@@ -397,6 +433,10 @@ int main(int argc, char *argv[])
 	}
 	if (dousekeyup) 
 		if ( usekeyup() > OTP_WARN )
+			return 1;
+			
+	if (dogenusekeyup) 
+		if ( genusekeyup() > OTP_WARN )
 			return 1;
 	
 /* Clean up */
