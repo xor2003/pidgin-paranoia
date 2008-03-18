@@ -1215,3 +1215,39 @@ OtpError otp_signal_connect(struct otp_config* config, gchar *signal_name, gpoin
 					
 	return OTP_OK;
 }
+
+void otp_marshal_VOID__DOUBLE_PAD (GClosure     *closure,
+                                        GValue       *return_value,
+                                        guint         n_param_values,
+                                        const GValue *param_values,
+                                        gpointer      invocation_hint,
+                                        gpointer      marshal_data)
+/* Marshal function for double, struct otp transmission with signal */	
+{
+  typedef void (*GMarshalFunc_VOID__DOUBLE_PAD) (gpointer     data1,
+                                                      double       arg_1,
+                                                      struct otp*  arg_2,
+                                                      gpointer     data2);
+  register GMarshalFunc_VOID__DOUBLE_PAD callback;
+  register GCClosure *cc = (GCClosure*) closure;
+  register gpointer data1, data2;
+
+  g_return_if_fail (n_param_values == 3);
+
+  if (G_CCLOSURE_SWAP_DATA (closure))
+    {
+      data1 = closure->data;
+      data2 = g_value_peek_pointer (param_values + 0);
+    }
+  else
+    {
+      data1 = g_value_peek_pointer (param_values + 0);
+      data2 = closure->data;
+    }
+  callback = (GMarshalFunc_VOID__DOUBLE_PAD) (marshal_data ? marshal_data : cc->callback);
+
+  callback (data1,
+            g_value_get_double (param_values + 1),
+            g_value_get_pointer (param_values + 2),
+            data2);
+}
