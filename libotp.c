@@ -51,7 +51,7 @@
 
 #define RNDMSGLEN               /* Add a random-length string onto the message */
 
-#define PRINT_ERRORS
+//#define PRINT_ERRORS
 /* Print errors to the terminal if enabled (Recommanded)*/
 
 /*  ------------------- Defines (in development) ------------------------

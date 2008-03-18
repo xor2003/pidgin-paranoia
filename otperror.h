@@ -115,6 +115,13 @@ typedef enum {
  * The keygen is already in use and is blocked (TODO) */
 	OTP_ERR_GENKEY_KEYGEN_IN_USE	= 0x00300000,
 	
+/* ------------------------ otptester ------------------------------ */
+	
+/* function: otptester
+ * origin: otptester 
+ * For errors in the test infrastructure */
+	OTP_ERR_OTPTESTER	= 0x70000000,
+	
 /* ------------------------ keygen ------------------------------ */
 
 /* function: keygen
