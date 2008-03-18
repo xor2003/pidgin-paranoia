@@ -22,6 +22,7 @@
 
 /* GNOMElib */
 #include <glib.h>
+#include <glib-object.h>
 
 /* GNUlibc stuff */
 #include <string.h>
@@ -34,505 +35,375 @@
  * keyfile is placed onto the desktop. If not set, the
  * file is placed in the home directory.*/
 
-
-
-
-
 /* great stuff */
 #include "../libotp.h"
 
+#define LINE "-----------------------------------------------------------------------\n"
 #define PARANOIA_PATH "otptester-keys/"
 #define DESKTOP_PATH "otptester-desktop/"
 
-char* programname;
-int* argnumber;
-int* argpos;
-char** argvalue;
-char* path;
-struct otp* encryptpad;
-struct otp* decryptpad;
-int debuglevel=0;
-char** permmessage;
-int repeatnumber=1;
+gboolean verbose = FALSE;
+gboolean results = FALSE;
+gchar **pmessage;
+gchar **pwarning;
+gchar *startmessage = "Bruce Schneier can crack a one-time pad before it's used.";
+gchar *startwarning = "%!()!%paranoia noent";
+gchar **palice;
+gchar **pbob;
+gchar **palicefile = NULL;
+gchar **pbobfile = NULL;
+gint genkeysize = 1000;
+gchar *source = NULL;
 struct otp_config* config;
+gboolean block_genkey = TRUE;
+struct otp* encryptpad = NULL;
+struct otp* decryptpad = NULL;
 
-
-/* Usage */
-int usage() {
-    printf("%s: Usage: \"%s [OPTIONS] \"\n",programname,programname);
-    printf(
-					"--setmessage message\n"
-					"--repeat # TODO\n"
-					"--encrypt\n"
-					"--decrypt\n"
-					"--genkey alice bob sourcefile size\n"
-					"--openpad filename encrypt|decrypt\n"
-					"--closepad encrypt|decrypt\n"
-					"--create_config\n"
-					"--destroy_config\n"
-					"--erasekey\n"
-					"--test\n"
-					"--signalencrypt\n"
-					"--debug\n"
-					"--nodebug\n"
-					"\n"
-					"This tester is meant as an instrument to test differerent setups.\n"
-					"\n"
-					"Some Hints: \n"
-					" * The arguments are parsed in order\n"
-					" * Start with --create_config\n"
-					" * You can use --debug at any position\n"
-					" * A full encryption/decryption cycle:\n"
-					"%s --create_config --openpad \"bob@jabber.org alice@jabber.org 22222201.entropy\" "
-					"encrypt --openpad \"alice@jabber.org bob@jabber.org 22222201.entropy\" decrypt "
-					"--setmessage \"test\" --encrypt --decrypt --closepad encrypt --closepad decrypt "
-					"--destroy_config\n"
-					"\n"
-					" * To create keys: (write 'NULL' as source to use the keygen)\n"
-					"%s --create_config --genkey alice bob NULL 10000\n"
-					,programname, programname);
-	return TRUE;
+/* Signal */
+static void keygen_key_generation_done(GObject *my_object, gdouble percent) 
+{
+	if (results) g_print(" + %5.2f percent of the key done\n", percent);
+	block_genkey = FALSE;
 }
 
-int something() {
-	int takes = 0;
-	if(*argpos+takes-1 >= *argnumber) {
-		return FALSE;
-	}
-	struct otp_config* c = otp_pad_get_conf(encryptpad);
-	printf("%s\n",otp_conf_get_export_path(c));
-	
-	//printf("%.8X\n",otp_conf_set_path(config, "testtest"));
-	//printf("%.8X\n",otp_conf_set_export_path(config, "testtest"));
-	//printf("%s\n",otp_conf_get_path(config));
-	//printf("%s\n",otp_conf_get_export_path(config));
-	//printf("%.8X\n",otp_conf_set_random_msg_tail_max_len(config,88));
-	//printf("%i\n",otp_conf_get_random_msg_tail_max_len(config));
-	//printf("%.8X\n",otp_conf_set_msg_key_improbability_limit(config,9));
-	//printf("%e\n",otp_conf_get_msg_key_improbability_limit(config));
-	//printf("%i\n",strlen("sdfsdfsdf http://pidgin-...."));
-	return TRUE;	
-}
 
-int create_config() {
-	int takes = 0;
-	if(*argpos+takes-1 >= *argnumber) {
-		return FALSE;
-	}
+/* Prepare */
+OtpError create_config() 
+{
+	g_print("------------------------- Create Config -------------------------------------\n");
 	config = otp_conf_create("otptester", 
-		PARANOIA_PATH, DESKTOP_PATH);
-	if (config == NULL) {
-		printf("Error creating the otp_config!\n");
-		return FALSE;
-	}
-	*argpos = *argpos+takes;
-	return TRUE;	
+			PARANOIA_PATH, DESKTOP_PATH);
+	otp_signal_connect(config, 
+			"keygen_key_done_signal", &keygen_key_generation_done);
+	return OTP_OK;
 }
 
-int destroy_config() {
-	int takes = 0;
-	if(*argpos+takes-1 >= *argnumber) {
-		return FALSE;
-	}
-	OtpError syndrome = otp_conf_destroy(config);
-	if (syndrome > OTP_WARN) {
-		printf("Error freeing the otp_config :\t%.8X\n",syndrome);
-		return FALSE;
-	}
-	*argpos = *argpos+takes;
-	return TRUE;	
+/* Clean Up */
+OtpError destroy_config() 
+{
+	g_print("------------------------- Destroy Config -------------------------------------\n");
+	OtpError syndrome;
+	if (encryptpad != NULL) 
+		otp_pad_destroy(encryptpad);
+	if (decryptpad != NULL)
+		otp_pad_destroy(decryptpad);
+	syndrome = otp_conf_destroy(config);
+	if (syndrome > OTP_WARN)
+		g_print(" ! freeing config       : %.8X\n",syndrome);
+	return syndrome;
 }
 
-
-
-
-int genkey() {
-	int takes = 4;
-	int i;
-	if(*argpos+takes-1 >= *argnumber) {
-		return FALSE;
-	}
-	
-	unsigned int size = (unsigned int) g_ascii_strtoll (argvalue[*argpos+3] ,NULL,10); 
-	if (debuglevel) {
-		printf("* Username1:\t%s\n",argvalue[*argpos]);
-		printf("* Username2:\t%s\n",argvalue[*argpos+1]);
-		printf("* Sourcefile:\t%s\n",argvalue[*argpos+2]);
-		printf("* Keypath:\t%s\n",otp_conf_get_path(config));
-		printf("* Exportpath:\t%s\n",otp_conf_get_export_path(config));
-		printf("* Keysize:\t%u\n",size);
+/* Simple Operations */
+OtpError genkey() 
+{
+	g_print("------------------------- Genkey -------------------------------------\n");
+	if ( verbose ) {
+		g_print(" * Alice                : '%s'\n", *palice);
+		g_print(" * Bob                  : '%s'\n", *pbob);
+		g_print(" * Sourcefile           : '%s'\n", (source == NULL? "<using keygen>" : source));
+		g_print(" * Keysize to generate  : %i\n", genkeysize);
+		g_print(" * Keypath              : '%s'\n",otp_conf_get_path(config));
+		g_print(" * Exportpath:          : '%s'\n",otp_conf_get_export_path(config));
 	}
 	OtpError syndrome;
-	if (strcmp(argvalue[*argpos+2],"NULL") == 0) {
-		syndrome = otp_generate_key_pair(config,
-				argvalue[*argpos], argvalue[*argpos+1],
-				NULL, size);
-		printf("Waiting for keygen...\n" );
-		for (i = 1; i <= size/50+2; i++) {
-			usleep(1000*1000);
-			printf("%i/%i\n",i,size/50+2);
-		}
-	} else {
-		syndrome = otp_generate_key_pair(config,
-				argvalue[*argpos], argvalue[*argpos+1],
-				argvalue[*argpos+2], size);
-		printf("Waiting for keygen...\n" );
-		for (i = 1; i <= size/500000+1; i++) {
-			usleep(1000*1000);
-			printf("%i/%i\n",i,size/500000+1);
-		}
-	}
+	syndrome = otp_generate_key_pair(config,
+			*palice, *pbob,
+			source, genkeysize);
 	if (syndrome > OTP_WARN) {
-		printf("Error creating keys %.8X\n",syndrome);
-		return FALSE;
-	}
-	if (debuglevel) {
-		printf("* Syndrome:\t%.8X\n",syndrome);
-	}
-	*argpos = *argpos+takes;
-	return TRUE;	
+		g_print(" ! genkey              : %.8X\n",syndrome);
+	} else
+		if ( verbose && syndrome >  OTP_OK) 
+				g_print(" * Syndrome             : %.8X\n",syndrome);
+	while (block_genkey) usleep(10000);
+	block_genkey = TRUE;
+	return syndrome;
 }
 
-int test() {
-	int takes = 0;
-	if(*argpos+takes-1 >= *argnumber) {
-		return FALSE;
+OtpError encrypt() 
+{
+	g_print("------------------------- Encrypt -------------------------------------\n");
+	if (encryptpad == NULL) {
+		encryptpad = otp_pad_create_from_file(config, *palicefile);
+		if (encryptpad == NULL) {
+			g_print(" ! create pad from '%s'\n",*palicefile);
+			return OTP_ERR_OTPTESTER;
+		}
+		if (verbose) {
+			printf(" * Pad:    Filename     : '%s'\n",otp_pad_get_filename(encryptpad));
+			printf(" * Pad:    Pos          : %u\n",otp_pad_get_position(encryptpad));
+			printf(" * Pad:    Entropy      : %u\n",otp_pad_get_entropy(encryptpad));
+			printf(" * Pad:    src          : '%s'\n",otp_pad_get_src(encryptpad));
+			printf(" * Pad:    dest         : '%s'\n",otp_pad_get_dest(encryptpad));
+			printf(" * Pad:    id           : '%s'\n",otp_pad_get_id(encryptpad));
+			printf(" * Pad:    filesize:    : %u\n",otp_pad_get_filesize(encryptpad));
+		}
 	}
-	printf("Test point reached!\n");
-	*argpos = *argpos+takes;
-	return TRUE;	
+	OtpError syndrome = otp_encrypt(encryptpad, pmessage);
+	if (syndrome > OTP_WARN) {
+		g_print(" ! encrypt              : %.8X\n",syndrome);
+		g_print(" * Message              : '%s'\n", *pmessage);
+	} else {
+		if ( verbose && syndrome >  OTP_OK) 
+				g_print(" * Syndrome             : %.8X\n",syndrome);
+		if (results) g_print(" + Message              : '%s'\n", *pmessage);
+	}
+	return syndrome;
 }
 
-int debug() {
-	int takes = 0;
-	if(*argpos+takes-1 >= *argnumber) {
-		return FALSE;
+
+OtpError warning_encrypt()
+{
+	g_print("------------------------- Encrypt warning -------------------------------------\n");
+	if (encryptpad == NULL) {
+		encryptpad = otp_pad_create_from_file(config, *palicefile);
+		if (encryptpad == NULL) {
+			g_print(" ! create pad from '%s'\n",*palicefile);
+			return OTP_ERR_OTPTESTER;
+		}
+		if (verbose) {
+			printf(" * Pad:    Filename     : '%s'\n",otp_pad_get_filename(encryptpad));
+			printf(" * Pad:    Pos          : %u\n",otp_pad_get_position(encryptpad));
+			printf(" * Pad:    Entropy      : %u\n",otp_pad_get_entropy(encryptpad));
+			printf(" * Pad:    src          : '%s'\n",otp_pad_get_src(encryptpad));
+			printf(" * Pad:    dest         : '%s'\n",otp_pad_get_dest(encryptpad));
+			printf(" * Pad:    id           : '%s'\n",otp_pad_get_id(encryptpad));
+			printf(" * Pad:    filesize:    : %u\n",otp_pad_get_filesize(encryptpad));
+		}
 	}
-	debuglevel=1;
-	*argpos = *argpos+takes;
-	return TRUE;	
+	OtpError syndrome = otp_encrypt_warning(encryptpad, pwarning,0);
+	if (syndrome > OTP_WARN) {
+		g_print(" ! encrypt              : %.8X\n",syndrome);
+		g_print(" * Warning              : '%s'\n", *pwarning);
+	} else {
+		if ( verbose && syndrome >  OTP_OK) 
+				g_print(" * Syndrome             : %.8X\n",syndrome);
+		if (results) g_print(" + Warning              : '%s'\n", *pwarning);
+	}
+	return syndrome;
 }
 
-int erasekey() {
-	int takes = 0;
-	if(*argpos+takes-1 >= *argnumber) {
-		return FALSE;
+OtpError decrypt() 
+{
+	g_print("------------------------- Decrypt -------------------------------------\n");
+	if (decryptpad == NULL) {
+		decryptpad = otp_pad_create_from_file(config, *pbobfile);
+		if (decryptpad == NULL) {
+			g_print(" ! create pad from '%s'\n",*pbobfile);
+			return OTP_ERR_INPUT;
+		}
+		if (verbose) {
+			printf(" * Pad:    Filename     : '%s'\n",otp_pad_get_filename(decryptpad));
+			printf(" * Pad:    Pos          : %u\n",otp_pad_get_position(decryptpad));
+			printf(" * Pad:    Entropy      : %u\n",otp_pad_get_entropy(decryptpad));
+			printf(" * Pad:    src          : '%s'\n",otp_pad_get_src(decryptpad));
+			printf(" * Pad:    dest         : '%s'\n",otp_pad_get_dest(decryptpad));
+			printf(" * Pad:    id           : '%s'\n",otp_pad_get_id(decryptpad));
+			printf(" * Pad:    filesize:    : %u\n",otp_pad_get_filesize(decryptpad));
+		}
+	}
+	OtpError syndrome = otp_decrypt(decryptpad, pmessage);
+	if (syndrome > OTP_WARN) {
+		g_print(" ! decrypt              : %.8X\n",syndrome);
+		g_print(" * Message              : '%s'\n", *pmessage);
+	} else {
+		if ( verbose && syndrome >  OTP_OK) 
+				g_print(" * Syndrome             : %.8X\n",syndrome);
+		if (results) g_print(" + Message              : '%s'\n", *pmessage);
+	}
+	return syndrome;
+}
+
+OtpError erasekey()
+{
+	g_print("------------------------- Erasekey -------------------------------------\n");
+	if (encryptpad == NULL) {
+		encryptpad = otp_pad_create_from_file(config, *palicefile);
+		if (encryptpad == NULL) {
+			g_print(" ! create pad from '%s'\n",*palicefile);
+			return OTP_ERR_OTPTESTER;
+		}
+		if (verbose) {
+			printf(" * Pad:    Filename     : '%s'\n",otp_pad_get_filename(encryptpad));
+			printf(" * Pad:    Pos          : %u\n",otp_pad_get_position(encryptpad));
+			printf(" * Pad:    Entropy      : %u\n",otp_pad_get_entropy(encryptpad));
+			printf(" * Pad:    src          : '%s'\n",otp_pad_get_src(encryptpad));
+			printf(" * Pad:    dest         : '%s'\n",otp_pad_get_dest(encryptpad));
+			printf(" * Pad:    id           : '%s'\n",otp_pad_get_id(encryptpad));
+			printf(" * Pad:    filesize:    : %u\n",otp_pad_get_filesize(encryptpad));
+		}
 	}
 	OtpError syndrome = otp_pad_erase_entropy(encryptpad);
 	if (syndrome > OTP_WARN) {
-		printf("Error erasing keys %.8X\n",syndrome);
-		return FALSE;
+		g_print(" ! erasekey            : %.8X\n",syndrome);
+	} else {
+		if ( verbose && syndrome >  OTP_OK) 
+				g_print(" * Syndrome             : %.8X\n",syndrome);
 	}
-	if (debuglevel) {
-		printf("* Syndrome:\t%.8X\n",syndrome);
-	}
-	*argpos = *argpos+takes;
-	return TRUE;
+	return syndrome;
 }
 
-int nodebug() {
-	int takes = 0;
-	if(*argpos+takes-1 >= *argnumber) {
-		return FALSE;
+/* Tests */
+OtpError usekeyup() 
+{
+	g_print("------------------------- Test: Use key up -------------------------------------\n");
+	OtpError syndrome = OTP_OK;
+	while ( TRUE ) {
+		syndrome = encrypt();
+		if (syndrome > OTP_WARN) break;
+		syndrome = decrypt();
+		if ((syndrome > OTP_WARN) || (strcmp(startmessage, *pmessage) != 0)) break;
 	}
-	debuglevel = 0;
-	*argpos = *argpos+takes;
-	return TRUE;
-}
-
-
-int openpad() {
-	int takes = 2;
-	if(*argpos+takes-1 >= *argnumber) {
-		return FALSE;
-	}
-	
-	if (!strcmp(argvalue[*argpos+1],"encrypt")) {
-		encryptpad = otp_pad_create_from_file(config, argvalue[*argpos]);
-		if (encryptpad == NULL) {
-			//printf("Keyfile '%s' can not be opened!\n",argvalue[*argpos]);
-			return FALSE;
-		}	
-		if (debuglevel) {
-			printf("* Keyfile '%s' opened!\n",argvalue[*argpos]);
-			printf("* Pad:\tfilename:\t%s\n",otp_pad_get_filename(encryptpad));
-			printf("* Pad:\tPos:\t\t%u\n",otp_pad_get_position(encryptpad));
-			printf("* Pad:\tentropy:\t%u\n",otp_pad_get_entropy(encryptpad));
-			printf("* Pad:\tsrc:\t\t%s\n",otp_pad_get_src(encryptpad));
-			printf("* Pad:\tdest:\t\t%s\n",otp_pad_get_dest(encryptpad));
-			printf("* Pad:\tid:\t\t%s\n",otp_pad_get_id(encryptpad));
-			printf("* Pad:\tfilesize:\t%u\n",otp_pad_get_filesize(encryptpad));
+	if (syndrome == OTP_ERR_KEY_EMPTY) {
+		g_print(" @ Key is empty, sending signal ...\n");
+		syndrome = warning_encrypt();
+		if (syndrome < OTP_WARN) {
+			g_free(*pmessage);
+			pmessage = pwarning;
+			syndrome = decrypt();
+			if ((syndrome < OTP_WARN) && (strcmp(startwarning, *pmessage) == 0) )  {
+				g_print(" @ Signal sent, destroying key ...\n");
+				syndrome = erasekey();
+				if (syndrome < OTP_WARN) 
+					g_print(" @ Key is used up!\n");
+				} else {
+					g_print(" ! sending signal!\n");
+					syndrome = OTP_ERR_OTPTESTER;
+				}
+			}
 		}
-	}
-	if (!strcmp(argvalue[*argpos+1],"decrypt")) {
-		decryptpad = otp_pad_create_from_file(config, argvalue[*argpos]);
-		if (decryptpad == NULL) {
-			printf("Keyfile '%s' can not be opened!\n",argvalue[*argpos]);
-		return FALSE;
-		}	
-		if (debuglevel) {
-			printf("* Keyfile '%s' opened!\n",argvalue[*argpos]);
-			printf("* Pad:\tfilename:\t%s\n",otp_pad_get_filename(decryptpad));
-			printf("* Pad:\tPos:\t\t%u\n",otp_pad_get_position(decryptpad));
-			printf("* Pad:\tentropy:\t%u\n",otp_pad_get_entropy(decryptpad));
-			printf("* Pad:\tsrc:\t\t%s\n",otp_pad_get_src(decryptpad));
-			printf("* Pad:\tdest:\t\t%s\n",otp_pad_get_dest(decryptpad));
-			printf("* Pad:\tid:\t\t%s\n",otp_pad_get_id(decryptpad));
-			printf("* Pad:\tfilesize:\t%u\n",otp_pad_get_filesize(decryptpad));
-		}	
-	}
-	
-	*argpos = *argpos+takes;
-	return TRUE;	
-}
-
-int closepad() {
-	int takes = 1;
-	if(*argpos+takes-1 >= *argnumber) {
-		return FALSE;
-	}
-	if (!strcmp(argvalue[*argpos],"decrypt")) {
-		if (decryptpad == NULL) {
-			printf("Can not destroy a pad that does not exist!\n");
-			return FALSE;
-		}
-		otp_pad_destroy(decryptpad);
-	}
-	
-	if (!strcmp(argvalue[*argpos],"encrypt")) {
-		if (encryptpad == NULL) {
-			printf("Can not destroy a pad that does not exist!\n");
-			return FALSE;
-		}
-		otp_pad_destroy(encryptpad);
-	}
-	
-	*argpos = *argpos+takes;
-	return TRUE;	
-}
-	
-int setmessage() {
-	int takes = 1;
-	if(*argpos+takes-1 >= *argnumber) {
-		return FALSE;
-	}
-	
-	if (permmessage != NULL) {
-		g_free(*permmessage);
-	}
-	permmessage = g_malloc(sizeof(char*));
-	*permmessage = g_strdup(argvalue[*argpos]);
-	if (debuglevel) {
-		printf("* Message:\t\t%s\n",*permmessage);
-	}
-
-	*argpos = *argpos+takes;
-	return TRUE;	
-}
-
-int encrypt() {
-	int takes = 0;
-	if(*argpos+takes-1 >= *argnumber) {
-		return FALSE;
-	}
-	
-	if (permmessage == NULL) {
-		printf("No message set!\n");
-		return FALSE;
-	}
-	
-	OtpError syndrome = otp_encrypt(encryptpad, permmessage);
-	if (syndrome > OTP_WARN) {
-		printf("Encrypt failed! %.8X\n",syndrome);
-		printf("Message:\t\t%s\n",*permmessage);
-		return FALSE;
-	}
-	printf("Encrypted message:\t%s\n",*permmessage);
-	if (debuglevel) {
-		printf("* Syndrome:\t\t%.8X\n",syndrome);
-		printf("* Pad:\tPos:\t\t%u\n",otp_pad_get_position(encryptpad));
-		printf("* Pad:\tentropy:\t%u\n",otp_pad_get_entropy(encryptpad));
-	}
-	*argpos = *argpos+takes;
-	return TRUE;	
+	g_free(*pmessage);
+	*pmessage = g_strdup(startmessage);
+	g_free(*pwarning);
+	*pwarning = g_strdup(startwarning);
+	return syndrome;
 }
 
 
-		
-int signalencrypt() {
-	int takes = 0;
-	if(*argpos+takes-1 >= *argnumber) {
-		return FALSE;
-	}
-	
-	if (permmessage == NULL) {
-		printf("No message set!\n");
-		return FALSE;
-	}
-	if (debuglevel) {
-		printf("* Message:\t%s\n",*permmessage);
-	}
-	OtpError syndrome = otp_encrypt_warning(encryptpad, permmessage,0);
-	if (syndrome > OTP_WARN) {
-		printf("Signalencrypt failed! %.8X\n",syndrome);
-		return FALSE;	
-	}
-	printf("Enc. signal message:\t%s\n",*permmessage);	
-	
-	if (debuglevel) {
-		printf("* Syndrome:\t\t%.8X\n",syndrome);
-		printf("* Pad:\tPos:\t\t%u\n",otp_pad_get_position(encryptpad));
-		printf("* Pad:\tentropy:\t%u\n",otp_pad_get_entropy(encryptpad));
-	}
-
-	if (permmessage != NULL) {
-		//g_free(**permmessage);
-	}
+OtpError testlibotp()
+{
 	
 	
-	*argpos = *argpos+takes;
-	return TRUE;	
+	return OTP_OK;
 }
 
-int decrypt() {
-	int takes = 0;
-	if(*argpos+takes-1 >= *argnumber) {
-		return FALSE;
-	}
-//	char *stupid = g_strdup(*permmessage); // Timeing problem?
-	if (permmessage == NULL) {
-		printf("No message set!\n");
-		return FALSE;	
-	}
-	if (debuglevel) {
-		printf("* Encrypted message:\t%s\n",*permmessage);
-	}
-	OtpError syndrome = otp_decrypt(decryptpad,permmessage); 
-	if (syndrome > OTP_WARN) {
-		printf("Decrypt failed! %.8X\n",syndrome);
-		printf("Message:\t\t%s\n",*permmessage);
-		return FALSE;	
-	}
-	printf("Decrypted message:\t%s\n",*permmessage);
-	
-	if (debuglevel) {
-		printf("* Syndrome:\t\t%.8X\n",syndrome);
-	}
-	*argpos = *argpos+takes;
-	return TRUE;	
+/* Done */
+void test_done() 
+{
+	g_print("------------------------- Done ---------------------------------------\n");
 }
 
+int main(int argc, char *argv[])
+{
+	gchar *alice = "alice@jabber.org";
+	gchar *bob = "bob@jabber.org";
+	gchar *alicefile = NULL;
+	gchar *bobfile = NULL;
+	gchar *commands = NULL;
+	gboolean doalltests = FALSE;
+	gboolean dousekeyup = FALSE;
+	
+	GOptionEntry values[] = {
+			{ "source", 0, 0, G_OPTION_ARG_STRING, &source, "The name of the source file for keygeneration", "filename" },
+			{ "alice", 0, 0, G_OPTION_ARG_STRING, &alice, "The name of alice", "string"},
+			{ "bob", 0, 0, G_OPTION_ARG_STRING, &bob, "The name of bob", "string"},
+			{ "alicefile", 0, 0, G_OPTION_ARG_STRING, &alicefile, "The filename of alice's key", "filename"},
+			{ "bobfile", 0, 0, G_OPTION_ARG_STRING, &bobfile, "The filename of bob's key", "filename"},
+			{ "keysize", 0, 0, G_OPTION_ARG_INT, &genkeysize, "Generate a key with size N bytes", "N" },
+			{ "message", 0, 0, G_OPTION_ARG_STRING, &startmessage, "The message to encrypt/decrypt", "message"},
+			{ NULL }
+	};
+	
+	GOptionEntry flags[] = {
+			{ "verbose", 'v', 0, G_OPTION_ARG_NONE, &verbose, "Be verbose", NULL },
+			{ "results", 'r', 0, G_OPTION_ARG_NONE, &results, "Show results", NULL },
+			{ NULL }
+	};
+	
+	GOptionEntry simple[] = {
+			{ "commands", 0, 0, G_OPTION_ARG_STRING, &commands, "A list of simple operations\n\
+\tg : generate key\n\
+\te : encrypt\n\
+\tw : encrypt warning\n\
+\td : decrypt\n\
+\tk : erase key\
+","string" },
+			{ NULL }
+	};
+	
+	GOptionEntry tests[] = {
+			{ "alltests", 0, 0, G_OPTION_ARG_NONE, &doalltests, "Run all tests" },
+			{ "usekeyup", 0, 0, G_OPTION_ARG_NONE, &dousekeyup, "Use the key up" },
+			{ NULL }
+	};
+	GOptionContext *ctx;
 
-int main ( int argc , char *argv[] ) {
-	printf("--------------------------------------------------------------------------------\n");
-	programname = argv[0];
-	argnumber = &argc;
-	*argnumber = *argnumber-1;
-	argvalue = &argv[1];
-	int i = 0;
-	argpos = &i;
+	ctx = g_option_context_new("- OtpTester");
+	g_option_context_add_main_entries(ctx, values, "example1");
+	g_option_context_add_main_entries(ctx, simple, "example1");
+	g_option_context_add_main_entries(ctx, tests, "example1");
+	g_option_context_add_main_entries(ctx, flags, "example1");
+	g_option_context_parse(ctx, &argc, &argv, NULL);
+	g_option_context_free(ctx);
 	
-	const gchar* home = g_get_home_dir();
-	path = (char *) g_malloc((strlen(home) + strlen(PARANOIA_PATH) + 1) * sizeof(char));
-	strcpy(path, (char*) home);
-	strcat(path, PARANOIA_PATH);
-	
-	
-	//printf("%d\n",*argnumber);
-		
-	if (*argnumber <= 0)
-	{
-		usage();		/* Show usage */
-    	return(1);
-	}
-	for(i=0;i <= *argnumber;i++){
-		//printf("argument:%s\n",argv[i+1]);
-		
-		if (!strcmp(argv[i],"--setmessage")) {
-			if(setmessage() == FALSE){
-				return 1;
-			}
-		}
-		if (!strcmp(argv[i],"--encrypt")) {
-			if(encrypt() == FALSE){
-				return 1;
-			}
-		}
-		
-		if (!strcmp(argv[i],"--signalencrypt")) {
-			if(signalencrypt() == FALSE){
-				return 1;
-			}
-		}
-		
-		if (!strcmp(argv[i],"--decrypt")) {
-			if(decrypt() == FALSE){
-				return 1;
-			}
-		}	
+/* Values */
 
-		if (!strcmp(argv[i],"--genkey")) {
-			if(genkey() == FALSE){
-				return 1;
-			}
-		}	
-		
-		if (!strcmp(argv[i],"--openpad")) {
-			if(openpad() == FALSE){
-				return 1;
-			}
-		}
-		
-		if (!strcmp(argv[i],"--closepad")) {
-			if(closepad() == FALSE){
-				return 1;
-			}
-		}
-		
-		if (!strcmp(argv[i],"--erasekey")) {
-			if(erasekey() == FALSE){
-				return 1;
-			}
-		}
-		
-		if (!strcmp(argv[i],"--test")) {
-			if(test() == FALSE){
-				return 1;
-			}
-		}
-		
-		if (!strcmp(argv[i],"--debug")) {
-			if(debug() == FALSE){
-				return 1;
-			}
-		}
-		
-		if (!strcmp(argv[i],"--nodebug")) {
-			if(nodebug() == FALSE){
-				return 1;
-			}
-		}
-		
-		if (!strcmp(argv[i],"--something")) {
-			if(something() == FALSE){
-				return 1;
-			}
-		}
-		
-		if (!strcmp(argv[i],"--create_config")) {
-			if(create_config() == FALSE){
-				return 1;
-			}
-		}
-		
-		if (!strcmp(argv[i],"--destroy_config")) {
-			if(destroy_config() == FALSE){
-				return 1;
-			}
-		}
-	}
-	printf("--------------------------------------------------------------------------------\n");
-	printf("Reporting: All commands executed successfully!\n");
+	pmessage = g_malloc(sizeof(gchar*));
+	*pmessage = g_strdup(startmessage);
+	pwarning = g_malloc(sizeof(gchar*));
+	*pwarning = g_strdup(startwarning);
 	
-	return(0);
+	palice = &alice;
+	pbob = &bob;
+	palicefile = &alicefile;
+	pbobfile = &bobfile;
+
+/* Verbose */
+
+	if (verbose) {
+		g_print(" * Message              : '%s'\n", *pmessage);
+	}
+
+/* Prepare */
+	if (create_config() > OTP_WARN )
+		return 1;
+	
+	
+/* Simple operations */
+	int c=0;
+	while(commands != NULL && commands[c] != 0) {
+		gchar command = commands[c];
+		//g_print("\t'commands[%d]' == '%c'\n", c, command);
+		
+		if ( command == 'g' ) 
+			if ( genkey() > OTP_WARN ) return 1;
+			
+		if ( command == 'w' )
+			if ( warning_encrypt() > OTP_WARN ) return 1;
+			
+		if ( command == 'e' )
+			if ( encrypt() > OTP_WARN ) return 1;
+			
+		if ( command == 'd' )
+			if ( decrypt() > OTP_WARN ) return 1;
+			
+		if ( command == 'k' )
+			if ( erasekey() > OTP_WARN ) return 1;
+		c++;
+	}
+		
+/* Tests */
+	if (doalltests) {
+		dousekeyup = TRUE;
+	}
+	if (dousekeyup) 
+		if ( usekeyup() > OTP_WARN )
+			return 1;
+	
+/* Clean up */
+	if ( destroy_config() > OTP_WARN )
+		return 1;
+	
+/* Done */
+	test_done();
+	return 0;
 }
