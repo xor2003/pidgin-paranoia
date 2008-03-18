@@ -195,12 +195,6 @@ static int par_count_keys()
 	return sum;
 }
 
-static void par_keygen_key_generation_done(GObject *my_object, gdouble percent, struct otp* a_pad) {
-	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-			"%5.2f Percent of the key done\n", percent);
-	return;
-}
-
 static int par_count_matching_keys(const char* src, const char* dest)
 /* counts all matching keys in the list */
 {
@@ -404,6 +398,20 @@ static struct key* par_search_key(const char* src, const char* dest)
 	g_free(src_copy);
 	g_free(dest_copy);
 	return NULL;
+}
+
+static void par_keygen_key_generation_done(GObject *my_object, gdouble percent, struct otp* alice_pad) {
+	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+			"%5.2f Percent of the key done.\n", percent);
+			
+	if (alice_pad != NULL) {
+		par_add_key(alice_pad);
+		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+				"Key %s->%s (%s) added to the key list.\n", 
+				otp_pad_get_src(alice_pad), otp_pad_get_dest(alice_pad),
+				otp_pad_get_id(alice_pad));
+	}
+	return;
 }
 
 /* ----------------- Session Management ------------------ */
@@ -808,8 +816,7 @@ static void par_cli_generate_keys(PurpleConversation* conv, int size, gchar** pa
 				"Key files successfully generated.\n"
 				"Your own key was stored in the directory '~/.paranoia'.\n"
 				"Your buddy's key is stored in your home directory.\n"
-				"Please send this key in a secure way to your partner.\n"
-				"Please reload the plugin to add your key.\n",
+				"Please send this key in a secure way to your partner.\n",
 				PURPLE_MESSAGE_NO_LOG, time(NULL));
 		if (syndrome == OTP_OK) {
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 

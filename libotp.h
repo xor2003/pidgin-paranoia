@@ -172,5 +172,5 @@ OtpError otp_conf_set_msg_key_improbability_limit(struct otp_config* myconfig,
 
 /*	connect to signal with name signal_name. Following a list with available signal names and the 
 *	corresponding function structures:
-*	"keygen_key_done_signal"  -> my_function(GObject* object, double percent_done) */
+*	"keygen_key_done_signal"  -> my_function(GObject* object, double percent_done, struct otp* alice_pad) */
 OtpError otp_signal_connect(struct otp_config* config, gchar *signal_name, gpointer function);
