@@ -469,8 +469,10 @@ static gboolean par_session_check_req(const char* alice, const char* bob,
 			char* id = g_strndup(tmp_ptr, OTP_ID_LENGTH);
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Searching for requested ID: %s\n", id);
 			a_key = par_search_key_by_id(id, alice, bob);
-			if (!a_key->opt->no_entropy) {
-					temp_key = a_key;
+			if (a_key != NULL) {
+				if (!a_key->opt->no_entropy) {
+						temp_key = a_key;
+				}
 			}
 			g_free(id);
 			tmp_ptr += OTP_ID_LENGTH + 1;
