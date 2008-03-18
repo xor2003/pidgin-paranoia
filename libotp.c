@@ -143,6 +143,15 @@ struct otp_config {
  	GObject* keygen_signal_trigger;		/* Trigger to emit signal on */
 };
 
+/*  ----------------- Marshal function definition ------------ */
+void otp_marshal_VOID__DOUBLE_PAD (GClosure     *closure,
+                                        GValue       *return_value,
+                                        guint         n_param_values,
+                                        const GValue *param_values,
+                                        gpointer      invocation_hint,
+                                        gpointer      marshal_data);
+                                        
+                                        
 /*  ----------------- Private Functions of the Library------------ */
 
 static void otp_xor(char** message, char** key, gsize len)
@@ -880,6 +889,8 @@ OtpError otp_conf_create_signal(struct otp_config *config)
 {
 	guint sid;
 	GObject *trigger;
+	GClosure *default_closure;
+	GType param_types[2];
 
 /* initialize g_typ */	
 	g_type_init();
@@ -887,10 +898,22 @@ OtpError otp_conf_create_signal(struct otp_config *config)
 /* create trigger and add it to config */	
 	trigger = g_object_new(G_TYPE_OBJECT, NULL);
 	otp_conf_set_trigger(config, trigger);
+
+/* create closure and type array */
+	param_types[0] = G_TYPE_DOUBLE;
+	param_types[1] = G_TYPE_POINTER;
+	default_closure = g_cclosure_new(NULL, NULL, NULL);
 	
 /* create signal */
-	sid = g_signal_new("keygen_key_done_signal", G_TYPE_OBJECT, G_SIGNAL_RUN_LAST | G_SIGNAL_ACTION, 
-						0, NULL, NULL, g_cclosure_marshal_VOID__DOUBLE, G_TYPE_NONE, 1, G_TYPE_DOUBLE);
+	sid = g_signal_newv("keygen_key_done_signal", 
+						G_TYPE_OBJECT, G_SIGNAL_RUN_LAST | G_SIGNAL_ACTION, 
+						default_closure, 
+						NULL, 
+						NULL, 
+						otp_marshal_VOID__DOUBLE_PAD, 
+						G_TYPE_NONE, 
+						2, 
+						param_types);
 						
 	return OTP_OK;						
 }

@@ -327,7 +327,7 @@ gpointer key_from_device(gpointer data)
 	
 	otp_conf_decrement_number_of_keys_in_production(key_data.config);
 	
-	g_signal_emit_by_name(G_OBJECT(otp_conf_get_trigger(key_data.config)), "keygen_key_done_signal", 100.0);
+	g_signal_emit_by_name(G_OBJECT(otp_conf_get_trigger(key_data.config)), "keygen_key_done_signal", 100.0, pad);
 	
 	return 0;
 }
@@ -434,7 +434,7 @@ gpointer key_from_file(gpointer data)
 	
 	otp_conf_decrement_number_of_keys_in_production(key_data.config);
 	
-	g_signal_emit_by_name(G_OBJECT(otp_conf_get_trigger(key_data.config)), "keygen_key_done_signal", 100.0);
+	g_signal_emit_by_name(G_OBJECT(otp_conf_get_trigger(key_data.config)), "keygen_key_done_signal", 100.0, pad);
 	
 	return 0;
 }
@@ -546,7 +546,7 @@ gpointer start_generation(gpointer data)
 	
 	otp_conf_decrement_number_of_keys_in_production(key_data.config);
 
-	g_signal_emit_by_name(G_OBJECT(otp_conf_get_trigger(key_data.config)), "keygen_key_done_signal", 100.0);
+	g_signal_emit_by_name(G_OBJECT(otp_conf_get_trigger(key_data.config)), "keygen_key_done_signal", 100.0, pad);
 	
 	return 0;
 } // end start_generation();
