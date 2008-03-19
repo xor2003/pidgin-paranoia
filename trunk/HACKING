@@ -44,3 +44,16 @@ http://svnbook.red-bean.com/en/1.1/index.html
 RANDOMNUMBER GENERATOR TESTING
 --------------------------------------------------------------------------------
 http://www.stat.fsu.edu/pub/diehard/
+
+SIGNAL IMPLEMENTATION WITH GLIB
+--------------------------------------------------------------------------------
+GNOMELib (glib) API:
+	http://library.gnome.org/devel/gobject/unstable/gobject-Signals.html
+	http://library.gnome.org/devel/gobject/unstable/gobject-Closures.html
+	http://library.gnome.org/devel/gobject/unstable/gobject-Type-Information.html
+Signal creation HOWTO:
+	http://le-hacker.org/papers/gobject/ch05s03.html
+Sample Code for Marshall Functions:
+	http://www.codase.com/
+	seatch querry: "nautilus-marshal"
+	files: nautilus-marshal-guts.c and nautilus-marshal.h
