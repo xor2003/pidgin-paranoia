@@ -1014,12 +1014,13 @@ static void par_buddy_signed_off(PurpleBuddy *buddy)
 	while (tmp_ptr != NULL) {
 		if ((strcmp(otp_pad_get_src(tmp_ptr->pad), src_copy) == 0) 
 					&& (strcmp(otp_pad_get_dest(tmp_ptr->pad), dest_copy) == 0)) {
-				// TODO: Maybe just reset active keys?
-				if (tmp_ptr->conv != NULL) {
+				/* notify enabled keys */
+				if (tmp_ptr->conv != NULL && tmp_ptr->opt->otp_enabled) {
 					purple_conversation_write(tmp_ptr->conv, NULL, 
 						"Encryption disabled.", 
 						PURPLE_MESSAGE_NO_LOG, time(NULL));
 				}
+				// TODO: Maybe just reset active keys?
 				par_reset_key(tmp_ptr);
 				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 						"Key %s options resetted.\n", otp_pad_get_id(tmp_ptr->pad));
