@@ -185,7 +185,7 @@ struct otp *keygen_get_pad(char *filename) {
 	struct otp *pad;
 	char *alice_relative;
 	char **splited;
-	int i = 0;
+	int i;
 	
 	if(filename == NULL) {
 		g_printerr("Input NULL\n");
@@ -195,7 +195,9 @@ struct otp *keygen_get_pad(char *filename) {
 	splited = g_strsplit(filename, PATH_DELI, -1);
 	
 	/* get the relative filename*/
+	i = 0;
 	while(splited[i] != NULL) i++;
+
 	alice_relative = splited[i-1];
 	
 	/* generate pad from file */	
