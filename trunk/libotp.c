@@ -571,10 +571,10 @@ OtpError otp_generate_key_pair(struct otp_config *config,
 	id = keygen_id_get();
 	
 	alice_file = (char *)g_strdup_printf("%s%s%s%s%s%s%.8X", 
-			otp_conf_get_path(config), 
-			alice, FILE_DELI, FILE_DELI, bob, FILE_DELI, id);
+			otp_conf_get_path(config), PATH_DELI, 
+			alice, FILE_DELI, bob, FILE_DELI, id);
 	bob_file = (char *)g_strdup_printf("%s%s%s%s%s%s%.8X", 
-			otp_conf_get_export_path(config), FILE_DELI, 
+			otp_conf_get_export_path(config), PATH_DELI, 
 			bob, FILE_DELI, alice, FILE_DELI, id);
 	
 	if(stat(alice_file, &rfstat) == 0) {
