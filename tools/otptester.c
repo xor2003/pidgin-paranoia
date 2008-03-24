@@ -41,8 +41,8 @@
 #include "../libotp-internal.h"
 
 #define LINE "-----------------------------------------------------------------------\n"
-#define PARANOIA_PATH "otptester-keys/"
-#define DESKTOP_PATH "otptester-desktop/"
+#define PARANOIA_PATH "otptester-keys"
+#define DESKTOP_PATH "otptester-desktop"
 
 gboolean verbose = FALSE;
 gboolean results = FALSE;
@@ -70,8 +70,9 @@ static void key_generation_done(GObject *my_object, gdouble percent, struct otp*
 		encryptpad = a_pad;
 		if (*pbobfile != NULL) g_free(*pbobfile);
 		*pbobfile = g_strconcat(otp_pad_get_dest(encryptpad), FILE_DELI, otp_pad_get_src(encryptpad), FILE_DELI, otp_pad_get_id(encryptpad), FILE_SUFFIX_DELI, FILE_SUFFIX, NULL);
-		gchar *fullbobfile = g_strconcat(otp_conf_get_export_path(config), *pbobfile, NULL);
-		gchar *newbobfile = g_strconcat(otp_conf_get_path(config), *pbobfile, NULL);
+		gchar *fullbobfile = g_strconcat(otp_conf_get_export_path(config), PATH_DELI, *pbobfile, NULL);
+		gchar *newbobfile = g_strconcat(otp_conf_get_path(config), PATH_DELI,  *pbobfile, NULL);
+		g_print("%s %s\n", fullbobfile, newbobfile);
 		g_rename(fullbobfile, newbobfile);
 		g_free(fullbobfile);
 		g_free(newbobfile);

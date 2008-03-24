@@ -118,8 +118,10 @@ struct otp_config* otp_pad_get_conf(struct otp* mypad);
 /* Creation of the config stucture of the library, sets some parameters
  *
  * client_id:		The name of the application using the library, i.e. 'paranoia-core'
- * path:		The path where the .entropy-files are stored.
- * export_path:		The path where to export new created keys
+ * path:			The path where the .entropy-files are stored. 
+ * 					Without tailing path delimiter ('/').
+ * export_path:		The path where to export new created keys. 
+ * 					Without tailing path delimiter.
  * 					for the other converstation partner i.e. 'bob' */
 struct otp_config* otp_conf_create(const char* client_id,
 				const char* path, const char* export_path);
