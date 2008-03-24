@@ -889,7 +889,6 @@ OtpError otp_conf_create_signal(struct otp_config *config)
 {
 	guint sid;
 	GObject *trigger;
-	GClosure *default_closure;
 	GType param_types[2];
 
 /* initialize g_typ */	
@@ -899,15 +898,14 @@ OtpError otp_conf_create_signal(struct otp_config *config)
 	trigger = g_object_new(G_TYPE_OBJECT, NULL);
 	otp_conf_set_trigger(config, trigger);
 
-/* create closure and type array */
+/* create type array */
 	param_types[0] = G_TYPE_DOUBLE;
 	param_types[1] = G_TYPE_POINTER;
-	default_closure = g_cclosure_new(NULL, NULL, NULL);
 	
 /* create signal */
 	sid = g_signal_newv("keygen_key_done_signal", 
 						G_TYPE_OBJECT, G_SIGNAL_RUN_LAST | G_SIGNAL_ACTION, 
-						default_closure, 
+						NULL, 
 						NULL, 
 						NULL, 
 						otp_marshal_VOID__DOUBLE_PAD, 
