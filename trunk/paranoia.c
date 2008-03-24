@@ -64,7 +64,7 @@ plugin (%s) to communicate encrypted."
 #define PARANOIA_NO_ENTROPY "%!()!%paranoia noent"
 #define PARANOIA_PREFIX_LEN 6
 
-#define PARANOIA_PATH "/.paranoia/"
+#define PARANOIA_PATH "/.paranoia"
 #define ENTROPY_LIMIT 10000 /* has to be bigger then the message size limit */
 
 struct otp_config* otp_conf;
@@ -719,7 +719,7 @@ static void par_cli_show_key_details(PurpleConversation *conv)
 	int num = par_count_matching_keys(my_acc, other_acc);
 	char* disp_string = NULL;
 
-	if(used_key != NULL) {
+	if(used_key != NULL) { //FIXME: there is one key!
 		disp_string = g_strdup_printf("There are %i keys available for this"
 				" conversation.\nCurrently active key infos:\nSource:\t\t%s\n"
 				"Destination:\t%s\nID:\t\t\t%s\nSize:\t\t\t%i\nPosition:\t\t%i\n"
@@ -733,9 +733,12 @@ static void par_cli_show_key_details(PurpleConversation *conv)
 				used_key->opt->otp_enabled, used_key->opt->auto_enable, 
 				used_key->opt->no_entropy); //FIXME: it's redundant!
 	} else {
-		if (num != 0) {
+		if (num > 1) {
 			disp_string = g_strdup_printf("There are %i keys available for this"
-					" conversation, but none is active.", num);
+					" conversation, but none is active.", num); 
+		} else if (num == 1) {
+			disp_string = g_strdup("There is one key available for this"
+					" conversation, but it is not active.");
 		} else {
 			disp_string = g_strdup("There is no key available for this conversation.");
 		}
