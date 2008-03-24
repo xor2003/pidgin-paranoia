@@ -275,7 +275,7 @@ static gboolean par_init_key_list()
 		/* loop over global key dir */
 		// TODO: detect dublicate id's?
 		while (tmp_filename != NULL) {
-			tmp_path = g_strconcat(otp_conf_get_path(otp_conf), tmp_filename, NULL);
+			tmp_path = g_strconcat(otp_conf_get_path(otp_conf), "/", tmp_filename, NULL);
 			
 			if (g_file_test(tmp_path, G_FILE_TEST_IS_REGULAR)) {
 				tmp_key = par_create_key(tmp_filename);
