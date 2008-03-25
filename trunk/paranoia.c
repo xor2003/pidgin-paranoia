@@ -722,14 +722,15 @@ static void par_cli_show_key_details(PurpleConversation *conv)
 	if(used_key != NULL) { //FIXME: there is one key!
 		disp_string = g_strdup_printf("There are %i keys available for this"
 				" conversation.\nCurrently active key infos:\nSource:\t\t%s\n"
-				"Destination:\t%s\nID:\t\t\t%s\nSize:\t\t\t%i\nPosition:\t\t%i\n"
-				"Entropy:\t\t%i\n"
+				"Destination:\t%s\nID:\t\t\t%s\nSize:\t\t\t%" G_GSIZE_FORMAT 
+				"\nPosition:\t\t%" G_GSIZE_FORMAT "\n"
+				"Entropy:\t\t%" G_GSIZE_FORMAT "\n"
 				"OTP enabled:\t%i\nAuto enable:\t%i\nNo entropy:\t%i", num,
 				otp_pad_get_src(used_key->pad), otp_pad_get_dest(used_key->pad), 
 				otp_pad_get_id(used_key->pad), 
-				(unsigned int) otp_pad_get_filesize(used_key->pad), 
-				(unsigned int) otp_pad_get_position(used_key->pad), 
-				(unsigned int) otp_pad_get_entropy(used_key->pad), 
+				otp_pad_get_filesize(used_key->pad), 
+				otp_pad_get_position(used_key->pad), 
+				otp_pad_get_entropy(used_key->pad), 
 				used_key->opt->otp_enabled, used_key->opt->auto_enable, 
 				used_key->opt->no_entropy); //FIXME: it's redundant!
 	} else {
@@ -755,13 +756,13 @@ static void par_cli_show_keys(PurpleConversation *conv)
 	struct key* tmp_ptr = keylist;
 	char* nice_str;
 	while (tmp_ptr != NULL) {
-		nice_str = g_strdup_printf("%s -> %s (%s)\n\tSize: %ibytes, "
-				"Bytes left: %i Active: %i Enabled: %i\n",
+		nice_str = g_strdup_printf("%s -> %s (%s)\n\tSize: %" G_GSIZE_FORMAT "bytes, "
+				"Bytes left: %" G_GSIZE_FORMAT " Active: %i Enabled: %i\n",
 				otp_pad_get_src(tmp_ptr->pad), 
 				otp_pad_get_dest(tmp_ptr->pad), 
 				otp_pad_get_id(tmp_ptr->pad), 
-				(unsigned int) otp_pad_get_filesize(tmp_ptr->pad), 
-				(unsigned int) otp_pad_get_entropy(tmp_ptr->pad), 
+				otp_pad_get_filesize(tmp_ptr->pad), 
+				otp_pad_get_entropy(tmp_ptr->pad), 
 				tmp_ptr->opt->active, 
 				tmp_ptr->opt->otp_enabled);
 				
@@ -1273,7 +1274,7 @@ static void par_im_msg_sending(PurpleAccount *account,
 			} else {
 				// TODO: send an entropy warning (inside the real msg)
 				char *warning_msg = g_strdup_printf (
-						"Your entropy is low! %i bytes left.",
+						"Your entropy is low! %" G_GSIZE_FORMAT " bytes left.",
 						otp_pad_get_entropy(used_key->pad));
 				purple_conversation_write(used_key->conv, NULL, 
 						warning_msg, PURPLE_MESSAGE_NO_LOG, time(NULL));

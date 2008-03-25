@@ -671,7 +671,7 @@ OtpError otp_encrypt_warning(struct otp* pad, char** message, gsize protected_po
 	}
 #endif
 	/* Our position in the pad */
-	char* pos_str = g_strdup_printf("%u", pad->encrypt_start_pos);
+	char* pos_str = g_strdup_printf("%" G_GSIZE_FORMAT "", pad->encrypt_start_pos);
 	/*Something like "3EF9|34EF4588|M+Rla2w=" */
 	char* new_msg = g_strconcat(pos_str, MSG_DELI,
 	                            pad->id, MSG_DELI, *message, NULL);
@@ -808,7 +808,7 @@ OtpError otp_encrypt(struct otp* pad, char** message)
 #endif
 
 	/* Our position in the pad*/
-	char* pos_str = g_strdup_printf("%u", pad->encrypt_start_pos);
+	char* pos_str = g_strdup_printf("%" G_GSIZE_FORMAT "", pad->encrypt_start_pos);
 	/*Something like "3EF9|34EF4588|M+Rla2w=" */
 	char* new_msg = g_strconcat(pos_str, MSG_DELI, pad->id, MSG_DELI, *message, NULL);
 	g_free(*message);
