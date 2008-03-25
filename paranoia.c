@@ -816,23 +816,23 @@ static void par_cli_init_keygen(PurpleConversation* conv, int size, gchar** para
 				"Key files could not be generated! %.8X\n", syndrome);
 	} else {
 		purple_conversation_write(conv, NULL, 
-				"Key files successfully generated.\n"
-				"Your own key was stored in the directory '~/.paranoia'.\n"
-				"Your buddy's key is stored in your home directory.\n"
+				"Key generation succesfully started. This will take some "
+				"minutes depending on the key length.\n"
+				"Your own key will be stored in the directory '~/.paranoia'.\n"
+				"Your buddy's key will be stored in your home directory.\n"
 				"Please send this key in a secure way to your partner.\n",
 				PURPLE_MESSAGE_NO_LOG, time(NULL));
 		if (syndrome == OTP_OK) {
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-					"Generated two entropy files of %ikiB size.\n", size);
+					"Generation of two entropy files of %ikiB size started.\n", size);
 		} else {
 			purple_conversation_write(conv, NULL,
 					"There was a warning issued!\n",
 					PURPLE_MESSAGE_NO_LOG, time(NULL));
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-					"Generated two entropy files of %ikiB size with a warning! %.8X\n",
+					"Generation of two entropy files of %ikiB size started with a warning! %.8X\n",
 					size, syndrome);
 		}
-		// TODO: add the key to the list
 	}
 	return;
 }
