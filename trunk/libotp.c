@@ -906,15 +906,16 @@ OtpError otp_conf_create_signal(struct otp_config *config)
 	param_types[1] = G_TYPE_POINTER;
 	
 /* create signal */
-	sid = g_signal_newv("keygen_key_done_signal", 
-						G_TYPE_OBJECT, G_SIGNAL_RUN_LAST | G_SIGNAL_ACTION, 
-						NULL, 
-						NULL, 
-						NULL, 
-						otp_marshal_VOID__DOUBLE_PAD, 
-						G_TYPE_NONE, 
-						2, 
-						param_types);
+	sid = g_signal_newv("keygen_key_done_signal",								/* Signal Name */
+						G_TYPE_OBJECT, 											/* Type the Signal pertains to*/
+						G_SIGNAL_RUN_LAST | G_SIGNAL_ACTION,					/* Signal Flags */
+						NULL,													/* GClosure Function */
+						NULL,													/* Accumulator */
+						NULL,													/* Accumulator Data */
+						otp_marshal_VOID__DOUBLE_PAD,							/* Marshal Function Name*/
+						G_TYPE_NONE,											/* Return Value Type of the Signal*/
+						2,														/* Lenth of Array of Parameter Types*/
+						param_types);											/* Array of Parameter Types */
 						
 	return OTP_OK;						
 }
@@ -1241,37 +1242,34 @@ OtpError otp_signal_connect(struct otp_config* config, gchar *signal_name, gpoin
 }
 
 void otp_marshal_VOID__DOUBLE_PAD (GClosure     *closure,
-                                        GValue       *return_value,
-                                        guint         n_param_values,
-                                        const GValue *param_values,
-                                        gpointer      invocation_hint,
-                                        gpointer      marshal_data)
+									GValue       *return_value,
+									guint         n_param_values,
+									const GValue *param_values,
+									gpointer      invocation_hint,
+									gpointer      marshal_data)
 /* Marshal function for double, struct otp transmission with signal */	
 {
-  typedef void (*GMarshalFunc_VOID__DOUBLE_PAD) (gpointer     data1,
-                                                      double       arg_1,
-                                                      struct otp*  arg_2,
-                                                      gpointer     data2);
-  register GMarshalFunc_VOID__DOUBLE_PAD callback;
-  register GCClosure *cc = (GCClosure*) closure;
-  register gpointer data1, data2;
+	typedef void (*GMarshalFunc_VOID__DOUBLE_PAD) (gpointer     data1,  	/* pointer on Object */
+													double       arg_1, 	/* First Argument */
+													struct otp*  arg_2, 	/* Second Argument */
+													gpointer     data2); 	/*  Pointer on User Data*/
+	/* local variables */
+	GMarshalFunc_VOID__DOUBLE_PAD callback;
+	GCClosure *cc = (GCClosure*) closure;
+	gpointer data1, data2;
 
-  g_return_if_fail (n_param_values == 3);
+	g_return_if_fail (n_param_values == 3);
 
-  if (G_CCLOSURE_SWAP_DATA (closure))
-    {
-      data1 = closure->data;
-      data2 = g_value_peek_pointer (param_values + 0);
-    }
-  else
-    {
-      data1 = g_value_peek_pointer (param_values + 0);
-      data2 = closure->data;
-    }
-  callback = (GMarshalFunc_VOID__DOUBLE_PAD) (marshal_data ? marshal_data : cc->callback);
+	/* assign values to the data pointer and set the callback function */
+	if (G_CCLOSURE_SWAP_DATA (closure)) {
+		data1 = closure->data;
+		data2 = g_value_peek_pointer (param_values + 0);
+	} else {
+		data1 = g_value_peek_pointer (param_values + 0);
+		data2 = closure->data;
+	}
+	callback = (GMarshalFunc_VOID__DOUBLE_PAD) (marshal_data ? marshal_data : cc->callback);
 
-  callback (data1,
-            g_value_get_double (param_values + 1),
-            g_value_get_pointer (param_values + 2),
-            data2);
+	/* set values of the arguments */
+	callback (data1, g_value_get_double (param_values + 1),	g_value_get_pointer (param_values + 2),	data2);
 }
