@@ -5,6 +5,9 @@ This file explains how to install pidgin-paranoia.
 
 This procedure was tested on Debian Testing (amd64/i386) and Ubuntu 7.10 (i386).
 
+If you use Debian or a Debian derivate like Ubuntu, you can use the debian packages.
+If you want, you can build the package using the debian/ directory in SVN.
+
 Comments:
 
  * Commands beginning with '#' are meant to be executed as root whereas commands 

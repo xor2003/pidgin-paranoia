@@ -839,12 +839,12 @@ OtpError otp_decrypt(struct otp* pad, char** message)
 		return OTP_ERR_MSG_FORMAT;
 		}
 	/* Our position to decrypt in the pad */
-	int testpos = g_ascii_strtoll( strdup(m_array[0]), NULL, 10);
+	gsize testpos = g_ascii_strtoull( strdup(m_array[0]), NULL, 10);
 	if (testpos < 0 || testpos > pad->filesize/2) {
 		g_strfreev(m_array);
 		return OTP_ERR_KEY_SIZE_MISMATCH;
 	}
-	gsize decryptpos = (unsigned int) testpos;
+	gsize decryptpos = testpos;
 	if (strcmp(m_array[1], pad->id) != 0) {
 		g_strfreev(m_array);
 		return OTP_ERR_ID_MISMATCH;
