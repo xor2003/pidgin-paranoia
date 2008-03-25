@@ -1227,8 +1227,10 @@ static void par_im_msg_sending(PurpleAccount *account,
 		}
 
 		/* check for remaining entropy */
+		// TODO 0.3 first try to encrypt and act afterwards (?)
 		if (otp_pad_get_entropy(used_key->pad) < ENTROPY_LIMIT) {
-			if (otp_pad_get_entropy(used_key->pad) < strlen(*message)) {
+			if (otp_pad_get_entropy(used_key->pad) < strlen(*message) 
+						+ otp_conf_get_random_msg_tail_max_len(otp_conf)) {
 				used_key->opt->no_entropy = TRUE;
 				used_key->opt->otp_enabled = FALSE;
 				used_key->opt->auto_enable = FALSE;
