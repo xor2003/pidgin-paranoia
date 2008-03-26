@@ -117,3 +117,41 @@ If a buddy goes offline the session gets closed and a new initialisation is
 needed. 
 If the opposite client sends an unencypted message, our plugin stops 
 sending encrypted messages too.
+
+
+
+4 Key generation
+--------------------------------------------------------------------------------
+This section describes the key generation procedure and the possible options.
+with /otp genkey <size> <source> one can generate a new key. If no source is 
+given, the key is generated with the internal key generator. Furthermore the
+source can either be an entropy file or a character device.
+
+4.1 Internal key generator
+--------------------------------------------------------------------------------
+The internal key generator takes the entropy from different sources and mixes
+them together into the entropy file. At the moment there are 4 different
+sources used:
+audio device:	Entropy is taken from the /dev/audio device and xor-ed with 
+				entropy from the /dev/urandom device to improve the quality of 
+				the entropy.
+				It is recommended to play some music during the key generation 
+				process to improve the entropy quality.
+/dev/random:	Entropy is taken from the /dev/random device and mixed directly
+				into the entropy file.
+thread timing:	The time to generate and finish 100 Threads is measured and
+				mixed into the entropy file.
+system state:	A mix out of page faults and used user and system time is 
+				converted into entropy and mixed into the entropy file.
+
+4.2 Key from entropy file
+--------------------------------------------------------------------------------
+The entropy file has to be a standart unformated file with entropy. The user
+is responsible for the quality of the entropy in this file. The file must be
+long enough, else the key doesn't get generated.
+
+4.3 Key from entropy device
+--------------------------------------------------------------------------------
+The entropy device must be a character device. The quality of this device is not
+checked by the key generator, so the user is responsible that the entropy source
+is good enough. The generation time depends on the entropy source.
