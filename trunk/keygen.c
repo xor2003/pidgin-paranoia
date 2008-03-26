@@ -806,7 +806,6 @@ gpointer sysstate(gpointer data)
 			g_mutex_unlock(keygen_mutex);
 		}
 		if(key_data.size == 0) {
-			g_mutex_unlock(keygen_mutex);
 			break;
 		}
 
