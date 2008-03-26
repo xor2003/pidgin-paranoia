@@ -10,7 +10,7 @@ Simon Wenner:
  * Paranoia: Support for multiple key files per conversation
  * Paranoia: Use the new libotp api (set/get and config)
  * Paranoia: Key settings are resetted if a buddy goes offline
- * Paranoia: '/otp list' and '/otp list-all' added to list all available keys
+ * Paranoia: '/otp list' and '/otp list-all' added to list available keys
  * Paranoia: no more request messages for offline buddies
  * Paranoia: add generated key to the key list
 
