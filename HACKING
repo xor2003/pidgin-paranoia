@@ -57,3 +57,29 @@ Sample Code for Marshall Functions:
 	http://www.codase.com/
 	seatch querry: "nautilus-marshal"
 	files: nautilus-marshal-guts.c and nautilus-marshal.h
+
+USING FINCH
+--------------------------------------------------------------------------------
+http://developer.pidgin.im/wiki/Using%20Finch
+
+BUILDING DEBIAN PACKAGES
+--------------------------------------------------------------------------------
+Debian New Maintainers' Guide:
+	http://www.debian.org/doc/manuals/maint-guide/index.en.html
+
+Additonally to the specified packages in INSTALL you need to install: 
+	fakeroot debhelper
+
+You can build the package from trunk/ using:
+	$ ./autogen.sh (since you are using the trunk)
+	$ dpkg-buildpackage -rfakeroot
+
+TESTING PARANOIA
+--------------------------------------------------------------------------------
+You can use "/otp drop" in Pidgin to drop the encryption. Your buddy will not be
+notified. You can insert something like: 
+"*** Encrypted with the Pidgin-Paranoia plugin: 38009|03699C2B|MW24qGojvBfVFAK0Y87BMwAjXd9pw51ZAtGQGq5d5WfRf/J3V5wA"
+This allows you to test for denial of service attacks.
+
+
+
