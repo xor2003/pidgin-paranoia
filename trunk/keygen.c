@@ -791,7 +791,7 @@ gpointer sysstate(gpointer data)
 			g_printerr("resurce usage not supported, exit thread\n");
 			break;
 		}
-		usleep(500);
+		usleep(1000);
 		minflt = usage.ru_minflt;
 		systime = usage.ru_stime.tv_sec*1000000+usage.ru_stime.tv_usec;
 		usertime = usage.ru_utime.tv_sec*1000000+usage.ru_utime.tv_usec;
