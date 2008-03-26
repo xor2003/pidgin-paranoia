@@ -16,9 +16,8 @@ Version 0.3
 	 * checking for \0\0\0 on decrypt to check if the message is valid 
 	 * keyfile entropy really checked for patterns
 
-	other
+	otp
 	 * commandline program that can use libotp for general usage
-	 * libotp test framework
 
 Version 0.4
 ============
