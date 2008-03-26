@@ -25,6 +25,7 @@ Christian Wäckerlin:
    (and also random length padding) (allows future feature without breakage 
    of the spec.)
  * Debian/Ubuntu package support added
+ * New otptester added
 
 Pascal Sachs:
  * Libotp: Create and integrate the threaded key-generator
