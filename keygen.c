@@ -705,7 +705,7 @@ gpointer audio(gpointer data)
 		close(fp_audio);
 		return 0;
 	}
-	if((fp_alice = open(key_data.alice,O_RDWR|O_CREAT|O_APPEND,00644)) < 0) {
+	if((fp_alice = open(key_data.alice, O_RDWR|O_CREAT|O_APPEND, 00644)) < 0) {
 		g_printerr("could not open alice file \n");
 		close(fp_audio);
 		close(fp_urand);
