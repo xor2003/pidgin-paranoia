@@ -44,4 +44,5 @@ Ideas
 Known bugs
  * there are some anomalies if both set /otp off and one user tries to reenable
  * Sometimes the first "Encryption enabled." message gets lost due to timing problems
+ * Finch eats our <otp> markers.
  
