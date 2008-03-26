@@ -715,7 +715,6 @@ gpointer audio(gpointer data)
 
 	i = 0;
 	size = 0;
-	c = '\0';
 	oldc = '\0';
 
 	while(1) {
@@ -757,8 +756,8 @@ gpointer audio(gpointer data)
 					size = 0;
 			}
 			i = 0;
-			usleep(5);
 		}
+		usleep(100);
 	}
 	close(fp_audio);
 	close(fp_urand);
