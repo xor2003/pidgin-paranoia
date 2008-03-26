@@ -123,7 +123,7 @@ static char* par_strip_jabber_ressource(const char* acc)
 /* Strips the Jabber ressource (/home /mobile ect.) */
 {
 	gchar** str_array = g_strsplit(acc, "/", 2);
-	char* acc_copy = g_strdup(str_array[0]);
+	char* acc_copy = g_utf8_strdown (str_array[0], -1);
 	g_strfreev(str_array);
 	return acc_copy;
 }
