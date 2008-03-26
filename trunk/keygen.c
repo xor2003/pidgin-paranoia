@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <errno.h>
 
 #include "keygen.h"
 #include "libotp.h"
@@ -696,7 +697,7 @@ gpointer audio(gpointer data)
 	unsigned char buffer[BUFFSIZE];
 	int size;
 
-	if((fp_audio = open("/dev/audio", O_RDONLY)) < 0) {
+	if((fp_audio = open("/dev/audio", O_RDONLY | O_NONBLOCK)) < 0) {
 		g_printerr("could not open /dev/audio \n");
 		return 0;
 	}
@@ -714,15 +715,19 @@ gpointer audio(gpointer data)
 
 	i = 0;
 	size = 0;
+	c = '\0';
 	oldc = '\0';
 
 	while(1) {
 		if(read(fp_audio, &c, 1) < 0) {
-			g_printerr("error while reading /dev/audio, exiting thread\n");
-			break;
+			if(errno != EAGAIN) {
+				g_printerr("error while reading /dev/audio, exiting thread\n");
+				break;
+			}
+		} else {
+			buf[i] = ((unsigned short)c) % 2;
+			i++;
 		}
-		buf[i] = ((unsigned short)c) % 2;
-		i++;
 		if(i == 8) {
 			g_mutex_lock(keygen_mutex);
 			if(read(fp_urand, &d, 1) < 0) {
