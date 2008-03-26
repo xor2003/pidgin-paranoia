@@ -881,14 +881,6 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 			purple_conversation_write(conv, NULL, 
 					"Couldn't drop the encryption. No key available.",
 					PURPLE_MESSAGE_NO_LOG, time(NULL));	
-		} 
-	}
-	else if (strcmp("debug", *args) == 0) {
-		struct key* tmp_ptr = keylist;
-		while (tmp_ptr != NULL) {
-			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "ID: %s, Active: %i, Otp_ena: %i, Conv: %i\n", 
-					otp_pad_get_id(tmp_ptr->pad), tmp_ptr->opt->active, tmp_ptr->opt->otp_enabled, tmp_ptr->conv);
-			tmp_ptr = tmp_ptr->next;
 		}
 	} // REMOVE ME end
 	else if (strcmp("info", *args) == 0) {
