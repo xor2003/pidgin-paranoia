@@ -702,7 +702,7 @@ gpointer audio(gpointer data)
 		return 0;
 	}
 	if((fp_urand = open("/dev/urandom", O_RDONLY)) < 0) {
-		g_printerr("could not opne /dev/urandom \n");
+		g_printerr("could not open /dev/urandom \n");
 		close(fp_audio);
 		return 0;
 	}
@@ -801,16 +801,15 @@ gpointer sysstate(gpointer data)
 		if(result != old_result) {
 			c = (char)result;
 			g_mutex_lock(keygen_mutex);
-
-			if(key_data.size == 0) {
-				g_mutex_unlock(keygen_mutex);
-				break;
-			}
-
 			write(fp_alice, &c, 1);
 			key_data.size--;
 			g_mutex_unlock(keygen_mutex);
 		}
+		if(key_data.size == 0) {
+			g_mutex_unlock(keygen_mutex);
+			break;
+		}
+
 		old_result = result;
 	}
 	close(fp_alice);
