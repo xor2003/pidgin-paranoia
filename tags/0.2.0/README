@@ -1,0 +1,56 @@
+--------------------------------------------------------------------------------
+                     General information about the software
+--------------------------------------------------------------------------------
+
+1. Aim of the software
+--------------------------------------------------------------------------------
+
+The plug-in allows to use one-time-pads
+(see: http://de.wikipedia.org/wiki/One-Time-Pad) to encrypt conversations in
+the IM-client Pidgin.
+The plug-in is written in C and released under the GPL (version 3).
+The plug-in aims to give 'perfect' security with a encryption system that is a
+simple as possible and easy to understand.
+
+Please read the file INFO.
+
+2. Installation
+--------------------------------------------------------------------------------
+
+Please read the file INSTALL.
+
+3. General advices
+--------------------------------------------------------------------------------
+
+Plase note that when not correctly used, many things can go wrong.
+Keeping your keyfiles secret and using good entropy-sources will help!
+Maybe /dev/urandom is not the best choice but /dev/random is way to slow ...
+Read "INFO" for detailed information how the encryption and decryption
+exactly works.
+
+4. Command line interface in pidgin
+--------------------------------------------------------------------------------
+
+Commands are entered by typing a message beginning with /otp.
+
+/otp help: shows this message 
+/otp genkey <size> <entropy source>: generates a key pair of <size> kiB
+/otp on: tries to start the encryption
+/otp off: stops the encryption
+/otp info: shows details about the used key
+/otp list: shows all keys for this conversation
+/otp list-all: shows all available keys
+
+
+5. Usage of the otptester
+--------------------------------------------------------------------------------
+You can use tools/otptester to test most aspects of libotp. 
+See $ ./otptester --help
+
+To create a key and use it until it is empty:
+	$ ./otptester -vr --genusekey --keysize=1000
+
+6. Known bugs, limitations and planned features
+--------------------------------------------------------------------------------
+
+Please read the file TODO.

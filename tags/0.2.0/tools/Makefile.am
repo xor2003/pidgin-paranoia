@@ -1,0 +1,18 @@
+
+# with install: bin_PROGRAMS = otptester
+noinst_PROGRAMS = otptester
+
+otptester_SOURCES = \
+	otptester.c
+
+nodist_otptester_SOURCES = \
+	../otperror.h \
+	../keygen.c \
+	../keygen.h \
+	../libotp.c \
+	../libotp.h
+	../libotp-internal.h
+
+otptester_CPPFLAGS = $(GLIB_CFLAGS)
+
+otptester_LDADD = $(GLIB_LIBS)
