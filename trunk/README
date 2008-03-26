@@ -33,22 +33,24 @@ exactly works.
 
 Commands are entered by typing a message beginning with /otp.
 
-/otp help - shows a list of all available commands
-/otp genkey <size> <entropy source> - generates a key pair of <size> kB
-The source parameter is optional.
-/otp on - tries to start the encryption
-/otp off - stops the encryption
-/otp info - shows details about the active key
-/otp list - shows all your keys
+/otp help: shows this message 
+/otp genkey <size> <entropy source>: generates a key pair of <size> kiB
+/otp on: tries to start the encryption
+/otp off: stops the encryption
+/otp info: shows details about the used key
+/otp list: shows all keys for this conversation
+/otp list-all: shows all available keys
 
 
 5. Usage of the otptester
 --------------------------------------------------------------------------------
-The program takes any amount of arguments/commands and goes through all of them
-from the beginning to the end.
-Start "otptester --help" for more information.
+You can use tools/otptester to test most aspects of libotp. 
+See $ ./otptester --help
+
+To create a key and use it until it is empty:
+	$ ./otptester -vr --genusekey --keysize=1000
 
 6. Known bugs, limitations and planned features
 --------------------------------------------------------------------------------
 
-Please read the file TODO
+Please read the file TODO.
