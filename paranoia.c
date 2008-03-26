@@ -618,7 +618,8 @@ PurpleCmdId par_cmd_id;
 source&gt;: generates a key pair of &lt;size&gt; \
 kiB\n/otp on: tries to start the encryption\n/otp off: stops the \
 encryption\n/otp info: shows details about the used key\n\
-/otp list: shows all available keys"
+/otp list: shows all keys for this conversation\n\
+/otp list-all: shows all available keys"
 #define PARANOIA_ERROR_STR "Wrong argument(s). Type '/otp help' for help."
 #define PARANOIA_KEYSIZE_ERROR "Your key size is too large."
 
@@ -750,25 +751,44 @@ static void par_cli_show_key_details(PurpleConversation *conv)
 	return;
 }
 
-static void par_cli_show_keys(PurpleConversation *conv)
+static void par_cli_show_keys(PurpleConversation *conv, gboolean all)
 /* shows all keys in the list */
 {
+	const char* src = purple_account_get_username(
+				purple_conversation_get_account(conv));
+	const char* dest = purple_conversation_get_name(conv);
+	
+	char* src_copy = par_strip_jabber_ressource(src);
+	char* dest_copy = par_strip_jabber_ressource(dest);
+	
+	if (all) {
+		purple_conversation_write(conv, NULL, "All your keys:", 
+				PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_NO_LINKIFY, time(NULL));
+	} else {
+		purple_conversation_write(conv, NULL, "All your keys for this conversation:", 
+				PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_NO_LINKIFY, time(NULL));
+	}
+	
 	struct key* tmp_ptr = keylist;
 	char* nice_str;
 	while (tmp_ptr != NULL) {
-		nice_str = g_strdup_printf("%s -> %s (%s)\n\tSize: %" G_GSIZE_FORMAT "bytes, "
-				"Bytes left: %" G_GSIZE_FORMAT " Active: %i Enabled: %i\n",
-				otp_pad_get_src(tmp_ptr->pad), 
-				otp_pad_get_dest(tmp_ptr->pad), 
-				otp_pad_get_id(tmp_ptr->pad), 
-				otp_pad_get_filesize(tmp_ptr->pad), 
-				otp_pad_get_entropy(tmp_ptr->pad), 
-				tmp_ptr->opt->active, 
-				tmp_ptr->opt->otp_enabled);
-				
-		purple_conversation_write(conv, NULL, nice_str, 
-				PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_NO_LINKIFY, time(NULL));
-		g_free(nice_str);
+		if (all || ((strcmp(otp_pad_get_src(tmp_ptr->pad), src_copy) == 0) 
+					&& (strcmp(otp_pad_get_dest(tmp_ptr->pad), dest_copy) == 0))) {
+			
+			nice_str = g_strdup_printf("%s -> %s (%s)\n\tSize: %" G_GSIZE_FORMAT "bytes, "
+					"Bytes left: %" G_GSIZE_FORMAT " Active: %i Enabled: %i\n",
+					otp_pad_get_src(tmp_ptr->pad), 
+					otp_pad_get_dest(tmp_ptr->pad), 
+					otp_pad_get_id(tmp_ptr->pad), 
+					otp_pad_get_filesize(tmp_ptr->pad), 
+					otp_pad_get_entropy(tmp_ptr->pad), 
+					tmp_ptr->opt->active, 
+					tmp_ptr->opt->otp_enabled);
+					
+			purple_conversation_write(conv, NULL, nice_str, 
+					PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_NO_LINKIFY, time(NULL));
+			g_free(nice_str);
+		}
 		tmp_ptr = tmp_ptr->next;
 	}
 	return;
@@ -887,7 +907,10 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 		par_cli_show_key_details(conv);
 	}
 	else if (strcmp("list", *args) == 0) {
-		par_cli_show_keys(conv);
+		par_cli_show_keys(conv, FALSE);
+	}
+		else if (strcmp("list-all", *args) == 0) {
+		par_cli_show_keys(conv, TRUE);
 	}
 	else if (strncmp("genkey ", *args, 7) == 0) {
 		gchar** param_array = g_strsplit(*args + 7, " ", 2); /* to skip "genkey " */
