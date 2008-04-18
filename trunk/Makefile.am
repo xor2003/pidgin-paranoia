@@ -15,6 +15,8 @@ paranoia_la_SOURCES = \
 	libotp.h \
 	libotp-internal.h \
 	libotp.c \
+	key_management.h \
+	key_management.c \
 	paranoia.c
 
 paranoia_la_CPPFLAGS = \
