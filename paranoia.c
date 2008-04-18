@@ -34,8 +34,9 @@
 // debug only:
 #include "core.h"
 
-/* Lib One-Time Pad */
+/* Our stuff */
 #include "libotp.h"
+#include "key_management.h"
 
 #ifdef HAVE_CONFIG_H
 #include "paranoia_config.h"
@@ -47,7 +48,7 @@
 
 /* Requires GNOMElib 2.14! Bob's keyfile is placed onto the desktop. 
  * If not set, the file is placed in the home directory. */
-//#define USEDESKTOP
+#define USEDESKTOP
 
 /* ----------------- General Paranoia Stuff ------------------ */
 #define PARANOIA_HEADER "*** Encrypted with the Pidgin-Paranoia plugin: "
@@ -130,276 +131,6 @@ static char* par_strip_jabber_ressource(const char* acc)
 
 /* ----------------- Paranoia Key Management ------------------ */
 
-/* key options struct */
-struct options {
-	gboolean otp_enabled; /* otp on/off */
-	gboolean auto_enable; /* false to force disable */
-	gboolean no_entropy; /* all entropy of one user was used up completely */
-	gboolean handshake_done; /* key ids have been exchanged */
-	gboolean active; /* an initialised key */
-};
-
-/* paranoia key struct (a linked list) */
-struct key {
-	struct otp* pad; /* see libotp.h */
-	struct options* opt; /* key options */
-	PurpleConversation* conv; /* current conversation (if any) */
-	struct key* next;
-};
-
-/* paranoia keylist pointer */
-struct key* keylist = NULL;
-
-static struct key* par_create_key(const char* filename)
-/* creates a key struct from a valid key file or returns NULL */
-{
-	/* get otp object */
-	static struct otp* a_pad;
-	a_pad = otp_pad_create_from_file(otp_conf, filename);
-
-	if(a_pad == NULL) {
-		return NULL;
-	}
-
-	/* default option struct */
-	static struct options* a_opt;
-	a_opt = (struct options *) g_malloc(sizeof(struct options));
-	a_opt->otp_enabled = FALSE;
-	a_opt->auto_enable = TRUE;
-	a_opt->handshake_done = FALSE;
-	a_opt->active = FALSE;
-	if(otp_pad_get_entropy(a_pad) <= 0) {
-		a_opt->no_entropy = TRUE;
-	} else {
-		a_opt->no_entropy = FALSE;
-	}
-
-	static struct key* key;
-	key = (struct key *) g_malloc(sizeof(struct key));
-	key->pad = a_pad;
-	key->opt = a_opt;
-	key->conv = NULL;
-	key->next = NULL;
-	return key;
-}
-
-static int par_count_keys()
-/* counts all keys in the list */
-{
-	int sum = 0;
-	struct key* tmp_ptr = keylist;
-	while (tmp_ptr != NULL) {
-		sum++;
-		tmp_ptr = tmp_ptr->next;
-	}
-	return sum;
-}
-
-static int par_count_matching_keys(const char* src, const char* dest)
-/* counts all matching keys in the list */
-{
-	int sum = 0;
-	char* src_copy = par_strip_jabber_ressource(src);
-	char* dest_copy = par_strip_jabber_ressource(dest);
-	struct key* tmp_ptr = keylist;
-	while (tmp_ptr != NULL) {
-		if ((strcmp(otp_pad_get_src(tmp_ptr->pad), src_copy) == 0) 
-				&& (strcmp(otp_pad_get_dest(tmp_ptr->pad), dest_copy) == 0)) {
-			sum++;
-		}
-		tmp_ptr = tmp_ptr->next;
-	}
-	g_free(src_copy);
-	g_free(dest_copy);
-	return sum;
-}
-
-static void par_add_key(struct otp* a_pad)
-/* adds a key created from a pad at the first position of the key list */
-{
-	/* default option struct */
-	static struct options* a_opt;
-	a_opt = (struct options *) g_malloc(sizeof(struct options));
-	a_opt->otp_enabled = FALSE;
-	a_opt->auto_enable = TRUE;
-	a_opt->handshake_done = FALSE;
-	a_opt->active = FALSE;
-	if(otp_pad_get_entropy(a_pad) <= 0) {
-		a_opt->no_entropy = TRUE;
-	} else {
-		a_opt->no_entropy = FALSE;
-	}
-
-	static struct key* key;
-	key = (struct key *) g_malloc(sizeof(struct key));
-	key->pad = a_pad;
-	key->opt = a_opt;
-	key->conv = NULL;
-	key->next = keylist;
-	
-	keylist = key;
-	return;
-}
-
-static void par_reset_key(struct key* a_key) 
-/* resets all option values of a key to default */
-{
-	a_key->opt->otp_enabled = FALSE;
-	a_key->opt->auto_enable = TRUE;
-	a_key->opt->handshake_done = FALSE;
-	a_key->opt->active = FALSE;
-	if(otp_pad_get_entropy(a_key->pad) <= 0) {
-		a_key->opt->no_entropy = TRUE;
-	} else {
-		a_key->opt->no_entropy = FALSE;
-	}
-	return;
-}
-
-static gboolean par_init_key_list()
-/* loads all valid keys from the global otp folder into the key list */
-{
-	struct key* prev_key = NULL;
-	struct key* tmp_key = NULL;
-	GError* error = NULL;
-	GDir* directoryhandle = g_dir_open(otp_conf_get_path(otp_conf), 0, &error);
-	const gchar* tmp_filename = g_dir_read_name(directoryhandle);
-	char* tmp_path = NULL;
-	
-	if (error) {
-		purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
-				"Opening \"%s\" failed! %s\n", 
-				otp_conf_get_path(otp_conf), error->message);
-		g_error_free(error);
-	} else {
-		/* loop over global key dir */
-		// TODO: detect dublicate id's?
-		while (tmp_filename != NULL) {
-			tmp_path = g_strconcat(otp_conf_get_path(otp_conf), "/", tmp_filename, NULL);
-			
-			if (g_file_test(tmp_path, G_FILE_TEST_IS_REGULAR)) {
-				tmp_key = par_create_key(tmp_filename);
-				if (tmp_key == NULL) {
-					purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-							"Could not add the file \"%s\".\n", 
-							tmp_filename);
-				} else {
-					purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-							"Key \"%s\" added.\n", tmp_filename);
-					tmp_key->next = prev_key;
-					keylist = tmp_key;
-					prev_key = tmp_key;
-				}
-			}
-			g_free(tmp_path);
-			tmp_filename = g_dir_read_name(directoryhandle);
-		}
-	}
-	g_dir_close(directoryhandle);
-
-	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-		"Key list of %i keys created.\n", par_count_keys());
-
-	return TRUE;
-}
-
-static void par_free_key_list()
-/* frees all memory of the keylist */
-{
-	struct key* tmp_key = keylist;
-	struct key* next_key_ptr = NULL;
-
-	while (tmp_key != NULL) {
-		next_key_ptr = tmp_key->next;
-		otp_pad_destroy(tmp_key->pad);
-		g_free(tmp_key->opt);
-		g_free(tmp_key);
-		tmp_key = next_key_ptr;
-	}
-	return;
-}
-
-static char* par_search_ids(const char* src, const char* dest)
-/* searches all ids for a src/dest pair in the keylist (comma separated).
- * Returns NULL if none found.
- * */
-{
-	char* ids = NULL;
-	char* src_copy = par_strip_jabber_ressource(src);
-	char* dest_copy = par_strip_jabber_ressource(dest);
-
-	struct key* tmp_ptr = keylist;
-	
-	while (tmp_ptr != NULL) {
-		if ((strcmp(otp_pad_get_src(tmp_ptr->pad), src_copy) == 0) 
-				&& (strcmp(otp_pad_get_dest(tmp_ptr->pad), dest_copy) == 0)
-				&& (!tmp_ptr->opt->no_entropy)) {
-			if (ids == NULL) {
-				ids = g_strdup(otp_pad_get_id(tmp_ptr->pad));
-			} else {
-				ids = g_strconcat(ids, ",", otp_pad_get_id(tmp_ptr->pad), NULL);
-			}
-		}
-		tmp_ptr = tmp_ptr->next;
-	}
-	g_free(src_copy);
-	g_free(dest_copy);
-	return ids;
-}
-
-static struct key* par_search_key_by_id(const char* id, const char* src, 
-		const char* dest)
-/* Searches for the first key with a matching id.
- * Source and destination have to match too.
- * Returns NULL if none was found
- * */
-{
-	char* src_copy = par_strip_jabber_ressource(src);
-	char* dest_copy = par_strip_jabber_ressource(dest);
-
-	struct key* tmp_ptr = keylist;
-
-	while (tmp_ptr != NULL) {
-		if (strcmp(otp_pad_get_id(tmp_ptr->pad), id) == 0) {
-			if ((strcmp(otp_pad_get_src(tmp_ptr->pad), src_copy) == 0) 
-					&& (strcmp(otp_pad_get_dest(tmp_ptr->pad), dest_copy) == 0)) {
-				g_free(src_copy);
-				g_free(dest_copy);
-				return tmp_ptr;
-			}
-		}
-		tmp_ptr = tmp_ptr->next;
-	}
-	g_free(src_copy);
-	g_free(dest_copy);
-	return NULL;
-}
-
-static struct key* par_search_key(const char* src, const char* dest)
-/* Searches for the first initialised key with matching source and destination.
- * Returns NULL if none was found.
- * */
-{
-	char* src_copy = par_strip_jabber_ressource(src);
-	char* dest_copy = par_strip_jabber_ressource(dest);
-
-	struct key* tmp_ptr = keylist;
-
-	while (tmp_ptr != NULL) {
-		if ((strcmp(otp_pad_get_src(tmp_ptr->pad), src_copy) == 0) 
-					&& (strcmp(otp_pad_get_dest(tmp_ptr->pad), dest_copy) == 0)
-					&& tmp_ptr->opt->active) {
-				g_free(src_copy);
-				g_free(dest_copy);
-				return tmp_ptr;
-			}
-		tmp_ptr = tmp_ptr->next;
-	}
-	g_free(src_copy);
-	g_free(dest_copy);
-	return NULL;
-}
-
 static void par_keygen_key_generation_done(GObject *my_object, gdouble percent, struct otp* alice_pad) {
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 			"%5.2f Percent of the key done.\n", percent);
@@ -419,8 +150,13 @@ static void par_keygen_key_generation_done(GObject *my_object, gdouble percent, 
 static gboolean par_session_send_request(const char* my_acc_name, 
 			const char* receiver, PurpleConversation *conv)
 /* sends an otp encryption request message */
-{		
-	char *ids = par_search_ids(my_acc_name, receiver);
+{
+	char* my_acc_name_copy = par_strip_jabber_ressource(my_acc_name);
+	char* receiver_copy = par_strip_jabber_ressource(receiver);
+	char *ids = par_search_ids(my_acc_name_copy, receiver_copy);
+	g_free(my_acc_name_copy);
+	g_free(receiver_copy);
+	
 	if (ids == NULL) {
 		return FALSE;
 	}
@@ -476,7 +212,12 @@ static gboolean par_session_check_req(const char* alice, const char* bob,
 		while (*tmp_ptr != ':' && temp_key == NULL && totlen > tmp_ptr - *message_no_header) {
 			char* id = g_strndup(tmp_ptr, OTP_ID_LENGTH);
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Searching for requested ID: %s\n", id);
-			a_key = par_search_key_by_id(id, alice, bob);
+			
+			char* alice_copy = par_strip_jabber_ressource(alice);
+			char* bob_copy = par_strip_jabber_ressource(bob);
+			a_key = par_search_key_by_id(id, alice_copy, bob_copy);
+			g_free(alice_copy);
+			g_free(bob_copy);
 			if (a_key != NULL) {
 				if (!a_key->opt->no_entropy) {
 						temp_key = a_key;
@@ -638,7 +379,12 @@ static gboolean par_cli_try_enable_enc(PurpleConversation *conv)
 				purple_conversation_get_account(conv));
 	const char* other_acc = purple_conversation_get_name(conv);
 	
-	struct key* used_key = par_search_key(my_acc, other_acc);
+	char* my_acc_copy = par_strip_jabber_ressource(my_acc);
+	char* other_acc_copy = par_strip_jabber_ressource(other_acc);
+	struct key* used_key = par_search_key(my_acc_copy, other_acc_copy);
+	g_free(my_acc_copy);
+	g_free(other_acc_copy);
+	
 	if (used_key != NULL) {
 		if (used_key->opt->no_entropy) {
 			purple_conversation_write(conv, NULL, 
@@ -684,7 +430,12 @@ static gboolean par_cli_disable_enc(PurpleConversation *conv)
 				purple_conversation_get_account(conv));
 	const char* other_acc = purple_conversation_get_name(conv);
 	
-	struct key* used_key = par_search_key(my_acc, other_acc);
+	char* my_acc_copy = par_strip_jabber_ressource(my_acc);
+	char* other_acc_copy = par_strip_jabber_ressource(other_acc);
+	struct key* used_key = par_search_key(my_acc_copy, other_acc_copy);
+	g_free(my_acc_copy);
+	g_free(other_acc_copy);
+	
 	if (used_key != NULL) {
 		if (used_key->opt->otp_enabled) {
 			purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), 
@@ -716,8 +467,13 @@ static void par_cli_show_key_details(PurpleConversation *conv)
 				purple_conversation_get_account(conv));
 	const char* other_acc = purple_conversation_get_name(conv);
 	
-	struct key* used_key = par_search_key(my_acc, other_acc);
-	int num = par_count_matching_keys(my_acc, other_acc);
+	char* my_acc_copy = par_strip_jabber_ressource(my_acc);
+	char* other_acc_copy = par_strip_jabber_ressource(other_acc);
+	struct key* used_key = par_search_key(my_acc_copy, other_acc_copy);
+	int num = par_count_matching_keys(my_acc_copy, other_acc_copy);
+	g_free(my_acc_copy);
+	g_free(other_acc_copy);
+	
 	char* disp_string = NULL;
 
 	if(used_key != NULL) { //FIXME: there is one key!
@@ -885,7 +641,13 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 		const char* my_acc = purple_account_get_username(
 				purple_conversation_get_account(conv));
 		const char* other_acc = purple_conversation_get_name(conv);
-		struct key* used_key = par_search_key(my_acc, other_acc);
+		
+		char* my_acc_copy = par_strip_jabber_ressource(my_acc);
+		char* other_acc_copy = par_strip_jabber_ressource(other_acc);
+		struct key* used_key = par_search_key(my_acc_copy, other_acc_copy);
+		g_free(my_acc_copy);
+		g_free(other_acc_copy);
+		
 		if (used_key != NULL) {
 			if (used_key->opt->otp_enabled) {
 				used_key->opt->otp_enabled = FALSE;
@@ -967,7 +729,12 @@ static void par_conversation_created(PurpleConversation *conv)
 	gboolean online = purple_presence_is_online (pres);
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "This buddy, online == %i\n", online);
 	
-	struct key* active_key = par_search_key(my_acc_name, receiver);
+	char* my_acc_name_copy = par_strip_jabber_ressource(my_acc_name);
+	char* receiver_copy = par_strip_jabber_ressource(receiver);
+	struct key* active_key = par_search_key(my_acc_name_copy, receiver_copy);
+	g_free(my_acc_name_copy);
+	g_free(receiver_copy);
+	
 	if (active_key != NULL) {
 		/* display a nice message if already active */
 		if (active_key->opt->otp_enabled) {
@@ -1139,7 +906,11 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 	struct key* used_key = NULL;
 	char* recv_id = otp_id_get_from_message(otp_conf, *message);
 	if (recv_id != NULL) {
-		used_key = par_search_key_by_id(recv_id, my_acc_name, *sender);
+		char* my_acc_name_copy = par_strip_jabber_ressource(my_acc_name);
+		char* sender_copy = par_strip_jabber_ressource(*sender);
+		used_key = par_search_key_by_id(recv_id, my_acc_name_copy, sender_copy);
+		g_free(my_acc_name_copy);
+		g_free(sender_copy);
 		g_free(recv_id);
 	}
 
@@ -1228,7 +999,11 @@ static void par_im_msg_sending(PurpleAccount *account,
 			"Original Msg: %s\n", *message);
 
 	/* search in key list for a matching or initialised key */
-	struct key* used_key = par_search_key(my_acc_name, receiver);
+	char* my_acc_name_copy = par_strip_jabber_ressource(my_acc_name);
+	char* receiver_copy = par_strip_jabber_ressource(receiver);
+	struct key* used_key = par_search_key(my_acc_name_copy, receiver_copy);
+	g_free(my_acc_name_copy);
+	g_free(receiver_copy);
 
 	if (used_key != NULL) {
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
@@ -1349,7 +1124,13 @@ static gboolean par_im_msg_change_display(PurpleAccount *account,
 
 	/* save the first conv pounter (if libpurple >= 2.2.0) */
 	if (who != NULL) { /* needed to exclude libpurple < 2.2.0 */
-		used_key = par_search_key(purple_account_get_username(account), who);
+		char* my_acc_copy = par_strip_jabber_ressource(
+					purple_account_get_username(account));
+		char* who_copy = par_strip_jabber_ressource(who);
+		used_key = par_search_key(my_acc_copy, who_copy);
+		g_free(my_acc_copy);
+		g_free(who_copy);
+		
 		if ( used_key != NULL) {
 			if (used_key->conv == NULL) {
 				used_key->conv = conv;
@@ -1442,7 +1223,10 @@ static gboolean plugin_load(PurplePlugin *plugin)
 	void* blist_handle = purple_blist_get_handle();
 
 	/* setup the key list */
-	par_init_key_list();
+	keylist = NULL;
+	par_init_key_list(otp_conf);
+	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+			"Key list of %i keys created.\n", par_count_keys());
 	
 	/* connect to signals */
 	purple_signal_connect(conv_handle, "receiving-im-msg", plugin,
