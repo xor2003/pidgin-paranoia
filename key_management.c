@@ -163,7 +163,7 @@ void par_add_key(struct otp* a_pad)
 	return;
 }
 
-/* --------- Counting ----------*/
+/* --------- Counting ---------- */
 
 int par_count_keys()
 /* counts all keys in the list */
@@ -192,7 +192,7 @@ int par_count_matching_keys(const char* src, const char* dest)
 	return sum;
 }
 
-/* --------- Searching ----------*/
+/* --------- Searching ---------- */
 
 char* par_search_ids(const char* src, const char* dest)
 /* searches all ids for a src/dest pair in the keylist (comma separated).
