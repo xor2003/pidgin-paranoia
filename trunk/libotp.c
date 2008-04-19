@@ -343,7 +343,7 @@ static gboolean otp_key_is_random(gchar** key, gsize len,
 }
 
 static OtpError otp_get_encryptkey_from_file(gchar** key, struct otp* pad, 
-			gsize len, struct otp_config* config)
+			gsize len, const struct otp_config* config)
 /* Gets the key to encrypt from the keyfile */
 {
 	gsize i = 0;
@@ -1048,6 +1048,17 @@ unsigned int otp_conf_get_number_of_keys_in_production(const struct otp_config* 
 #endif
 	return config->number_of_keys_in_production;
 }
+
+const gchar* otp_conf_get_client_id(const struct otp_config* config)
+/* Gets the number of keys in production in the keygen */
+{
+	if (config == NULL) return 0;
+#ifdef DEBUG
+		g_printf("%s: ClientID: %s\n",config->client_id, config->client_id);
+#endif
+	return config->client_id;
+}
+
 
 void* otp_conf_get_trigger(const struct otp_config* config)
 /* gets the trigger to emit a signal for the plugin */

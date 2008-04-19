@@ -149,6 +149,10 @@ double otp_conf_get_msg_key_improbability_limit(const struct otp_config* myconfi
 /* Gets the number of keys in production in the keygen */
 unsigned int otp_conf_get_number_of_keys_in_production(const struct otp_config* config);
 
+/* Gets a reference the client id.
+ * Does not need to be freed.  */
+const gchar* otp_conf_get_client_id(const struct otp_config* myconfig);
+
 /* ------------------ otp_config set functions ------------------- */
 
 /* Sets the path where the .entropy-files are stored */
