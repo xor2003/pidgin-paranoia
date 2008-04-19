@@ -42,7 +42,7 @@ struct otp;
 /* encrypt the message
  * if it can't encrypt the message a syndrome > OTP_WARN is returned and
  * the message is left unchanged */
-OtpError otp_encrypt(struct otp* mypad, char** message);
+OtpError otp_encrypt(struct otp* mypad, gchar** message);
 
 /* encrypts a message with the protected entropy. protected_pos is the position in bytes to use.
  * The entropy is not consumed by this function.
@@ -51,12 +51,12 @@ OtpError otp_encrypt(struct otp* mypad, char** message);
  * When only one signal is used, use protected_pos = 0.
  * if it can't encrypt the message a syndrome > OTP_WARN is returned and
  * the message is left unchanged */
-OtpError otp_encrypt_warning(struct otp* mypad, char** message, gsize protected_pos);
+OtpError otp_encrypt_warning(struct otp* mypad, gchar** message, gsize protected_pos);
 
 /* decrypt the message
  * if it can't decrypt the message a syndrome > OTP_WARN is returned and
  * the message is left unchanged */
-OtpError otp_decrypt(struct otp* mypad, char** message);
+OtpError otp_decrypt(struct otp* mypad, gchar** message);
 
 /* destroys a keyfile by using up all encryption-entropy */
 OtpError otp_pad_erase_entropy(struct otp* mypad);
@@ -64,18 +64,18 @@ OtpError otp_pad_erase_entropy(struct otp* mypad);
 /* extracts and returns the ID from a given encrypted message.
  * Leaves the message constant. Returns NULL if it fails because the ID is not valid
  * or because it could not be extracted form the message */
-char* otp_id_get_from_message(const struct otp_config* myconfig, const char *msg);
+gchar* otp_id_get_from_message(const struct otp_config* myconfig, const gchar *msg);
 
 /* generates a new key pair (two files) with the name alice and bob of 'size' bytes.
  * if source is NULL (suggested as default), generate with keygen */
 OtpError otp_generate_key_pair(struct otp_config* myconfig,
-			const char* alice, const char* bob,
-			const char* source, gsize size);
+			const gchar* alice, const gchar* bob,
+			const gchar* source, gsize size);
 
 /* ------------------ otp_pad ------------------------------ */
 
 /* creates an otp pad with the data from a key file */
-struct otp* otp_pad_create_from_file(struct otp_config* myconfig, const char* filename);
+struct otp* otp_pad_create_from_file(struct otp_config* myconfig, const gchar* filename);
 
 /* closes the filehandle and the memory map. 
  * You can do this any time you want, it will just save memory */
@@ -87,31 +87,31 @@ void otp_pad_destroy(struct otp* mypad);
 /* ------------------ otp_pad get functions ------------------- */
 
 /* gets a reference to the source, i.e alice@jabber.org */
-const char* otp_pad_get_src(struct otp* mypad);
+const gchar* otp_pad_get_src(const struct otp* mypad);
 
 /* gets a reference to the destination, i.e bob@jabber.org */
-const char* otp_pad_get_dest(struct otp* mypad);
+const gchar* otp_pad_get_dest(const struct otp* mypad);
 
 /* gets a reference to the ID, 8 digits unique random number of the key pair (hex) */
-const char* otp_pad_get_id(struct otp* mypad);
+const gchar* otp_pad_get_id(const struct otp* mypad);
 
 /* gets a reference to the full path and the filename defined in the libotp spec */
-const char* otp_pad_get_filename(struct otp* mypad);
+const gchar* otp_pad_get_filename(const struct otp* mypad);
 
 /* gets the size (in bytes) of the entropy left for the sender */
-gsize otp_pad_get_entropy(struct otp* mypad);
+gsize otp_pad_get_entropy(const struct otp* mypad);
 
 /* gets the current encrypt-position (in bytes) in the keyfile */
-gsize otp_pad_get_position(struct otp* mypad);
+gsize otp_pad_get_position(const struct otp* mypad);
 
 /* gets the size of the file in bytes */
-gsize otp_pad_get_filesize(struct otp* mypad);
+gsize otp_pad_get_filesize(const struct otp* mypad);
 
 /* gets an OtpError that contains information about the status of the pad */
-OtpError otp_pad_get_syndrome(struct otp* mypad);
+OtpError otp_pad_get_syndrome(const struct otp* mypad);
 
 /* gets a reference to the config associated with this pad */
-struct otp_config* otp_pad_get_conf(struct otp* mypad);
+struct otp_config* otp_pad_get_conf(const struct otp* mypad);
 
 /* ------------------ otp_config ------------------------------ */
 
@@ -123,8 +123,8 @@ struct otp_config* otp_pad_get_conf(struct otp* mypad);
  * export_path:		The path where to export new created keys. 
  * 					Without tailing path delimiter.
  * 					for the other converstation partner i.e. 'bob' */
-struct otp_config* otp_conf_create(const char* client_id,
-				const char* path, const char* export_path);
+struct otp_config* otp_conf_create(const gchar* client_id,
+				const gchar* path, const gchar* export_path);
 
 /* Freeing of the otp_config struct
  * This fails with OTP_ERR_CONFIG_PAD_COUNT if there are any pads open in this config */
@@ -134,11 +134,11 @@ OtpError otp_conf_destroy(struct otp_config* myconfig);
 
 /* Gets a reference to the path in the config
  * Does not need to be freed.  */
-const char* otp_conf_get_path(const struct otp_config* myconfig);
+const gchar* otp_conf_get_path(const struct otp_config* myconfig);
 
 /* Gets a reference to the export path in the config
  * Does not need to be freed.  */
-const char* otp_conf_get_export_path(const struct otp_config* myconfig);
+const gchar* otp_conf_get_export_path(const struct otp_config* myconfig);
 
 /* Gets random_msg_tail_max_len */
 gsize otp_conf_get_random_msg_tail_max_len(const struct otp_config* myconfig);
@@ -152,10 +152,10 @@ unsigned int otp_conf_get_number_of_keys_in_production(const struct otp_config* 
 /* ------------------ otp_config set functions ------------------- */
 
 /* Sets the path where the .entropy-files are stored */
-OtpError otp_conf_set_path(struct otp_config* myconfig, const char* path);
+OtpError otp_conf_set_path(struct otp_config* myconfig, const gchar* path);
 
 /* Sets the export path where the .entropy-files are stored */
-OtpError otp_conf_set_export_path(struct otp_config* myconfig, const char* export_path);
+OtpError otp_conf_set_export_path(struct otp_config* myconfig, const gchar* export_path);
 
 /* Sets random_msg_tail_max_len:
  * 					The max length of the randomly added tailing charakters
