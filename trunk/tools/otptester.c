@@ -342,7 +342,7 @@ void test_done()
 	g_printf("------------------------- Done ---------------------------------------\n");
 }
 
-int main(int argc, char *argv[])
+int main(int argc, gchar *argv[])
 {
 	gchar *alice = "alice@jabber.org";
 	gchar *bob = "bob@jabber.org";
