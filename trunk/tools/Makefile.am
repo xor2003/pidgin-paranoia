@@ -1,6 +1,10 @@
 
-# with install: bin_PROGRAMS = otptester
-noinst_PROGRAMS = otptester
+# with install: bin_PROGRAMS = ...
+noinst_PROGRAMS = \
+	otptester \
+	otp	
+
+# ---- otptester ----
 
 otptester_SOURCES = \
 	otptester.c
@@ -17,8 +21,7 @@ otptester_CPPFLAGS = $(GLIB_CFLAGS)
 
 otptester_LDADD = $(GLIB_LIBS)
 
-# with install: bin_PROGRAMS = otp
-noinst_PROGRAMS = otp
+# ---- otp cli tool ----
 
 otp_SOURCES = \
 	otp.c
