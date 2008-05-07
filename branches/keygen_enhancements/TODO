@@ -1,0 +1,47 @@
+-----------------------------------------------------------------------
+                              TODO list
+-----------------------------------------------------------------------
+
+Version 0.3
+============
+	paranoia
+	 * /otp scan, to read in new keys
+	 * add a message queue thread
+	 	* enhanced session management (auto ack)
+	 	* send entropy warnings
+	 * modular key management (par_key_list.h)
+	 * string freeze
+
+	libotp
+	 * checking for \0\0\0 on decrypt to check if the message is valid 
+	 * keyfile entropy really checked for patterns
+
+	otp
+	 * commandline program that can use libotp for general usage
+
+Version 0.4
+============
+ 	paranoia
+ 	 * gettext support (translations)
+	 * optimize key list (hashtable or tree)
+
+Version 1.0
+============
+ 	paranoia
+ 	 * no conversation windows that pop-up independently
+	 * all pidgin protocols are tested and work
+	 * all major languages are available
+
+Misc
+ * Test all the less common protocols (Gadu-Gadu, QQ, SIMPLE...)
+ * ensure that the protocol is stable
+
+Ideas
+ * Entropy pool file
+ * Encrypted file transfer
+
+Known bugs
+ * there are some anomalies if both set /otp off and one user tries to reenable
+ * Sometimes the first "Encryption enabled." message gets lost due to timing problems
+ * Finch eats our <otp> markers.
+ 
