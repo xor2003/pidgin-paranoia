@@ -546,7 +546,7 @@ OtpError otp_generate_key_pair(struct otp_config *config,
 *	key generator (default), out of an entropy file or out of a character device. 
 *	Currently there can only be one key at the moment generated. */
 {
-	if (alice == NULL || bob == NULL || config == NULL || size <= 0) {
+	if (alice == NULL || bob == NULL || size <= 0) {
 		return OTP_ERR_INPUT;
 	}
 	/* Check for things like '/'. Alice and Bob will become filenames */
@@ -576,67 +576,22 @@ OtpError otp_generate_key_pair(struct otp_config *config,
 	g_printf("%s: genkey: '%s' '%s' \n",config->client_id, alice_file, bob_file);
 #endif
 	
+	/* check if file already exists */
 	if(stat(alice_file, &rfstat) == 0) {
 		g_free(alice_file);
 		g_free(bob_file);
 		return OTP_ERR_FILE_EXISTS;
 	}
 
-	/* choose the correct source and generate the key if possible */	
-	if(source == NULL) { /* use the integrated keygen */
-		if(keygen_keys_generate(alice_file, bob_file, size, 
-									(strcmp(alice, bob) == 0), (void *)config) == NULL) {
+	/* generate keys if possible */	
+	if(keygen_keys_generate(alice_file, bob_file, size, source, (void *)config) != OTP_OK) {
 			g_free(alice_file);
 			g_free(bob_file);
 			return OTP_ERR_KEYGEN_ERROR1;
-		}
+	}
 		g_free(alice_file);
 		g_free(bob_file);
 		return OTP_OK;
-	} else { /* use a file as source */
-		if(stat(source, &rfstat) < 0) { /* using a real file as source */
-#ifdef PRINT_ERRORS
-			g_printf("%s: sourcefile doesn't exist\n",config->client_id);
-#endif
-			otp_conf_decrement_number_of_keys_in_production(config);
-			g_free(alice_file);
-			g_free(bob_file);
-			return OTP_ERR_FILE;
-		}
-		if(S_ISREG(rfstat.st_mode)) {
-			if(keygen_keys_generate_from_file(alice_file, bob_file, source, size, 
-									(strcmp(alice, bob) == 0), (void *)config) == NULL) {
-				g_free(alice_file);
-				g_free(bob_file);
-				return OTP_ERR_KEYGEN_ERROR1;
-			}
-			g_free(alice_file);
-			g_free(bob_file);
-			return OTP_OK;
-		} else if(S_ISCHR(rfstat.st_mode)) { /* using a stream as source */
-			if(keygen_keys_generate_from_device(alice_file, bob_file, source, size, 
-									(strcmp(alice, bob) == 0), (void *)config) == NULL) {
-				g_free(alice_file);
-				g_free(bob_file);
-				return OTP_ERR_KEYGEN_ERROR1;
-			}
-			g_free(alice_file);
-			g_free(bob_file);
-			return OTP_OK;
-		} else {
-#ifdef PRINT_ERRORS
-			g_printf("%s: sourcefile type is not supported\n",config->client_id);
-#endif
-			otp_conf_decrement_number_of_keys_in_production(config);
-			g_free(alice_file);
-			g_free(bob_file);
-			return OTP_ERR_FILE;
-		}
-		otp_conf_decrement_number_of_keys_in_production(config);
-		g_free(alice_file);
-		g_free(bob_file);
-		return OTP_ERR_FILE;
-	}
 }
 
 
