@@ -28,6 +28,11 @@
 /* libc includes */
 #include <stdio.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <errno.h>
 
 /* declarations */
 typedef struct {
@@ -35,6 +40,7 @@ typedef struct {
 	gboolean is_loopkey;
 	gchar *alice, *bob, *src;
 	struct otp_config* config;
+	gpointer keygen_mutex;
 } KeyData;
 
 gpointer keygen_main_thread(gpointer data);
@@ -45,6 +51,11 @@ gpointer threads(gpointer data);
 gpointer sysstate(gpointer data);
 gpointer prng(gpointer data);
 
+/* defines */
+#define BUFFSIZE 20
+// do not change, for developement purpose
+#define CHARSIZE 256
+#define OFFSET 0
 
 /* ------------------------- TOOLS --------------------------*/
 OtpError keygen_invert(char *src, char *dest)
@@ -156,6 +167,8 @@ OtpError keygen_keys_generate(char *alice_file, char *bob_file,
 	// initialize g_thread if not already done.
 	// The program will abort if no thread system is available!
 	if (!g_thread_supported()) g_thread_init (NULL);
+	
+	key_data.keygen_mutex = g_mutex_new();
 
 	if(g_thread_create(keygen_main_thread, NULL, TRUE, (gpointer)&key_data) == NULL) {
 		otp_conf_decrement_number_of_keys_in_production(key_data.config);
@@ -178,7 +191,62 @@ gpointer keygen_main_thread(gpointer data)
 {
 	return NULL;
 }
-gpointer devrand(gpointer data);
+
+gpointer devrand(gpointer data) 
+/*
+*	Thread which collects entropy from the standart unix random device
+*/
+{	
+	KeyData key_data;	
+	int fp_rand, fp_alice;
+	unsigned char c1;
+	unsigned char buffer[BUFFSIZE];
+	int size;
+	
+	key_data = *((KeyData *)data);
+
+	if((fp_rand = open("/dev/random", O_RDONLY)) < 0) {
+		g_printerr("could not open /dev/random \n");
+		return 0;
+	}
+	if((fp_alice = open(key_data.alice, O_RDWR|O_CREAT|O_APPEND, 00644)) < 0) {
+		g_printerr("could not open alice file \n");
+		close(fp_rand);
+		return 0;
+	}
+
+	size = 0;
+	while(1) {
+		if(read(fp_rand, &c1, 1) < 0) {
+			g_print("read error\n");
+		}
+
+		buffer[size] = (unsigned char)((c1 % CHARSIZE) + OFFSET);
+		size++;
+
+		if(size == BUFFSIZE) {
+			g_mutex_lock(key_data.keygen_mutex);
+			if(key_data.size < size) {
+				g_mutex_unlock(key_data.keygen_mutex);
+				break;
+			}
+			if(write(fp_alice, &buffer, BUFFSIZE) < 0) {
+				g_printerr("write error\n");
+				g_mutex_unlock(key_data.keygen_mutex);
+				break;
+			}
+			key_data.size -= size;
+			g_mutex_unlock(key_data.keygen_mutex);
+			size = 0;
+		}
+		usleep(5);
+	}
+
+	close(fp_rand);
+	close(fp_alice);
+	return 0;
+} // end devrand()
+
 gpointer audio(gpointer data);
 gpointer stub(gpointer data);
 gpointer threads(gpointer data);
