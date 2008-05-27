@@ -46,15 +46,16 @@ AC_DEFINE_UNQUOTED(PARANOIA_ID, "core-paranoia", [Pidgin-Paranoia Plugin ID])
 #
 # Check for glib2.0
 #
-AM_PATH_GLIB_2_0(2.12.0,, AC_MSG_ERROR([
+AM_PATH_GLIB_2_0(2.16.0,, AC_MSG_ERROR([
 *** GLib 2.12.0 is required to build pidgin-paranoia;  The latest version of 
 *** GLib is always available at http://www.gtk.org/.]))
 
 PKG_CHECK_MODULES(GTHREAD, gthread-2.0,, [AC_MSG_ERROR([unable to find the GThread library])])
 PKG_CHECK_MODULES(GOBJECT, gobject-2.0,, [AC_MSG_ERROR([unable to find the GObject library])])
+PKG_CHECK_MODULES(GIO, gio-2.0,, [AC_MSG_ERROR([unable to find the GIO library])])
 
-GLIB_LIBS+="`pkg-config --libs gthread-2.0 gobject-2.0`"
-GLIB_CFLAGS+="`pkg-config --cflags gthread-2.0 gobject-2.0`"
+GLIB_LIBS+="`pkg-config --libs gthread-2.0 gobject-2.0 gio-2.0`"
+GLIB_CFLAGS+="`pkg-config --cflags gthread-2.0 gobject-2.0 gio-2.0`"
 
 #
 # Check for libpurple
