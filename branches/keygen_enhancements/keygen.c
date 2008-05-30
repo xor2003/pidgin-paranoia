@@ -59,8 +59,8 @@ OtpError keygen_invert(gchar *src, gchar *dest)
 */
 {
 	GOutputStream *fpout;
-	GFile *src_file, *dest_file;
-	GFileInfo *info;
+	GFile *dest_file;
+	GMappedFile *src_file;
 	gchar *buffer;
 	gsize file_length;
 	gint position;
@@ -70,19 +70,17 @@ OtpError keygen_invert(gchar *src, gchar *dest)
 		return OTP_ERR_KEYGEN_ERROR3;
 	}
 	
-	src_file = g_file_new_for_commandline_arg(src);
-	info = g_file_query_info(src_file, G_FILE_ATTRIBUTE_STANDARD_SIZE, G_FILE_QUERY_INFO_NONE, NULL, NULL);
-	if(info == NULL) {
-		g_printerr("wasn't able to get file info\n");
-		return OTP_ERR_KEYGEN_ERROR3;
-	}
-	file_length = (gsize)g_file_info_get_size(info);
-
+	src_file = g_mapped_file_new(src, 0, NULL);	
+	file_length = g_mapped_file_get_length(src_file);
+	buffer = g_mapped_file_get_contents(src_file);
+	
 	dest_file = g_file_new_for_commandline_arg(dest);
 	fpout = (GOutputStream *)g_file_append_to(dest_file, G_FILE_CREATE_PRIVATE, NULL, NULL);
 
 	if(file_length <= 0 || fpout == NULL) {
 		g_printerr("couldn't get file stream\n");
+		g_mapped_file_free(src_file);
+		g_output_stream_close(fpout, NULL, NULL);
 		return OTP_ERR_KEYGEN_ERROR3;
 	}
 	
@@ -93,14 +91,14 @@ OtpError keygen_invert(gchar *src, gchar *dest)
 	while(position >= 0) {
 		if(g_output_stream_write(fpout, &buffer[position], 1, NULL, NULL) != 1) {
 			g_printerr("wasn't able to create bob key\n");
+			g_mapped_file_free(src_file);
 			g_output_stream_close(fpout, NULL, NULL);
-			g_free(buffer);
 			return OTP_ERR_KEYGEN_ERROR1;
 		}
 		position--;
 	}
 	
-	g_free(buffer);
+	g_mapped_file_free(src_file);
 	g_output_stream_close(fpout, NULL, NULL);
 	return OTP_OK;
 } // end invert()
