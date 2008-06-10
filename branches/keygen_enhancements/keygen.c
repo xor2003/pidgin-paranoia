@@ -112,37 +112,98 @@ struct otp *keygen_get_pad(gchar *filename, KeyData *key_data)
 {
 	struct otp *pad;
 	gchar *alice_relative;
-	gchar **splited;
-	gint i;
 	
 	if(filename == NULL) {
 		g_printerr("Input NULL\n");
 		return NULL;
 	}
 	
-	splited = g_strsplit(filename, PATH_DELI, -1);
-	
-	/* get the relative filename*/
-	i = 0;
-	while(splited[i] != NULL) i++;
-
-	alice_relative = splited[i-1];
+	/* get relative filename*/	
+	alice_relative = g_path_get_basename(filename);
 	
 	/* generate pad from file */	
 	pad = otp_pad_create_from_file(key_data->config, alice_relative);
 	
-	g_strfreev(splited);
+	g_free(alice_relative);
 	
 	return pad;
 } // end keygen_get_pad()
 
 
-guchar bit2char(gshort buf[8]);
+guchar bit2char(gshort buf[8]) 
+/*
+*	Input a buf which elements are 1 or 0 and the function will output
+*	a char as output.
+*/
+{
+	gshort i, byte;
+	
+	/* Convert the buffer into one byte */
+	byte = 0;
+	for(i = 0; i < 8; i++) byte += buf[i] * (1<<i);
 
-void free_key_data(KeyData *key_data) {
+	return (guchar)byte;
+}
+
+gint improved_neumann(guchar buffer[BUFFSIZE]) {
+	gint size, i, j, count;
+	guchar current;
+	size = 0;
+	count = 0;
+	current = 0;
+	
+	for(i = 0; i < BUFFSIZE; i++) {
+		for(j = 0; j < 2; j++) {
+			switch((int)((buffer[i] >> i*4)&0xF)) {
+				case 1:	case 5:	case 13:
+					count += 2;
+					break;
+				case 3:
+					count++;
+					break;
+				case 4: case 6:	case 7:
+					count++;
+					if(count > 7) break;
+					current += (1 << count);
+					count++;
+					break;
+				case 2:	case 9:	case 14:
+					current += (1 << count);
+					count += 2;
+					break;
+				case 8:	case 10: case 11:
+					current += (1 << count);
+					count++;
+					if(count > 7) break;
+					current += (1 << count);
+					count++;
+					break;
+				case 12:
+					current += (1 << count);
+					count++;
+					break;
+				default:
+					break;
+			}
+			if(count > 7) {
+				buffer[size] = current;
+				size++;
+				count = 0;
+			}
+		}
+	}
+	return size;
+}
+
+void free_key_data(KeyData *key_data) 
+/*
+*	Free the KeyData struct
+*/
+{
 	g_free(key_data->alice);
 	g_free(key_data->bob);
 	g_free(key_data->src);
+	g_mutex_free(key_data->keygen_mutex);
 	g_free(key_data);
 } // end free_key_data()
 
@@ -175,19 +236,20 @@ OtpError keygen_keys_generate(char *alice_file, char *bob_file,
 	} else key_data->size = size / 2;
 	key_data->src = g_strdup(entropy_source);
 	
+	/* initialize g_thread if not already done.
+	   The program will abort if no thread system is available! */
+	if (!g_thread_supported()) g_thread_init (NULL);
+	
+	/* Create the mutex */
+	key_data->keygen_mutex = g_mutex_new();
+	
 	/* Try to create alice file */
 	key_data->fp_alice = (GOutputStream *) g_file_create(g_file_new_for_commandline_arg(key_data->alice), 
 															G_FILE_CREATE_PRIVATE, NULL, NULL);
 	if(key_data->fp_alice == NULL) {
 		free_key_data(key_data);
 		return OTP_ERR_FILE_EXISTS;
-	}
-	
-	/* initialize g_thread if not already done.
-	   The program will abort if no thread system is available! */
-	if (!g_thread_supported()) g_thread_init (NULL);
-	
-	key_data->keygen_mutex = g_mutex_new();
+	}	
 
 	/* Try to start thread for key generation */
 	if(g_thread_create(keygen_main_thread, NULL, TRUE, (gpointer)key_data) == NULL) {
@@ -263,6 +325,54 @@ gpointer audio(gpointer data)
 *	For the entropy collection only the last bit of the audio channle is taken.
 */
 {
+	KeyData *key_data;
+	GInputStream *audio;
+	gshort readbuf[8];
+	guchar writebuf[BUFFSIZE];
+	guint count;
+	gssize size;
+
+	key_data = (KeyData *)data;
+	
+	/* create audio file stream */
+	audio = (GInputStream *) g_file_read(g_file_new_for_commandline_arg("/dev/audio"), NULL, NULL);
+	
+	if(audio == NULL) {
+		g_printerr("couldn't open /dev/audio \n");
+		return 0;
+	}
+	
+	/* read from input and write to output */
+	count = 0;
+	while(1) {
+		if(g_input_stream_read(audio, readbuf, 8, NULL, NULL) != 8) {
+			g_printerr("audio read error\n");	
+		} else if(count < BUFFSIZE) {
+			writebuf[count] = bit2char(readbuf);
+			count++;
+		} else {
+			size = improved_neumann(writebuf);
+			g_mutex_lock(key_data->keygen_mutex);
+			if(key_data->size < size) {
+				g_mutex_unlock(key_data->keygen_mutex);
+				break;
+			}
+			if((size = g_output_stream_write(key_data->fp_alice, writebuf, size, NULL, NULL)) != -1) {
+				key_data->size -= size;
+				g_mutex_unlock(key_data->keygen_mutex);
+				count = 0;
+			} else {
+				g_printerr("write error\n");
+				g_mutex_unlock(key_data->keygen_mutex);
+				return 0;
+			}
+		}
+		
+		g_usleep(100);
+	}
+	/* close file streams */
+	g_input_stream_close(audio, NULL, NULL);
+	
 	return 0;
 } // end audio()
 
