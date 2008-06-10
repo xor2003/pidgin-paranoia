@@ -144,7 +144,7 @@ void free_key_data(KeyData *key_data) {
 	g_free(key_data->bob);
 	g_free(key_data->src);
 	g_free(key_data);
-}
+} // end free_key_data()
 
 
 /* ------------------------- ACCESS -------------------------*/
@@ -198,13 +198,13 @@ OtpError keygen_keys_generate(char *alice_file, char *bob_file,
 	}
 
 	return OTP_OK;
-}
+} // end keygen_keys_generate
 
 guint keygen_id_get()
 /* return a random id */
 {
 	return (guint)g_random_int();
-}	
+}	 // end keygen_id_get()
 
 /* ------------------------- THREADS ------------------------*/
 
@@ -212,7 +212,7 @@ gpointer keygen_main_thread(gpointer data)
 {
 	free_key_data((KeyData *)data);
 	return NULL;
-}
+} // end keygen_main_thread()
 
 gpointer devrand(gpointer data) 
 /*
@@ -256,8 +256,109 @@ gpointer devrand(gpointer data)
 	return 0;
 } // end devrand()
 
-gpointer audio(gpointer data);
-gpointer stub(gpointer data);
-gpointer threads(gpointer data);
+gpointer audio(gpointer data)
+/*
+*	audio() collect entropie from /dev/audio and unbias it with the improved Neumann Algorithm to
+*	get a better distribution.
+*	For the entropy collection only the last bit of the audio channle is taken.
+*/
+{
+	return 0;
+} // end audio()
+
+
+gpointer stub(gpointer data) 
+/*
+*	Stub Thread for thread timing measurement
+*/
+{
+	return 0;
+} // end stub()
+
+gpointer threads(gpointer data) 
+/*
+*	threads() collects entropie from thread timing, by just mesuring the time it takes
+*	to open and close the stub() thread. This function takes one sample every second
+* 	and writes the entropie into the alice keyfile
+*/
+{
+	KeyData *key_data;
+	GTimer *timer;
+	GThread *tid;
+	gint i;
+	gchar c;
+	gulong ms;
+	
+	key_data = (KeyData *)data;
+	timer = g_timer_new();
+	while(1) {
+		g_timer_start(timer);
+		for(i = 0; i < 100; i++) {
+			if((tid = g_thread_create(stub, NULL, TRUE, NULL)) != NULL) g_thread_join(tid);
+		}
+		g_timer_stop(timer);
+		g_timer_elapsed(timer, &ms);
+		c = (char) ((ms % CHARSIZE) + OFFSET);
+		g_mutex_lock(key_data->keygen_mutex);
+		if(key_data->size == 0) {
+			g_mutex_unlock(key_data->keygen_mutex);
+			break;
+		}
+		if(g_output_stream_write(key_data->fp_alice, &c, 1, NULL, NULL) != 1) {
+			g_printerr("write error\n");
+			g_mutex_unlock(key_data->keygen_mutex);
+			break;
+		}
+		key_data->size--;
+		g_mutex_unlock(key_data->keygen_mutex);
+		g_usleep(1000000);
+	}
+	g_timer_destroy(timer);
+	return 0;
+} // end threads()
+
+
 gpointer sysstate(gpointer data);
-gpointer prng(gpointer data);
+
+gpointer prng(gpointer data)
+/*
+*	prng collects entropy from the pseudo random generator /dev/urandom. If this device is not available it will
+*	use the glib random number generator.
+*/
+{
+	KeyData *key_data;
+	GInputStream *fp_prng;
+	gchar buffer[BUFFSIZE];
+	gsize size;
+	gint i;
+	
+	key_data = (KeyData *)data;
+	
+	fp_prng = (GInputStream *)g_file_read(g_file_new_for_commandline_arg("/dev/urandom"), NULL, NULL);
+	if(fp_prng == NULL) g_printerr("/dev/random not available, taking glib prng\n");
+
+	while(1) {	
+		if(fp_prng == NULL) {
+			for(i = 0; i < BUFFSIZE; i++) buffer[i] = (char)g_random_int_range(OFFSET, CHARSIZE + OFFSET);
+			size = BUFFSIZE;
+		} else {
+			size = g_input_stream_read(fp_prng, buffer, BUFFSIZE, NULL, NULL);
+		}
+		if(size >= 0) {
+			g_mutex_lock(key_data->keygen_mutex);
+			if(key_data->size < size) {
+				g_mutex_unlock(key_data->keygen_mutex);
+				break;
+			}
+			if((size = g_output_stream_write(key_data->fp_alice, buffer, size, NULL, NULL)) == -1) {
+				g_printerr("write error\n");
+				g_mutex_unlock(key_data->keygen_mutex);
+				break;
+			}
+			key_data->size -= size;
+			g_mutex_unlock(key_data->keygen_mutex);
+		}
+		g_usleep(100);
+	}
+	return 0;
+} // end prng;
