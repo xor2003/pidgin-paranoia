@@ -9,7 +9,6 @@ Version 0.3
 	 * add a message queue thread
 	 	* enhanced session management (auto ack)
 	 	* send entropy warnings
-	 * modular key management (par_key_list.h)
 	 * string freeze
 
 	libotp

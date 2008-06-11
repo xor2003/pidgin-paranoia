@@ -129,7 +129,7 @@ static char* par_strip_jabber_ressource(const char* acc)
 	return acc_copy;
 }
 
-/* ----------------- Paranoia Key Management ------------------ */
+/* ----------------- Paranoia custom signal handler ------------------ */
 
 static void par_keygen_key_generation_done(GObject *my_object, gdouble percent, struct otp* alice_pad) {
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
@@ -1030,6 +1030,7 @@ static void par_im_msg_sending(PurpleAccount *account,
 						"The last Message could not be sent.", 
 						PURPLE_MESSAGE_NO_LOG, time(NULL));
 				// TODO: display the message in the msg too
+				// 	     and hide the real one
 				/* delete the remaining entropy */
 				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 						"You have not enough entropy! no_entropy = TRUE\n");
