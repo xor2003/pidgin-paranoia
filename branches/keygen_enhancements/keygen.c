@@ -83,10 +83,7 @@ OtpError keygen_invert(gchar *src, gchar *dest)
 		g_output_stream_close(fpout, NULL, NULL);
 		return OTP_ERR_KEYGEN_ERROR3;
 	}
-	
-	buffer = (gchar *)g_malloc(file_length);
-	g_file_get_contents(src, &buffer, &file_length, NULL);	
-	
+
 	position = file_length - 1;
 	while(position >= 0) {
 		if(g_output_stream_write(fpout, &buffer[position], 1, NULL, NULL) != 1) {
@@ -104,7 +101,7 @@ OtpError keygen_invert(gchar *src, gchar *dest)
 } // end invert()
 
 
-struct otp *keygen_get_pad(gchar *filename, KeyData *key_data) 
+struct otp *keygen_get_pad(KeyData *key_data) 
 /*
 	Get the OTP pad for filename. 
 	filename has to be a regluar entropy file with absolute path.
@@ -113,13 +110,9 @@ struct otp *keygen_get_pad(gchar *filename, KeyData *key_data)
 	struct otp *pad;
 	gchar *alice_relative;
 	
-	if(filename == NULL) {
-		g_printerr("Input NULL\n");
-		return NULL;
-	}
-	
+
 	/* get relative filename*/	
-	alice_relative = g_path_get_basename(filename);
+	alice_relative = g_path_get_basename(key_data->alice);
 	
 	/* generate pad from file */	
 	pad = otp_pad_create_from_file(key_data->config, alice_relative);
@@ -195,6 +188,50 @@ gint improved_neumann(guchar buffer[BUFFSIZE]) {
 	return size;
 }
 
+gint keys_from_source(KeyData *key_data, GFile *source) {
+	GInputStream *fp_source;
+	gssize size;
+	gchar buffer[BUFFSIZE];
+	
+	fp_source = (GInputStream *) g_file_read(source, NULL, NULL);
+	
+	if(fp_source == NULL) {
+		g_printerr("couldn't open entropy source stream\n");
+		return -1;
+	}
+	
+	while(1) {
+		if(key_data->size >= BUFFSIZE) {
+			size = BUFFSIZE;
+		} else if(key_data->size < BUFFSIZE) {
+			size = key_data->size;
+		} else if(key_data->size == 0) {
+			break;
+		} else {
+			g_printerr("unknown size error\n");
+			g_input_stream_close(fp_source, NULL, NULL);
+			return -1;
+		}
+		
+		if((size = g_input_stream_read(fp_source, buffer, size, NULL, NULL)) == -1) {
+			g_input_stream_close(fp_source, NULL, NULL);
+			g_printerr("read error\n");
+			return -1;
+		}
+		
+		if((size = g_output_stream_write(key_data->fp_alice, buffer, size, NULL, NULL)) == -1) {
+			g_input_stream_close(fp_source, NULL, NULL);
+			g_printerr("write error\n");
+			return -1;
+		}
+		
+		key_data->size -= size;
+	}
+	
+	g_input_stream_close(fp_source, NULL, NULL);
+	return 0;
+}
+
 void free_key_data(KeyData *key_data) 
 /*
 *	Free the KeyData struct
@@ -204,6 +241,7 @@ void free_key_data(KeyData *key_data)
 	g_free(key_data->bob);
 	g_free(key_data->src);
 	g_mutex_free(key_data->keygen_mutex);
+	g_output_stream_close(key_data->fp_alice, NULL,  NULL);
 	g_free(key_data);
 } // end free_key_data()
 
@@ -219,6 +257,7 @@ OtpError keygen_keys_generate(char *alice_file, char *bob_file,
 */
 {
 	KeyData *key_data;
+	gchar *tmp_file;
 	
 	if(alice_file == NULL || bob_file == NULL || config == NULL) {
 		g_printerr("input NULL\n");
@@ -230,10 +269,16 @@ OtpError keygen_keys_generate(char *alice_file, char *bob_file,
 	key_data = (KeyData *)g_malloc0(sizeof(KeyData));	
 	key_data->config = (struct otp_config *)config;
 	key_data->alice = g_strdup(alice_file);
-	key_data->bob = g_strdup(bob_file);
-	if(g_strcmp0(alice_file, bob_file)) {
+
+	if(g_strcmp0(g_path_get_basename(alice_file), g_path_get_basename(bob_file))) {
+		key_data->bob = g_strdup(bob_file);
 		key_data->size = size;
-	} else key_data->size = size / 2;
+		key_data->is_loopkey = FALSE;
+	} else {
+		key_data->bob = g_strdup(alice_file);
+		key_data->size = size / 2;
+		key_data-> is_loopkey = TRUE;
+	}
 	key_data->src = g_strdup(entropy_source);
 	
 	/* initialize g_thread if not already done.
@@ -244,15 +289,17 @@ OtpError keygen_keys_generate(char *alice_file, char *bob_file,
 	key_data->keygen_mutex = g_mutex_new();
 	
 	/* Try to create alice file */
-	key_data->fp_alice = (GOutputStream *) g_file_create(g_file_new_for_commandline_arg(key_data->alice), 
+	tmp_file = g_strdup_printf("%s%s%s",g_get_tmp_dir(), G_DIR_SEPARATOR_S, g_path_get_basename(key_data->alice));
+	key_data->fp_alice = (GOutputStream *)g_file_create(g_file_new_for_commandline_arg(tmp_file), 
 															G_FILE_CREATE_PRIVATE, NULL, NULL);
+	g_free(tmp_file);
 	if(key_data->fp_alice == NULL) {
 		free_key_data(key_data);
 		return OTP_ERR_FILE_EXISTS;
 	}	
 
 	/* Try to start thread for key generation */
-	if(g_thread_create(keygen_main_thread, NULL, TRUE, (gpointer)key_data) == NULL) {
+	if(g_thread_create(keygen_main_thread, (gpointer)key_data, TRUE, NULL) == NULL) {
 		otp_conf_decrement_number_of_keys_in_production(key_data->config);
 		g_printerr("couldn't create thread");
 		free_key_data(key_data);
@@ -272,7 +319,80 @@ guint keygen_id_get()
 
 gpointer keygen_main_thread(gpointer data)
 {
-	free_key_data((KeyData *)data);
+	KeyData *key_data;
+	struct otp *pad;
+	gchar *tmp_file, *bob_file;
+	GFile *source;
+	GFileInfo *info;
+	gsize size;
+	gboolean error;
+	GThread *t_audio, *t_random, *t_prng, *t_threads;
+	
+	key_data = (KeyData *)data;
+	error = FALSE;
+
+	if(key_data->src == NULL) {
+		/* integrated keygen */
+		if((t_random = g_thread_create(devrand, (gpointer)key_data, TRUE, NULL)) == NULL) g_printerr("fail: /dev/random\n");
+		if((t_audio = g_thread_create(audio, (gpointer)key_data, TRUE, NULL)) == NULL) g_printerr("fail: /dev/audio\n");
+		if((t_threads = g_thread_create(threads, (gpointer)key_data, TRUE, NULL)) == NULL) g_printerr("fail: thread timing\n");
+		if((t_prng = g_thread_create(prng, (gpointer)key_data, TRUE, NULL)) == NULL) g_printerr("fail PRNG\n");
+		
+		g_thread_join(t_random);
+		g_thread_join(t_audio);
+		g_thread_join(t_threads);
+		g_thread_join(t_prng);
+	} else {	
+		source = g_file_new_for_commandline_arg(key_data->src);
+		info = g_file_query_info(source, "*",G_FILE_QUERY_INFO_NONE, NULL, NULL);
+		switch(g_file_info_get_file_type(info)) {
+			case G_FILE_TYPE_REGULAR:
+				size = g_file_info_get_size(info);
+				if(size < key_data->size) {
+					g_printerr("Entropy File to small\n");
+					error = TRUE;
+					break;
+				}
+				if(keys_from_source(key_data, source) != 0) {
+					g_printerr("error in entropy source\n");
+					error = TRUE;
+				}
+				break;
+			case G_FILE_TYPE_SPECIAL:
+				if(keys_from_source(key_data, source) != 0) {
+					g_printerr("error in entropy source\n");
+					error = TRUE;
+				}
+				break;
+			default:
+				g_printerr("unsupported source\n");
+				error = TRUE;
+				break;
+		}
+	}
+	
+	if(!error) {
+		tmp_file = g_strdup_printf("%s%s%s",g_get_tmp_dir(), G_DIR_SEPARATOR_S, g_path_get_basename(key_data->alice));
+		if(key_data->is_loopkey) {
+			bob_file = tmp_file;
+		} else {
+			bob_file = key_data->bob;
+		}
+		if(keygen_invert(tmp_file, bob_file) != OTP_OK) {
+			g_printerr("error in creation of bob key\n");
+		} else {
+			g_file_move(g_file_new_for_commandline_arg(tmp_file), 
+						g_file_new_for_commandline_arg(key_data->alice), 
+						G_FILE_COPY_NONE, NULL, NULL, NULL, NULL);
+			pad = keygen_get_pad(key_data);
+			g_signal_emit_by_name(G_OBJECT(otp_conf_get_trigger(key_data->config)), "keygen_key_done_signal", 100.0, pad);
+		}
+		g_free(tmp_file);
+	} else g_printerr("error!!!\n");
+
+	otp_conf_decrement_number_of_keys_in_production(key_data->config);
+	free_key_data(key_data);
+
 	return NULL;
 } // end keygen_main_thread()
 
@@ -326,7 +446,7 @@ gpointer audio(gpointer data)
 */
 {
 	KeyData *key_data;
-	GInputStream *audio;
+	GInputStream *fp_audio;
 	gshort readbuf[8];
 	guchar writebuf[BUFFSIZE];
 	guint count;
@@ -335,9 +455,9 @@ gpointer audio(gpointer data)
 	key_data = (KeyData *)data;
 	
 	/* create audio file stream */
-	audio = (GInputStream *) g_file_read(g_file_new_for_commandline_arg("/dev/audio"), NULL, NULL);
+	fp_audio = (GInputStream *) g_file_read(g_file_new_for_commandline_arg("/dev/audio"), NULL, NULL);
 	
-	if(audio == NULL) {
+	if(fp_audio == NULL) {
 		g_printerr("couldn't open /dev/audio \n");
 		return 0;
 	}
@@ -345,7 +465,7 @@ gpointer audio(gpointer data)
 	/* read from input and write to output */
 	count = 0;
 	while(1) {
-		if(g_input_stream_read(audio, readbuf, 8, NULL, NULL) != 8) {
+		if(g_input_stream_read(fp_audio, readbuf, 8, NULL, NULL) != 8) {
 			g_printerr("audio read error\n");	
 		} else if(count < BUFFSIZE) {
 			writebuf[count] = bit2char(readbuf);
@@ -371,7 +491,7 @@ gpointer audio(gpointer data)
 		g_usleep(100);
 	}
 	/* close file streams */
-	g_input_stream_close(audio, NULL, NULL);
+	g_input_stream_close(fp_audio, NULL, NULL);
 	
 	return 0;
 } // end audio()
@@ -468,7 +588,7 @@ gpointer prng(gpointer data)
 			key_data->size -= size;
 			g_mutex_unlock(key_data->keygen_mutex);
 		}
-		g_usleep(100);
+		g_usleep(1000);
 	}
 	return 0;
 } // end prng;

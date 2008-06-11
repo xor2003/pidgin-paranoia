@@ -566,10 +566,10 @@ OtpError otp_generate_key_pair(struct otp_config *config,
 	/* create filenames with the correct path*/
 	id = keygen_id_get();
 	
-	alice_file = (gchar *)g_strdup_printf("%s%s%s%s%s%s%.8X", 
+	alice_file = (gchar *)g_strdup_printf("%s%s%s%s%s%s%.8X.entropy", 
 			otp_conf_get_path(config), PATH_DELI,
 			alice, FILE_DELI, bob, FILE_DELI, id);
-	bob_file = (gchar *)g_strdup_printf("%s%s%s%s%s%s%.8X", 
+	bob_file = (gchar *)g_strdup_printf("%s%s%s%s%s%s%.8X.entropy", 
 			otp_conf_get_export_path(config), PATH_DELI,
 			bob, FILE_DELI, alice, FILE_DELI, id);
 #ifdef DEBUG
