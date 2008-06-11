@@ -201,12 +201,13 @@ gint keys_from_source(KeyData *key_data, GFile *source) {
 	}
 	
 	while(1) {
-		if(key_data->size >= BUFFSIZE) {
+		if(key_data->size == 0) {
+			break;	
+		} else if(key_data->size >= BUFFSIZE) {
 			size = BUFFSIZE;
 		} else if(key_data->size < BUFFSIZE) {
 			size = key_data->size;
-		} else if(key_data->size == 0) {
-			break;
+
 		} else {
 			g_printerr("unknown size error\n");
 			g_input_stream_close(fp_source, NULL, NULL);
@@ -223,11 +224,10 @@ gint keys_from_source(KeyData *key_data, GFile *source) {
 			g_input_stream_close(fp_source, NULL, NULL);
 			g_printerr("write error\n");
 			return -1;
-		}
-		
+		}	
 		key_data->size -= size;
 	}
-	
+
 	g_input_stream_close(fp_source, NULL, NULL);
 	return 0;
 }
