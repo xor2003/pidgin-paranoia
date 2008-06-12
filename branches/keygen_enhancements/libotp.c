@@ -560,38 +560,32 @@ OtpError otp_generate_key_pair(struct otp_config *config,
 	otp_conf_increment_number_of_keys_in_production(config);
 	
 	gchar *alice_file, *bob_file;
-	unsigned int id;
-	struct stat rfstat;
+	guint id;
+	gint i;
+	OtpError error;
+
+	for(i = 0; i < 10; i++) {	
+		/* create filenames with the correct path*/
+		id = keygen_id_get();
 	
-	/* create filenames with the correct path*/
-	id = keygen_id_get();
-	
-	alice_file = (gchar *)g_strdup_printf("%s%s%s%s%s%s%.8X.entropy", 
-			otp_conf_get_path(config), PATH_DELI,
-			alice, FILE_DELI, bob, FILE_DELI, id);
-	bob_file = (gchar *)g_strdup_printf("%s%s%s%s%s%s%.8X.entropy", 
-			otp_conf_get_export_path(config), PATH_DELI,
-			bob, FILE_DELI, alice, FILE_DELI, id);
+		alice_file = (gchar *)g_strdup_printf("%s%s%s%s%s%s%.8X.entropy", 
+				otp_conf_get_path(config), PATH_DELI,
+				alice, FILE_DELI, bob, FILE_DELI, id);
+		bob_file = (gchar *)g_strdup_printf("%s%s%s%s%s%s%.8X.entropy", 
+				otp_conf_get_export_path(config), PATH_DELI,
+				bob, FILE_DELI, alice, FILE_DELI, id);
 #ifdef DEBUG
 	g_printf("%s: genkey: '%s' '%s' \n",config->client_id, alice_file, bob_file);
 #endif
 	
-	/* check if file already exists */
-	if(stat(alice_file, &rfstat) == 0) {
-		g_free(alice_file);
-		g_free(bob_file);
-		return OTP_ERR_FILE_EXISTS;
-	}
+		/* generate keys if possible */	
+		error = keygen_keys_generate(alice_file, bob_file, size, source, (void *)config);
 
-	/* generate keys if possible */	
-	if(keygen_keys_generate(alice_file, bob_file, size, source, (void *)config) != OTP_OK) {
-			g_free(alice_file);
-			g_free(bob_file);
-			return OTP_ERR_KEYGEN_ERROR1;
-	}
 		g_free(alice_file);
 		g_free(bob_file);
-		return OTP_OK;
+		if(error != OTP_ERR_FILE_EXISTS) break;
+	}
+	return error;
 }
 
 

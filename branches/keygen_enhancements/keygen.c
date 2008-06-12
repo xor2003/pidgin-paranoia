@@ -264,6 +264,12 @@ OtpError keygen_keys_generate(char *alice_file, char *bob_file,
 		otp_conf_decrement_number_of_keys_in_production(config);
 		return OTP_ERR_KEYGEN_ERROR1;
 	}
+	
+	/* Check if file already exists */
+	if(g_file_query_exists(g_file_new_for_commandline_arg(alice_file), NULL)) {
+		g_printerr("file already exists!\n");
+		return OTP_ERR_FILE_EXISTS;
+	}
 
 	/* fill key_data struct */
 	key_data = (KeyData *)g_malloc0(sizeof(KeyData));	
