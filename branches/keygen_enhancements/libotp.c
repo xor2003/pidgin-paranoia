@@ -556,7 +556,7 @@ OtpError otp_generate_key_pair(struct otp_config *config,
 	}
 	
 	/* Check if the keygen is already in use and if not set: one key in generation. */
-	if(otp_conf_get_number_of_keys_in_production(config) > 0) return OTP_ERR_GENKEY_KEYGEN_IN_USE;
+/*	if(otp_conf_get_number_of_keys_in_production(config) > 0) return OTP_ERR_GENKEY_KEYGEN_IN_USE; */
 	otp_conf_increment_number_of_keys_in_production(config);
 	
 	gchar *alice_file, *bob_file;
