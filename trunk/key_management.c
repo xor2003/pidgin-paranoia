@@ -19,9 +19,6 @@
 /* GNOMElib */
 #include <glib.h>
 
-/* GNUlibc */
-#include <string.h>
-
 /* Our stuff */
 #include "libotp.h"
 #include "key_management.h"
@@ -183,8 +180,8 @@ int par_count_matching_keys(const char* src, const char* dest)
 	int sum = 0;
 	struct key* tmp_ptr = keylist;
 	while (tmp_ptr != NULL) {
-		if ((strcmp(otp_pad_get_src(tmp_ptr->pad), src) == 0) 
-				&& (strcmp(otp_pad_get_dest(tmp_ptr->pad), dest) == 0)) {
+		if ((g_strcmp0(otp_pad_get_src(tmp_ptr->pad), src) == 0) 
+				&& (g_strcmp0(otp_pad_get_dest(tmp_ptr->pad), dest) == 0)) {
 			sum++;
 		}
 		tmp_ptr = tmp_ptr->next;
@@ -203,8 +200,8 @@ char* par_search_ids(const char* src, const char* dest)
 	struct key* tmp_ptr = keylist;
 	
 	while (tmp_ptr != NULL) {
-		if ((strcmp(otp_pad_get_src(tmp_ptr->pad), src) == 0) 
-				&& (strcmp(otp_pad_get_dest(tmp_ptr->pad), dest) == 0)
+		if ((g_strcmp0(otp_pad_get_src(tmp_ptr->pad), src) == 0) 
+				&& (g_strcmp0(otp_pad_get_dest(tmp_ptr->pad), dest) == 0)
 				&& (!tmp_ptr->opt->no_entropy)) {
 			if (ids == NULL) {
 				ids = g_strdup(otp_pad_get_id(tmp_ptr->pad));
@@ -227,9 +224,9 @@ struct key* par_search_key_by_id(const char* id, const char* src,
 	struct key* tmp_ptr = keylist;
 
 	while (tmp_ptr != NULL) {
-		if (strcmp(otp_pad_get_id(tmp_ptr->pad), id) == 0) {
-			if ((strcmp(otp_pad_get_src(tmp_ptr->pad), src) == 0) 
-					&& (strcmp(otp_pad_get_dest(tmp_ptr->pad), dest) == 0)) {
+		if (g_strcmp0(otp_pad_get_id(tmp_ptr->pad), id) == 0) {
+			if ((g_strcmp0(otp_pad_get_src(tmp_ptr->pad), src) == 0) 
+					&& (g_strcmp0(otp_pad_get_dest(tmp_ptr->pad), dest) == 0)) {
 				return tmp_ptr;
 			}
 		}
@@ -246,8 +243,8 @@ struct key* par_search_key(const char* src, const char* dest)
 	struct key* tmp_ptr = keylist;
 
 	while (tmp_ptr != NULL) {
-		if ((strcmp(otp_pad_get_src(tmp_ptr->pad), src) == 0) 
-					&& (strcmp(otp_pad_get_dest(tmp_ptr->pad), dest) == 0)
+		if ((g_strcmp0(otp_pad_get_src(tmp_ptr->pad), src) == 0) 
+					&& (g_strcmp0(otp_pad_get_dest(tmp_ptr->pad), dest) == 0)
 					&& tmp_ptr->opt->active) {
 				return tmp_ptr;
 			}

@@ -63,7 +63,7 @@ plugin (%s) to communicate encrypted."
 #define PARANOIA_START "%!()!%paranoia start"
 #define PARANOIA_STOP "%!()!%paranoia stop"
 #define PARANOIA_NO_ENTROPY "%!()!%paranoia noent"
-#define PARANOIA_PREFIX_LEN 6
+#define PARANOIA_PREFIX "%!()!%"
 
 #define PARANOIA_PATH "/.paranoia"
 #define ENTROPY_LIMIT 10000 /* has to be bigger then the message size limit */
@@ -82,14 +82,11 @@ void par_add_header(char** message)
 static gboolean par_has_header(char** message)
 /* checks for a paranoia header and removes it if found */
 {
-	if (strlen(*message) > strlen(PARANOIA_HEADER)) {
-		if (strncmp(*message, PARANOIA_HEADER, 
-				strlen(PARANOIA_HEADER)) == 0) {
-			char* new_msg = g_strdup(*message + strlen(PARANOIA_HEADER));
-			g_free(*message);
-			*message = new_msg;
-			return TRUE;
-		}	
+	if (g_str_has_prefix(*message, PARANOIA_HEADER)) {
+		char* new_msg = g_strdup(*message + strlen(PARANOIA_HEADER));
+		g_free(*message);
+		*message = new_msg;
+		return TRUE;	
 	}
 	return FALSE;
 }
@@ -97,7 +94,7 @@ static gboolean par_has_header(char** message)
 static gboolean par_add_status_str(char** message) 
 /* adds a string at the beginning of the message (if encrypted) */
 {
-	if (strncmp(*message, "/me ", 4) == 0) {
+	if (g_str_has_prefix(*message, "/me ")) {
 		char* new_msg = g_strconcat("/me ", PARANOIA_STATUS, 
 				*message+4, NULL);
 		g_free(*message);
@@ -114,7 +111,7 @@ static gboolean par_add_status_str(char** message)
 static gboolean par_censor_internal_msg(char** message)
 /* detects all internal messages */
 {
-	if (strncmp(*message, PARANOIA_EXIT, PARANOIA_PREFIX_LEN) == 0) {
+	if (g_str_has_prefix(*message, PARANOIA_PREFIX)) {
 		return TRUE;
 	}
 	return FALSE;
@@ -200,7 +197,7 @@ static gboolean par_session_check_req(const char* alice, const char* bob,
  * Returns TRUE if a request was found.
  * */
 {
-	if (strncmp(*message_no_header, PARANOIA_REQUEST, 
+	if (g_ascii_strncasecmp(*message_no_header, PARANOIA_REQUEST, 
 			PARANOIA_REQUEST_LEN) == 0) {
 		/* set the ptr to the first id */
 		char* tmp_ptr = *message_no_header + PARANOIA_REQUEST_LEN + 2;
@@ -256,13 +253,12 @@ static gboolean par_session_check_msg(struct key* used_key,
  * Returns TRUE if one of them is found.
  * */
 {
-	/* check prefix */
-	if (!(strncmp(*message_decrypted, PARANOIA_EXIT, 
-			PARANOIA_PREFIX_LEN) == 0)) {
+	/* check prefix (optimisation) */
+	if (!g_str_has_prefix(*message_decrypted, PARANOIA_PREFIX)) {
 		return FALSE;
 	}
 	/*
-	if(strncmp(*message_decrypted, PARANOIA_ACK, strlen(PARANOIA_ACK)) == 0) {
+	if(g_strcmp0(*message_decrypted, PARANOIA_ACK) == 0) {
 		// TODO: move ACK inside the first sent message
 		used_key->opt->has_plugin = TRUE;
 		if(used_key->opt->auto_enable) {
@@ -275,8 +271,7 @@ static gboolean par_session_check_msg(struct key* used_key,
 		return TRUE;
 	} */
 	/* check START, STOP, EXIT and NO_ENTROPY */
-	if (strncmp(*message_decrypted, PARANOIA_EXIT, 
-			strlen(PARANOIA_EXIT)) == 0) {
+	if (g_strcmp0(*message_decrypted, PARANOIA_EXIT) == 0) {
 		used_key->opt->otp_enabled = FALSE;
 		purple_conversation_write(conv, NULL, 
 				"Encryption disabled (remote).", 
@@ -285,8 +280,7 @@ static gboolean par_session_check_msg(struct key* used_key,
 				"PARANOIA_EXIT detected. otp_enabled = FALSE\n");
 		return TRUE;
 	}
-	if (strncmp(*message_decrypted, PARANOIA_START,
-			strlen(PARANOIA_START)) == 0) {
+	if (g_strcmp0(*message_decrypted, PARANOIA_START) == 0) {
 		if(used_key->opt->auto_enable) {
 			used_key->opt->otp_enabled = TRUE;
 			purple_conversation_write(conv, NULL, 
@@ -305,8 +299,7 @@ static gboolean par_session_check_msg(struct key* used_key,
 		}
 		return TRUE;
 	}
-	if (strncmp(*message_decrypted, PARANOIA_STOP, 
-			strlen(PARANOIA_STOP)) == 0) {
+	if (g_strcmp0(*message_decrypted, PARANOIA_STOP) == 0) {
 		used_key->opt->otp_enabled = FALSE;
 		purple_conversation_write(conv, NULL, 
 				"Encryption disabled (remote).", 
@@ -315,8 +308,7 @@ static gboolean par_session_check_msg(struct key* used_key,
 				"PARANOIA_STOP detected. otp_enabled = FALSE\n");
 		return TRUE;
 	}
-	if (strncmp(*message_decrypted, PARANOIA_NO_ENTROPY, 
-			strlen(PARANOIA_NO_ENTROPY)) == 0) {
+	if (g_strcmp0(*message_decrypted, PARANOIA_NO_ENTROPY) == 0) {
 		used_key->opt->otp_enabled = FALSE;
 		used_key->opt->no_entropy = TRUE;
 		used_key->opt->auto_enable = FALSE;
@@ -528,8 +520,8 @@ static void par_cli_show_keys(PurpleConversation *conv, gboolean all)
 	struct key* tmp_ptr = keylist;
 	char* nice_str;
 	while (tmp_ptr != NULL) {
-		if (all || ((strcmp(otp_pad_get_src(tmp_ptr->pad), src_copy) == 0) 
-					&& (strcmp(otp_pad_get_dest(tmp_ptr->pad), dest_copy) == 0))) {
+		if (all || ((g_strcmp0(otp_pad_get_src(tmp_ptr->pad), src_copy) == 0) 
+					&& (g_strcmp0(otp_pad_get_dest(tmp_ptr->pad), dest_copy) == 0))) {
 			
 			nice_str = g_strdup_printf("%s -> %s (%s)\n\tSize: %" G_GSIZE_FORMAT "bytes, "
 					"Bytes left: %" G_GSIZE_FORMAT " Active: %i Enabled: %i\n",
@@ -625,18 +617,18 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 		par_cli_set_default_error(error);
 		return PURPLE_CMD_RET_FAILED;
 	}
-	if(strcmp("help", *args) == 0) {
+	if(g_strcmp0("help", *args) == 0) {
 		purple_conversation_write(conv, NULL, 
 				PARANOIA_HELP_STR, 
 				PURPLE_MESSAGE_NO_LOG, time(NULL));
 	}
-	else if (strcmp("on", *args) == 0) {
+	else if (g_strcmp0("on", *args) == 0) {
 		par_cli_try_enable_enc(conv);
 	}
-	else if (strcmp("off", *args) == 0) {
+	else if (g_strcmp0("off", *args) == 0) {
 		par_cli_disable_enc(conv);
 	}
-	else if (strcmp("drop", *args) == 0) {
+	else if (g_strcmp0("drop", *args) == 0) {
 	// REMOVE ME (just for testing!)
 		const char* my_acc = purple_account_get_username(
 				purple_conversation_get_account(conv));
@@ -665,16 +657,16 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 					PURPLE_MESSAGE_NO_LOG, time(NULL));	
 		}
 	} // REMOVE ME end
-	else if (strcmp("info", *args) == 0) {
+	else if (g_strcmp0("info", *args) == 0) {
 		par_cli_show_key_details(conv);
 	}
-	else if (strcmp("list", *args) == 0) {
+	else if (g_strcmp0("list", *args) == 0) {
 		par_cli_show_keys(conv, FALSE);
 	}
-		else if (strcmp("list-all", *args) == 0) {
+		else if (g_strcmp0("list-all", *args) == 0) {
 		par_cli_show_keys(conv, TRUE);
 	}
-	else if (strncmp("genkey ", *args, 7) == 0) {
+	else if (g_ascii_strncasecmp("genkey ", *args, 7) == 0) {
 		gchar** param_array = g_strsplit(*args + 7, " ", 2); /* to skip "genkey " */
 
 		if (param_array[0] == NULL) {
@@ -795,8 +787,8 @@ static void par_buddy_signed_off(PurpleBuddy *buddy)
 	struct key* tmp_ptr = keylist;
 
 	while (tmp_ptr != NULL) {
-		if ((strcmp(otp_pad_get_src(tmp_ptr->pad), src_copy) == 0) 
-					&& (strcmp(otp_pad_get_dest(tmp_ptr->pad), dest_copy) == 0)) {
+		if ((g_strcmp0(otp_pad_get_src(tmp_ptr->pad), src_copy) == 0) 
+					&& (g_strcmp0(otp_pad_get_dest(tmp_ptr->pad), dest_copy) == 0)) {
 				/* notify enabled keys */
 				if (tmp_ptr->conv != NULL && tmp_ptr->opt->otp_enabled) {
 					purple_conversation_write(tmp_ptr->conv, NULL, 
@@ -866,8 +858,8 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 		struct key* tmp_ptr = keylist;
 		
 		while (tmp_ptr != NULL) {
-			if ((strcmp(otp_pad_get_src(tmp_ptr->pad), src_copy) == 0) 
-						&& (strcmp(otp_pad_get_dest(tmp_ptr->pad), dest_copy) == 0)) {
+			if ((g_strcmp0(otp_pad_get_src(tmp_ptr->pad), src_copy) == 0) 
+						&& (g_strcmp0(otp_pad_get_dest(tmp_ptr->pad), dest_copy) == 0)) {
 							
 				// TODO: Maybe just check active keys?
 					
@@ -968,7 +960,7 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 					PURPLE_MESSAGE_NO_LOG, time(NULL));
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "This conversation was already initialized! otp_enabled is now TRUE\n");
 			/* detect REQUEST; needed for a auto-init */
-			if(strncmp(*message, PARANOIA_REQUEST, PARANOIA_REQUEST_LEN) == 0) {
+			if(g_ascii_strncasecmp(*message, PARANOIA_REQUEST, PARANOIA_REQUEST_LEN) == 0) {
 				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "He sends us an encrypted REQUEST message. otp_enabled is now TRUE\n");
 				return TRUE;
 			}
@@ -1144,7 +1136,7 @@ static gboolean par_im_msg_change_display(PurpleAccount *account,
 
 	char* stripped_message = g_strdup(purple_markup_strip_html(*message));
 
-	if (strncmp(stripped_message, PARANOIA_REQUEST, PARANOIA_REQUEST_LEN) == 0) {
+	if (g_ascii_strncasecmp(stripped_message, PARANOIA_REQUEST, PARANOIA_REQUEST_LEN) == 0) {
 		if (flags & PURPLE_MESSAGE_SEND) {
 			/* hide outgoing session init messages */
 			g_free(stripped_message);
