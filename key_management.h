@@ -36,6 +36,7 @@ struct key {
 };
 
 /* paranoia keylist pointer */
+// FIXME: replace keylist ptr with get/set fn
 struct key* keylist;
 
 /* --------- Core ---------- */
