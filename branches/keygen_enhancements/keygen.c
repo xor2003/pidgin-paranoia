@@ -50,7 +50,7 @@ gpointer prng(gpointer data);
 /* defines */
 #define BUFFSIZE 20
 #define POOLSIZE 1024
-// do not change, for developement purpose
+/* do not change, for developement purpose */
 #define CHARSIZE 256
 #define OFFSET 0
 
@@ -96,7 +96,7 @@ gpointer keygen_pool_read(gpointer data)
 					g_printerr("write error\n");
 				} else {
 					key_data->size -= size;
-					key_data->pool_level -= 2.0*size/POOLSIZE;
+					key_data->pool_level = 0.0;
 				}
 			g_mutex_unlock(key_data->keygen_mutex);
 			delay -= 100;
