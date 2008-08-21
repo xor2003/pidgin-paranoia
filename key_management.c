@@ -25,7 +25,7 @@
 
 /* ----------------- Paranoia Key Management ------------------ */
 
-struct key* par_create_key(const char* filename, struct otp_config* otp_conf)
+struct key* par_key_create(const char* filename, struct otp_config* otp_conf)
 /* creates a key struct from a valid key file or returns NULL */
 {
 	/* get otp object */
@@ -58,7 +58,7 @@ struct key* par_create_key(const char* filename, struct otp_config* otp_conf)
 	return key;
 }
 
-void par_reset_key(struct key* a_key) 
+void par_key_reset(struct key* a_key) 
 /* resets all option values of a key to default */
 {
 	a_key->opt->otp_enabled = FALSE;
@@ -73,11 +73,21 @@ void par_reset_key(struct key* a_key)
 	return;
 }
 
-gboolean par_init_key_list(struct otp_config* otp_conf)
+struct keylist* par_keylist_new()
+/* returns an empty list */
+{
+	struct keylist* new_list = (struct keylist *) g_malloc(sizeof(struct keylist));
+	new_list->head = NULL;
+	return new_list;
+}
+
+struct keylist* par_keylist_init(struct otp_config* otp_conf)
 /* loads all valid keys from the global otp folder into the key list */
 {
+	struct keylist* new_list;
 	struct key* prev_key = NULL;
 	struct key* tmp_key = NULL;
+	struct key* head = NULL; //REMOVE ME
 	GError* error = NULL;
 	GDir* directoryhandle = g_dir_open(otp_conf_get_path(otp_conf), 0, &error);
 	const gchar* tmp_filename = g_dir_read_name(directoryhandle);
@@ -95,7 +105,7 @@ gboolean par_init_key_list(struct otp_config* otp_conf)
 			tmp_path = g_strconcat(otp_conf_get_path(otp_conf), "/", tmp_filename, NULL);
 			
 			if (g_file_test(tmp_path, G_FILE_TEST_IS_REGULAR)) {
-				tmp_key = par_create_key(tmp_filename, otp_conf);
+				tmp_key = par_key_create(tmp_filename, otp_conf);
 				if (tmp_key == NULL) {
 					//purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 					//		"Could not add the file \"%s\".\n", 
@@ -104,7 +114,7 @@ gboolean par_init_key_list(struct otp_config* otp_conf)
 					//purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 					//		"Key \"%s\" added.\n", tmp_filename);
 					tmp_key->next = prev_key;
-					keylist = tmp_key;
+					head = tmp_key;
 					prev_key = tmp_key;
 				}
 			}
@@ -114,13 +124,15 @@ gboolean par_init_key_list(struct otp_config* otp_conf)
 	}
 	g_dir_close(directoryhandle);
 	
-	return TRUE;
+	new_list = (struct keylist *) g_malloc(sizeof(struct keylist));
+	new_list->head = head;
+	return new_list;
 }
 
-void par_free_key_list()
+void par_keylist_free(struct keylist* list)
 /* frees all memory of the keylist */
 {
-	struct key* tmp_key = keylist;
+	struct key* tmp_key = list->head;
 	struct key* next_key_ptr = NULL;
 
 	while (tmp_key != NULL) {
@@ -130,10 +142,11 @@ void par_free_key_list()
 		g_free(tmp_key);
 		tmp_key = next_key_ptr;
 	}
+	g_free(list);
 	return;
 }
 
-void par_add_key(struct otp* a_pad)
+void par_keylist_add_key(struct keylist* list, struct otp* a_pad)
 /* adds a key created from a pad at the first position of the key list */
 {
 	/* default option struct */
@@ -154,19 +167,19 @@ void par_add_key(struct otp* a_pad)
 	key->pad = a_pad;
 	key->opt = a_opt;
 	key->conv = NULL;
-	key->next = keylist;
+	key->next = list->head;
 	
-	keylist = key;
+	list->head = key;
 	return;
 }
 
 /* --------- Counting ---------- */
 
-int par_count_keys()
+int par_keylist_count_keys(struct keylist* list)
 /* counts all keys in the list */
 {
 	int sum = 0;
-	struct key* tmp_ptr = keylist;
+	struct key* tmp_ptr = list->head;
 	while (tmp_ptr != NULL) {
 		sum++;
 		tmp_ptr = tmp_ptr->next;
@@ -174,11 +187,11 @@ int par_count_keys()
 	return sum;
 }
 
-int par_count_matching_keys(const char* src, const char* dest)
+int par_keylist_count_matching_keys(struct keylist* list, const char* src, const char* dest)
 /* counts all keys in the list with matching src and dest */
 {
 	int sum = 0;
-	struct key* tmp_ptr = keylist;
+	struct key* tmp_ptr = list->head;
 	while (tmp_ptr != NULL) {
 		if ((g_strcmp0(otp_pad_get_src(tmp_ptr->pad), src) == 0) 
 				&& (g_strcmp0(otp_pad_get_dest(tmp_ptr->pad), dest) == 0)) {
@@ -191,13 +204,13 @@ int par_count_matching_keys(const char* src, const char* dest)
 
 /* --------- Searching ---------- */
 
-char* par_search_ids(const char* src, const char* dest)
+char* par_keylist_search_ids(struct keylist* list, const char* src, const char* dest)
 /* searches all ids for a src/dest pair in the keylist (comma separated).
  * Returns NULL if none found.
  * */
 {
 	char* ids = NULL;
-	struct key* tmp_ptr = keylist;
+	struct key* tmp_ptr = list->head;
 	
 	while (tmp_ptr != NULL) {
 		if ((g_strcmp0(otp_pad_get_src(tmp_ptr->pad), src) == 0) 
@@ -214,14 +227,14 @@ char* par_search_ids(const char* src, const char* dest)
 	return ids;
 }
 
-struct key* par_search_key_by_id(const char* id, const char* src, 
-		const char* dest)
+struct key* par_keylist_search_key_by_id(struct keylist* list, const char* id, 
+		const char* src, const char* dest)
 /* Searches for the first key with a matching id.
  * Source and destination have to match too.
  * Returns NULL if none was found
  * */
 {
-	struct key* tmp_ptr = keylist;
+	struct key* tmp_ptr = list->head;
 
 	while (tmp_ptr != NULL) {
 		if (g_strcmp0(otp_pad_get_id(tmp_ptr->pad), id) == 0) {
@@ -235,12 +248,12 @@ struct key* par_search_key_by_id(const char* id, const char* src,
 	return NULL;
 }
 
-struct key* par_search_key(const char* src, const char* dest)
+struct key* par_keylist_search_key(struct keylist* list, const char* src, const char* dest)
 /* Searches for the first initialised key with matching source and destination.
  * Returns NULL if none was found.
  * */
 {
-	struct key* tmp_ptr = keylist;
+	struct key* tmp_ptr = list->head;
 
 	while (tmp_ptr != NULL) {
 		if ((g_strcmp0(otp_pad_get_src(tmp_ptr->pad), src) == 0) 

@@ -18,6 +18,14 @@
 
 /* ----------------- Paranoia Key Management ------------------ */
 
+/* NOTE: These functions are not thread-safe! */
+
+/* the list */
+struct keylist {
+	struct key* head;
+	// for future use
+};
+
 /* key options struct */
 struct options {
 	gboolean otp_enabled; /* otp on/off */
@@ -35,33 +43,38 @@ struct key {
 	struct key* next;
 };
 
-/* paranoia keylist pointer */
-// FIXME: replace keylist ptr with get/set fn
-struct key* keylist;
+/* --------- List Element (Key) ---------- */
 
-/* --------- Core ---------- */
+struct key* par_key_create(const char* filename, struct otp_config* otp_conf);
 
-gboolean par_init_key_list(struct otp_config* otp_conf);
+void par_key_reset(struct key* a_key);
 
-void par_free_key_list();
+/* --------- List ---------- */
 
-struct key* par_create_key(const char* filename, struct otp_config* otp_conf);
+struct keylist* par_keylist_new();
+/* returns an empty list */
 
-void par_reset_key(struct key* a_key);
+struct keylist* par_keylist_init(struct otp_config* otp_conf);
+/* reads all keys from a config into a new list */
 
-void par_add_key(struct otp* a_pad);
+void par_keylist_free(struct keylist* list);
+/* destroy the key list */
 
-/* --------- Counting ----------*/
+void par_keylist_add_key(struct keylist* list, struct otp* a_pad);
 
-int par_count_keys();
+/* --- Counting --- */
 
-int par_count_matching_keys(const char* src, const char* dest);
+int par_keylist_count_keys(struct keylist* list);
 
-/* --------- Searching ---------- */
+int par_keylist_count_matching_keys(struct keylist* list, const char* src, const char* dest);
 
-char* par_search_ids(const char* src, const char* dest);
+/* --- Searching --- */
 
-struct key* par_search_key_by_id(const char* id, const char* src, 
-		const char* dest);
+char* par_keylist_search_ids(struct keylist* list, const char* src, const char* dest);
+
+struct key* par_keylist_search_key_by_id(struct keylist* list, const char* id, 
+		const char* src, const char* dest);
 		
-struct key* par_search_key(const char* src, const char* dest);
+struct key* par_keylist_search_key(struct keylist* list, const char* src, const char* dest);
+
+/* -- end -- */

@@ -10,7 +10,7 @@ or /usr/src/linux/Documentation/CodingStyle
 
 ANSI C
 --------------------------------------------------------------------------------
-C tutorial: http://www.pronix.de/pronix-4.html
+C tutorial: http://www.galileocomputing.de/openbook/c_von_a_bis_z/
 Pointers: http://www.c-plusplus.de/forum/viewtopic-var-t-is-124532
 Casting: http://www.cpax.org.uk/prg/writings/casting.php
 Filelock: http://www.ecst.csuchico.edu/~beej/guide/ipc/flock.html
