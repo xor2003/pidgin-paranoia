@@ -18,6 +18,7 @@
 
 /* GNOMElib */
 #include <glib.h>
+#include <glib/gstdio.h>
 
 /* Our stuff */
 #include "libotp.h"
@@ -85,18 +86,18 @@ struct keylist* par_keylist_init(struct otp_config* otp_conf)
 /* loads all valid keys from the global otp folder into the key list */
 {
 	struct keylist* new_list;
-	struct key* prev_key = NULL;
+	new_list = (struct keylist *) g_malloc(sizeof(struct keylist));
+	new_list->head = NULL;
 	struct key* tmp_key = NULL;
-	struct key* head = NULL; //REMOVE ME
+	
 	GError* error = NULL;
 	GDir* directoryhandle = g_dir_open(otp_conf_get_path(otp_conf), 0, &error);
 	const gchar* tmp_filename = g_dir_read_name(directoryhandle);
 	char* tmp_path = NULL;
 	
 	if (error) {
-		//purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
-		//		"Opening \"%s\" failed! %s\n", 
-		//		otp_conf_get_path(otp_conf), error->message);
+		g_printf("paranoia-key-management error: Opening \"%s\" failed! %s\n", 
+				otp_conf_get_path(otp_conf), error->message);
 		g_error_free(error);
 	} else {
 		/* loop over global key dir */
@@ -107,15 +108,11 @@ struct keylist* par_keylist_init(struct otp_config* otp_conf)
 			if (g_file_test(tmp_path, G_FILE_TEST_IS_REGULAR)) {
 				tmp_key = par_key_create(tmp_filename, otp_conf);
 				if (tmp_key == NULL) {
-					//purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-					//		"Could not add the file \"%s\".\n", 
-					//		tmp_filename);
+					//g_printf("paranoia-core: Could not add the file \"%s\".\n", tmp_filename);
 				} else {
-					//purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-					//		"Key \"%s\" added.\n", tmp_filename);
-					tmp_key->next = prev_key;
-					head = tmp_key;
-					prev_key = tmp_key;
+					//g_printf("paranoia-core: Key \"%s\" added.\n", tmp_filename);
+					tmp_key->next = new_list->head;
+					new_list->head = tmp_key;
 				}
 			}
 			g_free(tmp_path);
@@ -124,8 +121,6 @@ struct keylist* par_keylist_init(struct otp_config* otp_conf)
 	}
 	g_dir_close(directoryhandle);
 	
-	new_list = (struct keylist *) g_malloc(sizeof(struct keylist));
-	new_list->head = head;
 	return new_list;
 }
 
