@@ -7,7 +7,7 @@ Version 0.3.0
 Simon Wenner:
  * Paranoia: modular key management (first step)
  * Paranoia: key list uses move-to-front transform
-
+ * Paranoia: A pop-up at the end and status messages while generating new keys
 
 Version 0.2.0
 --------------------------------------------------------------------------------
