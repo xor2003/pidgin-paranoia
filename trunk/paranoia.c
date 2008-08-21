@@ -69,6 +69,7 @@ plugin (%s) to communicate encrypted."
 #define ENTROPY_LIMIT 10000 /* has to be bigger then the message size limit */
 
 struct otp_config* otp_conf;
+struct keylist* klist;
 
 void par_add_header(char** message)
 /* adds the paranoia header */
@@ -133,7 +134,7 @@ static void par_keygen_key_generation_done(GObject *my_object, gdouble percent, 
 			"%5.2f Percent of the key done.\n", percent);
 			
 	if (alice_pad != NULL) {
-		par_add_key(alice_pad);
+		par_keylist_add_key(klist, alice_pad);
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 				"Key %s->%s (%s) added to the key list.\n", 
 				otp_pad_get_src(alice_pad), otp_pad_get_dest(alice_pad),
@@ -150,7 +151,7 @@ static gboolean par_session_send_request(const char* my_acc_name,
 {
 	char* my_acc_name_copy = par_strip_jabber_ressource(my_acc_name);
 	char* receiver_copy = par_strip_jabber_ressource(receiver);
-	char *ids = par_search_ids(my_acc_name_copy, receiver_copy);
+	char *ids = par_keylist_search_ids(klist, my_acc_name_copy, receiver_copy);
 	g_free(my_acc_name_copy);
 	g_free(receiver_copy);
 	
@@ -212,7 +213,7 @@ static gboolean par_session_check_req(const char* alice, const char* bob,
 			
 			char* alice_copy = par_strip_jabber_ressource(alice);
 			char* bob_copy = par_strip_jabber_ressource(bob);
-			a_key = par_search_key_by_id(id, alice_copy, bob_copy);
+			a_key = par_keylist_search_key_by_id(klist, id, alice_copy, bob_copy);
 			g_free(alice_copy);
 			g_free(bob_copy);
 			if (a_key != NULL) {
@@ -330,9 +331,9 @@ static gboolean par_session_check_msg(struct key* used_key,
 static void par_session_reset_conv(PurpleConversation *conv)
 /* searches all pointer to conf and resets them to NULL */
 {	
-	struct key* tmp_ptr = keylist;
+	struct key* tmp_ptr = klist->head;
 
-	while (tmp_ptr != NULL) {
+	while (tmp_ptr != NULL) { //keylist violation
 		if (tmp_ptr->conv == conv) {
 			tmp_ptr->conv = NULL;
 			/* free the mmap of libotp */
@@ -373,7 +374,7 @@ static gboolean par_cli_try_enable_enc(PurpleConversation *conv)
 	
 	char* my_acc_copy = par_strip_jabber_ressource(my_acc);
 	char* other_acc_copy = par_strip_jabber_ressource(other_acc);
-	struct key* used_key = par_search_key(my_acc_copy, other_acc_copy);
+	struct key* used_key = par_keylist_search_key(klist, my_acc_copy, other_acc_copy);
 	g_free(my_acc_copy);
 	g_free(other_acc_copy);
 	
@@ -424,7 +425,7 @@ static gboolean par_cli_disable_enc(PurpleConversation *conv)
 	
 	char* my_acc_copy = par_strip_jabber_ressource(my_acc);
 	char* other_acc_copy = par_strip_jabber_ressource(other_acc);
-	struct key* used_key = par_search_key(my_acc_copy, other_acc_copy);
+	struct key* used_key = par_keylist_search_key(klist, my_acc_copy, other_acc_copy);
 	g_free(my_acc_copy);
 	g_free(other_acc_copy);
 	
@@ -461,8 +462,8 @@ static void par_cli_show_key_details(PurpleConversation *conv)
 	
 	char* my_acc_copy = par_strip_jabber_ressource(my_acc);
 	char* other_acc_copy = par_strip_jabber_ressource(other_acc);
-	struct key* used_key = par_search_key(my_acc_copy, other_acc_copy);
-	int num = par_count_matching_keys(my_acc_copy, other_acc_copy);
+	struct key* used_key = par_keylist_search_key(klist, my_acc_copy, other_acc_copy);
+	int num = par_keylist_count_matching_keys(klist, my_acc_copy, other_acc_copy);
 	g_free(my_acc_copy);
 	g_free(other_acc_copy);
 	
@@ -517,9 +518,9 @@ static void par_cli_show_keys(PurpleConversation *conv, gboolean all)
 				PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_NO_LINKIFY, time(NULL));
 	}
 	
-	struct key* tmp_ptr = keylist;
+	struct key* tmp_ptr = klist->head;
 	char* nice_str;
-	while (tmp_ptr != NULL) {
+	while (tmp_ptr != NULL) { //keylist violation
 		if (all || ((g_strcmp0(otp_pad_get_src(tmp_ptr->pad), src_copy) == 0) 
 					&& (g_strcmp0(otp_pad_get_dest(tmp_ptr->pad), dest_copy) == 0))) {
 			
@@ -636,7 +637,7 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 		
 		char* my_acc_copy = par_strip_jabber_ressource(my_acc);
 		char* other_acc_copy = par_strip_jabber_ressource(other_acc);
-		struct key* used_key = par_search_key(my_acc_copy, other_acc_copy);
+		struct key* used_key = par_keylist_search_key(klist, my_acc_copy, other_acc_copy);
 		g_free(my_acc_copy);
 		g_free(other_acc_copy);
 		
@@ -723,7 +724,7 @@ static void par_conversation_created(PurpleConversation *conv)
 	
 	char* my_acc_name_copy = par_strip_jabber_ressource(my_acc_name);
 	char* receiver_copy = par_strip_jabber_ressource(receiver);
-	struct key* active_key = par_search_key(my_acc_name_copy, receiver_copy);
+	struct key* active_key = par_keylist_search_key(klist, my_acc_name_copy, receiver_copy);
 	g_free(my_acc_name_copy);
 	g_free(receiver_copy);
 	
@@ -784,9 +785,9 @@ static void par_buddy_signed_off(PurpleBuddy *buddy)
 	char* src_copy = par_strip_jabber_ressource(src_acc);
 	char* dest_copy = par_strip_jabber_ressource(dest_acc);
 
-	struct key* tmp_ptr = keylist;
+	struct key* tmp_ptr = klist->head;
 
-	while (tmp_ptr != NULL) {
+	while (tmp_ptr != NULL) { //keylist violation
 		if ((g_strcmp0(otp_pad_get_src(tmp_ptr->pad), src_copy) == 0) 
 					&& (g_strcmp0(otp_pad_get_dest(tmp_ptr->pad), dest_copy) == 0)) {
 				/* notify enabled keys */
@@ -796,7 +797,7 @@ static void par_buddy_signed_off(PurpleBuddy *buddy)
 						PURPLE_MESSAGE_NO_LOG, time(NULL));
 				}
 				// TODO: Maybe just reset active keys?
-				par_reset_key(tmp_ptr);
+				par_key_reset(tmp_ptr);
 				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 						"Key %s options resetted.\n", otp_pad_get_id(tmp_ptr->pad));
 			}
@@ -855,9 +856,9 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 		char* src_copy = par_strip_jabber_ressource(my_acc_name);
 		char* dest_copy = par_strip_jabber_ressource(*sender);
 
-		struct key* tmp_ptr = keylist;
+		struct key* tmp_ptr = klist->head;
 		
-		while (tmp_ptr != NULL) {
+		while (tmp_ptr != NULL) { //keylist violation
 			if ((g_strcmp0(otp_pad_get_src(tmp_ptr->pad), src_copy) == 0) 
 						&& (g_strcmp0(otp_pad_get_dest(tmp_ptr->pad), dest_copy) == 0)) {
 							
@@ -900,7 +901,7 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 	if (recv_id != NULL) {
 		char* my_acc_name_copy = par_strip_jabber_ressource(my_acc_name);
 		char* sender_copy = par_strip_jabber_ressource(*sender);
-		used_key = par_search_key_by_id(recv_id, my_acc_name_copy, sender_copy);
+		used_key = par_keylist_search_key_by_id(klist, recv_id, my_acc_name_copy, sender_copy);
 		g_free(my_acc_name_copy);
 		g_free(sender_copy);
 		g_free(recv_id);
@@ -993,7 +994,7 @@ static void par_im_msg_sending(PurpleAccount *account,
 	/* search in key list for a matching or initialised key */
 	char* my_acc_name_copy = par_strip_jabber_ressource(my_acc_name);
 	char* receiver_copy = par_strip_jabber_ressource(receiver);
-	struct key* used_key = par_search_key(my_acc_name_copy, receiver_copy);
+	struct key* used_key = par_keylist_search_key(klist, my_acc_name_copy, receiver_copy);
 	g_free(my_acc_name_copy);
 	g_free(receiver_copy);
 
@@ -1120,7 +1121,7 @@ static gboolean par_im_msg_change_display(PurpleAccount *account,
 		char* my_acc_copy = par_strip_jabber_ressource(
 					purple_account_get_username(account));
 		char* who_copy = par_strip_jabber_ressource(who);
-		used_key = par_search_key(my_acc_copy, who_copy);
+		used_key = par_keylist_search_key(klist, my_acc_copy, who_copy);
 		g_free(my_acc_copy);
 		g_free(who_copy);
 		
@@ -1216,10 +1217,9 @@ static gboolean plugin_load(PurplePlugin *plugin)
 	void* blist_handle = purple_blist_get_handle();
 
 	/* setup the key list */
-	keylist = NULL;
-	par_init_key_list(otp_conf);
+	klist = par_keylist_init(otp_conf);
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-			"Key list of %i keys created.\n", par_count_keys());
+			"Key list of %i keys created.\n", par_keylist_count_keys(klist));
 	
 	/* connect to signals */
 	purple_signal_connect(conv_handle, "receiving-im-msg", plugin,
@@ -1251,7 +1251,7 @@ gboolean plugin_unload(PurplePlugin *plugin)
 /* gets called when disabling the plugin */
 {
 	/* send PARANOIA_EXIT to all open conversations */
-	struct key* key_ptr = keylist;
+	struct key* key_ptr = klist->head;
 	while (key_ptr != NULL) {
 		if (key_ptr->conv != NULL) {
 			par_session_send_close(key_ptr->conv);
@@ -1265,7 +1265,7 @@ gboolean plugin_unload(PurplePlugin *plugin)
 	purple_cmd_unregister(par_cmd_id);
 
 	/* free the key list */
-	par_free_key_list();
+	par_keylist_free(klist);
 
 	/* destoy libotp config */
 	otp_conf_destroy(otp_conf);

@@ -42,7 +42,7 @@
 
 gboolean verbose = FALSE;
 struct otp_config* config;
-struct key* keylist = NULL;
+struct keylist* key_list = NULL;
 
 
 
@@ -60,7 +60,7 @@ OtpError create_config()
 			PARANOIA_PATH, DESKTOP_PATH);
 	otp_signal_connect(config, 
 			"keygen_key_done_signal", &key_generation_done);
-	par_init_key_list(config);
+	key_list = par_keylist_init(config);
 	return OTP_OK;
 }
 
@@ -111,7 +111,7 @@ int main(int argc, gchar *argv[])
 		return 1;
 	
 	if (verbose) {
-		g_printf("Keys: %u\n", par_count_keys());
+		g_printf("Keys: %u\n", par_keylist_count_keys(key_list));
 	}
 /* Clean up */
 	if ( destroy_config() > OTP_WARN )
