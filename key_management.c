@@ -226,18 +226,27 @@ struct key* par_keylist_search_key_by_id(struct keylist* list, const char* id,
 		const char* src, const char* dest)
 /* Searches for the first key with a matching id.
  * Source and destination have to match too.
+ * The returned key is moved to the head of the list.
  * Returns NULL if none was found
  * */
 {
 	struct key* tmp_ptr = list->head;
+	struct key* last_ptr = list->head;
 
 	while (tmp_ptr != NULL) {
 		if (g_strcmp0(otp_pad_get_id(tmp_ptr->pad), id) == 0) {
 			if ((g_strcmp0(otp_pad_get_src(tmp_ptr->pad), src) == 0) 
 					&& (g_strcmp0(otp_pad_get_dest(tmp_ptr->pad), dest) == 0)) {
+				if(tmp_ptr != last_ptr) {
+					/* move to front */
+					last_ptr->next = tmp_ptr->next;
+					tmp_ptr->next = list->head;
+					list->head = tmp_ptr;
+				}
 				return tmp_ptr;
 			}
 		}
+		last_ptr = tmp_ptr;
 		tmp_ptr = tmp_ptr->next;
 	}
 	return NULL;

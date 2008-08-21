@@ -5,7 +5,8 @@
 Version 0.3.0
 --------------------------------------------------------------------------------
 Simon Wenner:
- * modular key management (first step)
+ * Paranoia: modular key management (first step)
+ * Paranoia: key list uses move-to-front transform
 
 
 Version 0.2.0
