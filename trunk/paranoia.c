@@ -75,11 +75,12 @@ struct kg_data* keygen;
 
 /* Keygen Data */
 struct kg_data {
-	PurpleAccount *owner;
-	const char *conv_name;
-	guint timer_handle; //TODO: needed?
+	PurpleAccount *owner; /* account that uses the keygen */
+	const char *conv_name; /* name of the conversation where the comand was run */
+	guint timer_handle; /* handle to remove the timer */
 	gdouble status; /* in percent */
-	gboolean updated;
+	gboolean updated; /* updates since last visit */
+	struct otp* new_pad;
 };
 
 
@@ -149,7 +150,7 @@ static void par_keygen_update_status(GObject *my_object,
 	
 	if (alice_pad != NULL) {
 		par_keylist_add_key(klist, alice_pad);
-		// TODO save a link to the key (global)
+		keygen->new_pad = alice_pad;
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 				"New key %s->%s (%s) added to the key list.\n", 
 				otp_pad_get_src(alice_pad), otp_pad_get_dest(alice_pad),
@@ -179,17 +180,27 @@ static gboolean par_keygen_poll_result(void* data) {
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 				"100.0 percent of the key done.\n");
 			//TODO for RELEASE only show if !conv
-			purple_notify_info(NULL, "Paranoia Key Generator", 
-					"The new key pair has been created!", // TODO add details
+			msg = g_strdup_printf("%s->%s (%s), %i Bytes\n\n"
 					"Your own key is stored in the directory '~/.paranoia'.\n"
 					"Your buddy's key is stored on your desktop. "
-					"Please send this key in a secure way to your partner.");
+					"Please send this key in a secure way to your partner.",
+					otp_pad_get_src(keygen->new_pad),
+					otp_pad_get_dest(keygen->new_pad),
+					otp_pad_get_id(keygen->new_pad),
+					otp_pad_get_filesize(keygen->new_pad));
+			purple_notify_info(NULL, "Paranoia Key Generator", 
+					"A new key pair has been created!",
+					msg);
 			if (conv) {
 				/* write to conv if available */
 				purple_conversation_write(conv, NULL, 
 					"Key generation successfully completed.", 
 					PURPLE_MESSAGE_NO_LOG, time(NULL));
+				// TODO: write stuff from above too
 			}
+			g_free(msg);
+			/* cleanup */
+			purple_timeout_remove(keygen->timer_handle);
 			g_free(keygen);
 			return FALSE;
 		}
@@ -646,7 +657,7 @@ static void par_cli_init_keygen(PurpleConversation* conv, int size, gchar** para
 				"Key generation successfully started. This will take some "
 				"minutes depending on the desired key length.",
 				PURPLE_MESSAGE_NO_LOG, time(NULL));
-		/* init and poll for the result */
+		/* init and start the polling for the result */
 		keygen = (struct kg_data *) g_malloc(sizeof(struct kg_data));
 		keygen->status = 0.0;
 		keygen->updated = FALSE;
@@ -654,6 +665,7 @@ static void par_cli_init_keygen(PurpleConversation* conv, int size, gchar** para
 		keygen->conv_name = purple_conversation_get_name(conv);
 		keygen->timer_handle = purple_timeout_add_seconds(KEYGEN_POLL_INTERVAL, 
 				(GSourceFunc)par_keygen_poll_result, NULL);
+		keygen->new_pad = NULL;
 		
 		if (syndrome == OTP_OK) {
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
