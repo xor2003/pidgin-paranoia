@@ -67,9 +67,21 @@ plugin (%s) to communicate encrypted."
 
 #define PARANOIA_PATH "/.paranoia"
 #define ENTROPY_LIMIT 10000 /* has to be bigger then the message size limit */
+#define KEYGEN_POLL_INTERVAL 3
 
 struct otp_config* otp_conf;
 struct keylist* klist;
+struct kg_data* keygen;
+
+/* Keygen Data */
+struct kg_data {
+	PurpleAccount *owner;
+	const char *conv_name;
+	guint timer_handle; //TODO: needed?
+	gdouble status; /* in percent */
+	gboolean updated;
+};
+
 
 void par_add_header(char** message)
 /* adds the paranoia header */
@@ -127,20 +139,65 @@ static char* par_strip_jabber_ressource(const char* acc)
 	return acc_copy;
 }
 
-/* ----------------- Paranoia custom signal handler ------------------ */
+/* ----------------- Paranoia custom signal handlers ------------------ */
 
-static void par_keygen_key_generation_done(GObject *my_object, gdouble percent, struct otp* alice_pad) {
-	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-			"%5.2f Percent of the key done.\n", percent);
-			
+static void par_keygen_update_status(GObject *my_object, 
+			gdouble percent, struct otp* alice_pad) {
+	
+	keygen->status = percent;
+	keygen->updated = TRUE;
+	
 	if (alice_pad != NULL) {
 		par_keylist_add_key(klist, alice_pad);
+		// TODO save a link to the key (global)
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-				"Key %s->%s (%s) added to the key list.\n", 
+				"New key %s->%s (%s) added to the key list.\n", 
 				otp_pad_get_src(alice_pad), otp_pad_get_dest(alice_pad),
 				otp_pad_get_id(alice_pad));
 	}
 	return;
+}
+
+static gboolean par_keygen_poll_result(void* data) {
+	
+	if(keygen->updated) {
+		PurpleConversation* conv = purple_find_conversation_with_account (
+				PURPLE_CONV_TYPE_IM, keygen->conv_name, keygen->owner);
+		char* msg;
+		
+		if(keygen->status < 100) {
+			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+				"%5.2f percent of the key done.\n", keygen->status);
+			if (conv) {
+				/* write to conv if available */
+				msg = g_strdup_printf("%5.2f percent of the key done.", keygen->status);
+				purple_conversation_write(conv, NULL, msg,
+					PURPLE_MESSAGE_NO_LOG, time(NULL));
+				g_free(msg);
+			}
+		} else {
+			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+				"100.0 percent of the key done.\n");
+			//TODO for RELEASE only show if !conv
+			purple_notify_info(NULL, "Paranoia Key Generator", 
+					"The new key pair has been created!", // TODO add details
+					"Your own key is stored in the directory '~/.paranoia'.\n"
+					"Your buddy's key is stored on your desktop. "
+					"Please send this key in a secure way to your partner.");
+			if (conv) {
+				/* write to conv if available */
+				purple_conversation_write(conv, NULL, 
+					"Key generation successfully completed.", 
+					PURPLE_MESSAGE_NO_LOG, time(NULL));
+			}
+			g_free(keygen);
+			return FALSE;
+		}
+		keygen->updated = FALSE;
+	}
+	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+				"POLL!!!! for the keygen result.\n"); //FIXME: remove it
+	return TRUE;
 }
 
 /* ----------------- Session Management ------------------ */
@@ -556,7 +613,7 @@ static void par_cli_init_keygen(PurpleConversation* conv, int size, gchar** para
 	
 	purple_conversation_write(conv, NULL, 
 			"Generating keys. Please wait...", 
-			PURPLE_MESSAGE_NO_LOG, time(NULL));
+			PURPLE_MESSAGE_NO_LOG, time(NULL)); //TODO: remove it
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 			"Generate new key: my_acc: %s, other_acc: %s, size: %ikiB\n",
 			my_acc_stp, other_acc_stp, size);
@@ -586,12 +643,18 @@ static void par_cli_init_keygen(PurpleConversation* conv, int size, gchar** para
 				"Key files could not be generated! %.8X\n", syndrome);
 	} else {
 		purple_conversation_write(conv, NULL, 
-				"Key generation succesfully started. This will take some "
-				"minutes depending on the key length.\n"
-				"Your own key will be stored in the directory '~/.paranoia'.\n"
-				"Your buddy's key will be stored in your home directory.\n"
-				"Please send this key in a secure way to your partner.\n",
+				"Key generation successfully started. This will take some "
+				"minutes depending on the desired key length.",
 				PURPLE_MESSAGE_NO_LOG, time(NULL));
+		/* init and poll for the result */
+		keygen = (struct kg_data *) g_malloc(sizeof(struct kg_data));
+		keygen->status = 0.0;
+		keygen->updated = FALSE;
+		keygen->owner = purple_conversation_get_account(conv);
+		keygen->conv_name = purple_conversation_get_name(conv);
+		keygen->timer_handle = purple_timeout_add_seconds(KEYGEN_POLL_INTERVAL, 
+				(GSourceFunc)par_keygen_poll_result, NULL);
+		
 		if (syndrome == OTP_OK) {
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 					"Generation of two entropy files of %ikiB size started.\n", size);
@@ -1234,7 +1297,8 @@ static gboolean plugin_load(PurplePlugin *plugin)
 			PURPLE_CALLBACK(par_conversation_deleting), NULL);
 	purple_signal_connect(blist_handle, "buddy-signed-off", plugin, 
 			PURPLE_CALLBACK(par_buddy_signed_off), NULL);
-	otp_signal_connect(otp_conf, "keygen_key_done_signal", &par_keygen_key_generation_done);
+			
+	otp_signal_connect(otp_conf, "keygen_key_done_signal", &par_keygen_update_status);
 
 	/* register commands ("/otp" + a string of args) */
 	par_cmd_id = purple_cmd_register ("otp", "s", PURPLE_CMD_P_DEFAULT,
