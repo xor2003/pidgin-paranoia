@@ -143,8 +143,9 @@ static char* par_strip_jabber_ressource(const char* acc)
 /* ----------------- Paranoia custom signal handlers ------------------ */
 
 static void par_keygen_update_status(GObject *my_object, 
-			gdouble percent, struct otp* alice_pad) {
-	
+			gdouble percent, struct otp* alice_pad)
+/* needed to save the keygen status by the keygen thread(s) */
+{
 	keygen->status = percent;
 	keygen->updated = TRUE;
 	
@@ -159,7 +160,9 @@ static void par_keygen_update_status(GObject *my_object,
 	return;
 }
 
-static gboolean par_keygen_poll_result(void* data) {
+static gboolean par_keygen_poll_result(void* data) 
+/* checks for an updated keygen status and displays messages if needed */
+{
 	
 	if(keygen->updated) {
 		PurpleConversation* conv = purple_find_conversation_with_account (
@@ -416,12 +419,14 @@ static void par_session_reset_conv(PurpleConversation *conv)
 PurpleCmdId par_cmd_id;
 
 #define PARANOIA_HELP_STR "Welcome to the One-Time Pad CLI.\n\
-/otp help: shows this message \n/otp genkey &lt;size&gt; &lt;entropy \
-source&gt;: generates a key pair of &lt;size&gt; \
-kiB\n/otp on: tries to start the encryption\n/otp off: stops the \
-encryption\n/otp info: shows details about the used key\n\
+/otp help: shows this message \n\
+/otp genkey &lt;size&gt; &lt;entropy \
+source&gt;: generates a key pair of &lt;size&gt; kiB\n\
+/otp on: tries to enable the encryption\n\
+/otp off: disables the encryption\n/otp info: shows details about the used key\n\
 /otp list: shows all keys for this conversation\n\
-/otp list-all: shows all available keys"
+/otp list-all: shows all available keys\n\
+/otp reload: reloads all your key files"
 #define PARANOIA_ERROR_STR "Wrong argument(s). Type '/otp help' for help."
 #define PARANOIA_KEYSIZE_ERROR "Your key size is too large."
 
@@ -739,8 +744,18 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 	else if (g_strcmp0("list", *args) == 0) {
 		par_cli_show_keys(conv, FALSE);
 	}
-		else if (g_strcmp0("list-all", *args) == 0) {
+	else if (g_strcmp0("list-all", *args) == 0) {
 		par_cli_show_keys(conv, TRUE);
+	}
+	else if (g_strcmp0("reload", *args) == 0) {
+		int old_count = par_keylist_count_keys(klist);
+		par_keylist_reload(otp_conf, klist);
+		char* msg = g_strdup_printf("Key list regenerated. Number of available "
+					"keys: old %i, new %i.",
+					old_count, par_keylist_count_keys(klist));
+		purple_conversation_write(conv, NULL, msg, 
+					PURPLE_MESSAGE_NO_LOG, time(NULL));
+		g_free(msg);
 	}
 	else if (g_ascii_strncasecmp("genkey ", *args, 7) == 0) {
 		gchar** param_array = g_strsplit(*args + 7, " ", 2); /* to skip "genkey " */
