@@ -73,7 +73,7 @@ struct otp_config* otp_conf;
 struct keylist* klist;
 struct kg_data* keygen;
 
-/* Keygen Data */
+/* Keygen data */
 struct kg_data {
 	PurpleAccount *owner; /* account that uses the keygen */
 	const char *conv_name; /* name of the conversation where the comand was run */
@@ -84,7 +84,7 @@ struct kg_data {
 };
 
 
-void par_add_header(char** message)
+static void par_add_header(char** message)
 /* adds the paranoia header */
 {
 	char* new_msg = g_strconcat(PARANOIA_HEADER, *message, NULL);
@@ -253,7 +253,7 @@ void par_session_ack(PurpleConversation *conv) {
 } */
 
 
-void par_session_send_close(PurpleConversation *conv)
+static void par_session_send_close(PurpleConversation *conv)
 /* sends an otp termination message */
 {
 	purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), 
@@ -542,13 +542,16 @@ static void par_cli_show_key_details(PurpleConversation *conv)
 	
 	char* disp_string = NULL;
 
-	if(used_key != NULL) { //FIXME: there is one key!
-		disp_string = g_strdup_printf("There are %i keys available for this"
+	if(used_key != NULL) {
+		disp_string = g_strdup_printf("There %s %i %s available for this"
 				" conversation.\nCurrently active key infos:\nSource:\t\t%s\n"
 				"Destination:\t%s\nID:\t\t\t%s\nSize:\t\t\t%" G_GSIZE_FORMAT 
 				"\nPosition:\t\t%" G_GSIZE_FORMAT "\n"
 				"Entropy:\t\t%" G_GSIZE_FORMAT "\n"
-				"OTP enabled:\t%i\nAuto enable:\t%i\nNo entropy:\t%i", num,
+				"OTP enabled:\t%i\nAuto enable:\t%i\nNo entropy:\t%i", 
+				num == 1 ? "is" : "are",
+				num,
+				num == 1 ? "key" : "keys",
 				otp_pad_get_src(used_key->pad), otp_pad_get_dest(used_key->pad), 
 				otp_pad_get_id(used_key->pad), 
 				otp_pad_get_filesize(used_key->pad), 
@@ -629,7 +632,7 @@ static void par_cli_init_keygen(PurpleConversation* conv, int size, gchar** para
 	
 	purple_conversation_write(conv, NULL, 
 			"Generating keys. Please wait...", 
-			PURPLE_MESSAGE_NO_LOG, time(NULL)); //TODO: remove it
+			PURPLE_MESSAGE_NO_LOG, time(NULL)); //FIXME: remove it
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 			"Generate new key: my_acc: %s, other_acc: %s, size: %ikiB\n",
 			my_acc_stp, other_acc_stp, size);
