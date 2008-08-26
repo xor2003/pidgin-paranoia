@@ -5,7 +5,6 @@
 Version 0.3
 ============
 	paranoia
-	 * /otp scan, to read in new keys
 	 * add a message queue thread
 	 	* enhanced session management (auto ack)
 	 	* send entropy warnings
@@ -22,7 +21,7 @@ Version 0.4
 ============
  	paranoia
  	 * gettext support (translations)
-	 * optimize key list (hashtable or tree)
+	 * optimize key list (hashtable(s))
 
 Version 1.0
 ============

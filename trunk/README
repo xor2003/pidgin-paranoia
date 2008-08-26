@@ -12,7 +12,7 @@ The plug-in is written in C and released under the GPL (version 3).
 The plug-in aims to give 'perfect' security with a encryption system that is a
 simple as possible and easy to understand.
 
-Please read the file INFO.
+Please read the file INFO for futher details.
 
 2. Installation
 --------------------------------------------------------------------------------
@@ -21,6 +21,7 @@ Please read the file INSTALL.
 
 3. General advices
 --------------------------------------------------------------------------------
+TODO: update it for 0.3
 
 Plase note that when not correctly used, many things can go wrong.
 Keeping your keyfiles secret and using good entropy-sources will help!
@@ -35,12 +36,12 @@ Commands are entered by typing a message beginning with /otp.
 
 /otp help: shows this message 
 /otp genkey <size> <entropy source>: generates a key pair of <size> kiB
-/otp on: tries to start the encryption
-/otp off: stops the encryption
+/otp on: tries to enable the encryption
+/otp off: disables the encryption
 /otp info: shows details about the used key
 /otp list: shows all keys for this conversation
 /otp list-all: shows all available keys
-
+/otp reload: reloads all your key files
 
 5. Usage of the otptester
 --------------------------------------------------------------------------------

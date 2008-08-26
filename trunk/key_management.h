@@ -49,6 +49,8 @@ struct key* par_key_create(const char* filename, struct otp_config* otp_conf);
 
 void par_key_reset(struct key* a_key);
 
+void par_key_copy_state(struct key* old_key, struct key* new_key);
+
 /* --------- List ---------- */
 
 struct keylist* par_keylist_new();
@@ -56,6 +58,9 @@ struct keylist* par_keylist_new();
 
 struct keylist* par_keylist_init(struct otp_config* otp_conf);
 /* reads all keys from a config into a new list */
+
+void par_keylist_reload(struct otp_config* otp_conf, struct keylist* list);
+/* reloads all keys of a config, key properties are copied */
 
 void par_keylist_free(struct keylist* list);
 /* destroy the key list */

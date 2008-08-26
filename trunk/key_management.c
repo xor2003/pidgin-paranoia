@@ -74,6 +74,19 @@ void par_key_reset(struct key* a_key)
 	return;
 }
 
+void par_key_copy_state(struct key* old_key, struct key* new_key)
+{
+	new_key->opt->otp_enabled = old_key->opt->otp_enabled;
+	new_key->opt->auto_enable = old_key->opt->auto_enable;
+	new_key->opt->no_entropy = old_key->opt->no_entropy;
+	new_key->opt->handshake_done = old_key->opt->handshake_done;
+	new_key->opt->active = old_key->opt->active;
+	
+	new_key->next = old_key->next;
+
+	return;
+}
+
 struct keylist* par_keylist_new()
 /* returns an empty list */
 {
@@ -122,6 +135,62 @@ struct keylist* par_keylist_init(struct otp_config* otp_conf)
 	g_dir_close(directoryhandle);
 	
 	return new_list;
+}
+
+void par_keylist_reload(struct otp_config* otp_conf, struct keylist* list) 
+{
+	/* save old list and empty it */
+	struct keylist* old_list;
+	old_list = (struct keylist *) g_malloc(sizeof(struct keylist));
+	old_list->head = list->head;
+	
+	list->head = NULL;
+	
+	/* rebuild list */
+	struct key* tmp_key = NULL;
+	struct key* old_key;
+	
+	GError* error = NULL;
+	GDir* directoryhandle = g_dir_open(otp_conf_get_path(otp_conf), 0, &error);
+	const gchar* tmp_filename = g_dir_read_name(directoryhandle);
+	char* tmp_path = NULL;
+	
+	if (error) {
+		g_printf("paranoia-key-management error: Opening \"%s\" failed! %s\n", 
+				otp_conf_get_path(otp_conf), error->message);
+		g_error_free(error);
+	} else {
+		/* loop over global key dir */
+		// TODO: detect dublicate id's?
+		while (tmp_filename != NULL) {
+			tmp_path = g_strconcat(otp_conf_get_path(otp_conf), "/", tmp_filename, NULL);
+			
+			if (g_file_test(tmp_path, G_FILE_TEST_IS_REGULAR)) {
+				tmp_key = par_key_create(tmp_filename, otp_conf);
+				if (tmp_key == NULL) {
+					//g_printf("paranoia-core: Could not add the file \"%s\".\n", tmp_filename);
+				} else {
+					//g_printf("paranoia-core: Key \"%s\" added.\n", tmp_filename);
+					old_key = par_keylist_search_key_by_id(old_list, 
+								otp_pad_get_id(tmp_key->pad),
+								otp_pad_get_src(tmp_key->pad),
+								otp_pad_get_dest(tmp_key->pad));
+					if (old_key) {
+						// TODO: optimisation, delete found keys from old list!
+						par_key_copy_state(old_key, tmp_key);
+					}
+					tmp_key->next = list->head;
+					list->head = tmp_key;
+				}
+			}
+			g_free(tmp_path);
+			tmp_filename = g_dir_read_name(directoryhandle);
+		}
+	}
+	g_dir_close(directoryhandle);
+	
+	par_keylist_free(old_list);
+	return;
 }
 
 void par_keylist_free(struct keylist* list)
