@@ -48,7 +48,7 @@ gpointer sysstate(gpointer data);
 gpointer prng(gpointer data);
 
 /* defines */
-#define BUFFSIZE 20
+#define BUFFSIZE 32
 #define POOLSIZE 1024
 /* do not change, for developement purpose */
 #define CHARSIZE 256
@@ -97,6 +97,11 @@ gpointer keygen_pool_read(gpointer data)
 				} else {
 					key_data->size -= size;
 					key_data->pool_level = 0.0;
+					
+					g_signal_emit_by_name(	G_OBJECT(otp_conf_get_trigger(key_data->config)), 
+								"keygen_key_done_signal", 
+								(double)(100*(key_data->keysize - key_data->size)/key_data->keysize), 
+								NULL);
 				}
 			g_mutex_unlock(key_data->keygen_mutex);
 			delay -= 100;
