@@ -57,7 +57,7 @@ OtpError create_config()
 {
 	g_printf("------------------------- Create Config -------------------------------------\n");
 	config = otp_conf_create("otptester", 
-			PARANOIA_PATH, DESKTOP_PATH);
+			PARANOIA_PATH, DESKTOP_PATH, 1);
 	otp_signal_connect(config, 
 			"keygen_key_done_signal", &key_generation_done);
 	par_init_key_list(config);

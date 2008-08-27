@@ -137,6 +137,7 @@ struct otp_config {
 	double msg_key_improbability_limit;	/* entropy for message encryption with 
  * less probable content will be rejected */
  	unsigned int number_of_keys_in_production;		/* The Number of keys currently in production */
+	unsigned int max_number_of_keys_in_production;		/* The max number of keys that can be produced on the same time*/
  	GObject* keygen_signal_trigger;		/* Trigger to emit signal on */
 };
 
@@ -557,8 +558,12 @@ OtpError otp_generate_key_pair(struct otp_config *config,
 	
 	/* Check if the keygen is already in use and if not set: one key in generation. */
 /*	if(otp_conf_get_number_of_keys_in_production(config) > 0) return OTP_ERR_GENKEY_KEYGEN_IN_USE; */
-	otp_conf_increment_number_of_keys_in_production(config);
-	
+	if(config->number_of_keys_in_production < config->max_number_of_keys_in_production) {
+		otp_conf_increment_number_of_keys_in_production(config);
+	} else {
+		return OTP_ERR_GENKEY_KEYGEN_IN_USE;
+	}
+
 	gchar *alice_file, *bob_file;
 	guint id;
 	gint i;
@@ -871,7 +876,8 @@ OtpError otp_conf_create_signal(struct otp_config *config)
 struct otp_config* otp_conf_create(
 				const gchar* client_id,
 				const gchar* path,
-				const gchar* export_path)
+				const gchar* export_path,
+				unsigned int max_keys_in_production)
 /* Creation of the config stucture of the library, sets some parameters
  * Default values:
  * Sets msg_key_improbability_limit = DEFAULT_IMPROBABILITY
@@ -889,6 +895,7 @@ struct otp_config* otp_conf_create(
 	config->random_msg_tail_max_len = DEFAULT_RNDLENMAX;
 	config->pad_count = 0; /* Initialize with no associated pads */
 	config->number_of_keys_in_production = 0; /* Initialize with no keys in generation */
+	config->max_number_of_keys_in_production = max_keys_in_production;
 
 #ifdef DEBUG
 	g_printf("%s: config created with: %s, %s, %s, %e, %i\n", config->client_id, config->client_id,
