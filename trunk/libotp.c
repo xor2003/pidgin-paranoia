@@ -835,7 +835,7 @@ OtpError otp_decrypt(struct otp* pad, gchar** message)
 		return OTP_ERR_MSG_FORMAT;
 		}
 	/* Our position to decrypt in the pad */
-	gsize testpos = g_ascii_strtoull( strdup(m_array[0]), NULL, 10);
+	gsize testpos = g_ascii_strtoull(m_array[0], NULL, 10);
 	if (testpos < 0 || testpos > pad->filesize/2) {
 		g_strfreev(m_array);
 		return OTP_ERR_KEY_SIZE_MISMATCH;
