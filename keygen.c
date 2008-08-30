@@ -100,7 +100,7 @@ gpointer keygen_pool_read(gpointer data)
 					
 					g_signal_emit_by_name(	G_OBJECT(otp_conf_get_trigger(key_data->config)), 
 								SIGNALNAME, 
-								(double)(100*(key_data->keysize - key_data->size)/key_data->keysize), 
+								((double)(100*(key_data->keysize - key_data->size))/key_data->keysize), 
 								NULL);
 				}
 			g_mutex_unlock(key_data->keygen_mutex);
