@@ -90,7 +90,7 @@ OtpError create_config()
 	config = otp_conf_create("otptester", 
 			PARANOIA_PATH, DESKTOP_PATH, 1);
 	otp_signal_connect(config, 
-			"keygen_key_done_signal", &key_generation_done);
+			"keygen-status-update", &key_generation_done);
 	return OTP_OK;
 }
 

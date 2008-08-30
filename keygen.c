@@ -99,7 +99,7 @@ gpointer keygen_pool_read(gpointer data)
 					key_data->pool_level = 0.0;
 					
 					g_signal_emit_by_name(	G_OBJECT(otp_conf_get_trigger(key_data->config)), 
-								"keygen_key_done_signal", 
+								SIGNALNAME, 
 								(double)(100*(key_data->keysize - key_data->size)/key_data->keysize), 
 								NULL);
 				}
@@ -476,7 +476,7 @@ gpointer keygen_main_thread(gpointer data)
 						g_file_new_for_commandline_arg(key_data->alice), 
 						G_FILE_COPY_NONE, NULL, NULL, NULL, NULL);
 			pad = keygen_get_pad(key_data);
-			g_signal_emit_by_name(G_OBJECT(otp_conf_get_trigger(key_data->config)), "keygen_key_done_signal", 100.0, pad);
+			g_signal_emit_by_name(G_OBJECT(otp_conf_get_trigger(key_data->config)), SIGNALNAME, 100.0, pad);
 		}
 		g_free(tmp_file);
 	} else g_printerr("error!!!\n");

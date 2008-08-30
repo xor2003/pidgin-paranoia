@@ -47,7 +47,7 @@ AC_DEFINE_UNQUOTED(PARANOIA_ID, "core-paranoia", [Pidgin-Paranoia Plugin ID])
 # Check for glib2.0
 #
 AM_PATH_GLIB_2_0(2.16.0,, AC_MSG_ERROR([
-*** GLib 2.12.0 is required to build pidgin-paranoia;  The latest version of 
+*** GLib 2.16.0 is required to build pidgin-paranoia;  The latest version of 
 *** GLib is always available at http://www.gtk.org/.]))
 
 PKG_CHECK_MODULES(GTHREAD, gthread-2.0,, [AC_MSG_ERROR([unable to find the GThread library])])

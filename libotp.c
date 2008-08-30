@@ -836,8 +836,8 @@ OtpError otp_conf_set_trigger(struct otp_config* config, void* trigger)
 
 /* signal handling */
 OtpError otp_conf_create_signal(struct otp_config *config)
-/* create the signal 'keygen_key_done_signal' and write trigger into otp_config 
- * Create the 'keygen_key_done_signal' to which one can attach a function of
+/* create the signal 'keygen-status-update' and write trigger into otp_config 
+ * Create the 'keygen-status-update' to which one can attach a function of
  *	the form my_function(GObject *object, double percent_done)*/
 {
 	guint sid;
@@ -856,7 +856,7 @@ OtpError otp_conf_create_signal(struct otp_config *config)
 	param_types[1] = G_TYPE_POINTER;
 	
 /* create signal */
-	sid = g_signal_newv("keygen_key_done_signal",								/* Signal Name */
+	sid = g_signal_newv(SIGNALNAME,												/* Signal Name */
 						G_TYPE_OBJECT, 											/* Type the Signal pertains to*/
 						G_SIGNAL_RUN_LAST | G_SIGNAL_ACTION,					/* Signal Flags */
 						NULL,													/* GClosure Function */

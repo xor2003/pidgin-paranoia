@@ -24,6 +24,7 @@
 /* ------------------- Public Constans (you can change them) ----------------- */
 #define PATH_DELI "/"					/* For some reason some strange
 				 * operatingsystems use "\" */
+#define SIGNALNAME "keygen-status-update"
 
 /*  ------------------- Public Constants (don't change) -------------------
  * Changing this makes your one-time-pad incompatible */

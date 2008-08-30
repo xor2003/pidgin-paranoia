@@ -5,7 +5,7 @@
 Version 0.3
 ============
 	paranoia
-	 * add a message queue thread
+	 * add a message queue thread (???)
 	 	* enhanced session management (auto ack)
 	 	* send entropy warnings
 	 * string freeze
@@ -21,7 +21,7 @@ Version 0.4
 ============
  	paranoia
  	 * gettext support (translations)
-	 * optimize key list (hashtable(s))
+	 * optimize key list (hashtables)
 
 Version 1.0
 ============
@@ -37,6 +37,7 @@ Misc
 Ideas
  * Entropy pool file
  * Encrypted file transfer
+ * Pass controle messages over invisible conversations. Needs changes in purple.
 
 Known bugs
  * there are some anomalies if both set /otp off and one user tries to reenable
