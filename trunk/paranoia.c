@@ -1300,7 +1300,7 @@ static gboolean plugin_load(PurplePlugin *plugin)
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Export path: %s\n", desktoppath);
 	
 	/* Create global libotp config */
-	otp_conf = otp_conf_create(PARANOIA_ID, otp_path, desktoppath);
+	otp_conf = otp_conf_create(PARANOIA_ID, otp_path, desktoppath, 1);
 	g_free (otp_path);
 
 	/* get the conversation handle */

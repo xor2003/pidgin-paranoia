@@ -16,855 +16,638 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+/* glib includes */
 #include <glib.h>
-#include <glib-object.h>
+#include <gio/gio.h>
 
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/resource.h>
-#include <sys/time.h>
-#include <stdio.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <errno.h>
-
-#include "keygen.h"
+/* libotp includes */
 #include "libotp.h"
 #include "libotp-internal.h"
-
-// buffer which is stores the bytes before they are written into the keyfile
-#define BUFFSIZE 20
-// do not change, for developement purpose
-#define CHARSIZE 256
-#define OFFSET 0
+#include "keygen.h"
 
 
-// Definition for the funcions and global variables.
-OtpError keygen_invert(char *src, char *dest);
-OtpError keygen_loop_invert(char *src);
-struct otp *keygen_get_pad(char *filename);
-unsigned char bit2char(short buf[8]);
-gpointer key_from_device(gpointer data);
-gpointer key_from_file(gpointer data);
-gpointer start_generation(gpointer data);
+/* declarations */
+typedef struct {
+	gsize size, keysize;
+	gboolean is_loopkey;
+	gchar *alice, *bob, *src;
+	struct otp_config* config;
+	gpointer keygen_mutex;
+	GOutputStream *fp_alice;
+	gchar *entropy_pool;
+	gint position;
+	gdouble pool_level;
+} KeyData;
+
+gpointer keygen_main_thread(gpointer data);
 gpointer devrand(gpointer data);
 gpointer audio(gpointer data);
 gpointer stub(gpointer data);
 gpointer threads(gpointer data);
 gpointer sysstate(gpointer data);
 gpointer prng(gpointer data);
-gpointer keygen_mutex = NULL;
 
-// private key data for the threads
-struct _key_data {
-	int size;
-	gboolean is_loopkey;
-	char *alice, *bob, *file;
-	struct otp_config* config;
-} key_data;
+/* defines */
+#define BUFFSIZE 32
+#define POOLSIZE 1024
+/* do not change, for developement purpose */
+#define CHARSIZE 256
+#define OFFSET 0
 
+/* ---------------- Entropy Pool Functions ------------------*/
+void keygen_pool_write(gchar *buffer, gsize size, KeyData *key_data) 
+/*
+*	Write size bytes of entropy from buffer to the entropy pool
+*/
+{
+	gint i;
+	
+	i = 0;
+	while(i < size) {
+		if(key_data->position >= POOLSIZE) key_data->position = 0;
+		key_data->entropy_pool[key_data->position++] ^= buffer[i++];
+	}
+	key_data->pool_level += (gdouble)size/POOLSIZE;
+}
 
-OtpError keygen_invert(char *src, char *dest)
+gpointer keygen_pool_read(gpointer data)
+/*
+*	read from the entropy pool and write to the alice keyfile
+*/
+{
+	KeyData *key_data;
+	gint delay;
+	gssize size;
+	
+	key_data = (KeyData *)data;
+	delay = 1000;
+	while(1) {	
+		if(key_data->size == 0) break;
+		g_usleep(delay);
+		if(key_data->pool_level >= 2.0) {
+			if(key_data->size < POOLSIZE) {
+				size = key_data->size;
+			} else {
+				size = POOLSIZE;
+			}
+			g_mutex_lock(key_data->keygen_mutex);
+				size = g_output_stream_write(key_data->fp_alice, key_data->entropy_pool, size, NULL, NULL);
+				if(size == -1) {
+					g_printerr("write error\n");
+				} else {
+					key_data->size -= size;
+					key_data->pool_level = 0.0;
+					
+					g_signal_emit_by_name(	G_OBJECT(otp_conf_get_trigger(key_data->config)), 
+								"keygen_key_done_signal", 
+								(double)(100*(key_data->keysize - key_data->size)/key_data->keysize), 
+								NULL);
+				}
+			g_mutex_unlock(key_data->keygen_mutex);
+			delay -= 100;
+		} else {
+			delay *= 2;
+		}
+	}
+	return NULL;
+}
+
+/* ------------------------- TOOLS --------------------------*/
+OtpError keygen_invert(gchar *src, gchar *dest)
 /*
 *	Write the bytewise inverse of src to dest
 *	src and dest must be a valide filename with correct path
 * 	return 0 for success, -1 if a failure occures
 */
 {
-	FILE *fpin, *fpout;
-	int c;
-	long file_length;
-
+	GOutputStream *fpout;
+	GFile *dest_file;
+	GMappedFile *src_file;
+	gchar *buffer;
+	gsize file_length;
+	gint position;
+	
 	if(src == NULL || dest == NULL) {
 		g_printerr("source or destination NULL\n");
 		return OTP_ERR_KEYGEN_ERROR3;
 	}
+	
+	src_file = g_mapped_file_new(src, 0, NULL);	
+	file_length = g_mapped_file_get_length(src_file);
+	buffer = g_mapped_file_get_contents(src_file);
+	
+	dest_file = g_file_new_for_commandline_arg(dest);
+	fpout = (GOutputStream *)g_file_append_to(dest_file, G_FILE_CREATE_PRIVATE, NULL, NULL);
 
-	if(strcmp(src,dest) == 0) {
-		g_printerr("source and destination same file\n");
+	if(file_length <= 0 || fpout == NULL) {
+		g_printerr("couldn't get file stream\n");
+		g_mapped_file_free(src_file);
+		g_output_stream_close(fpout, NULL, NULL);
 		return OTP_ERR_KEYGEN_ERROR3;
 	}
 
-	if((fpin = fopen(src, "r")) == NULL) {
-		g_printerr("couldn't open source\n");
-		return OTP_ERR_KEYGEN_ERROR3;
+	position = file_length - 1;
+	while(position >= 0) {
+		if(g_output_stream_write(fpout, &buffer[position], 1, NULL, NULL) != 1) {
+			g_printerr("wasn't able to create bob key\n");
+			g_mapped_file_free(src_file);
+			g_output_stream_close(fpout, NULL, NULL);
+			return OTP_ERR_KEYGEN_ERROR1;
+		}
+		position--;
 	}
-
-	if((fpout = fopen(dest, "w")) == NULL) {
-		g_printerr("couldn't open destination\n");
-		fclose(fpin);
-		return OTP_ERR_KEYGEN_ERROR3;
-	}
-
-	fseek(fpin, -1, SEEK_END);
-	file_length = ftell(fpin);
-
-	while(file_length >= 0) {
-		c = fgetc(fpin);
-		fputc(c, fpout);
-		fseek(fpin, -2, SEEK_CUR);
-		file_length--;
-	}
-
-	fclose(fpin);
-	fclose(fpout);
-
+	
+	g_mapped_file_free(src_file);
+	g_output_stream_close(fpout, NULL, NULL);
 	return OTP_OK;
 } // end invert()
 
 
-OtpError keygen_loop_invert(char *src)
+struct otp *keygen_get_pad(KeyData *key_data) 
 /*
-*	append inverse of src to src.
-*	src must be a valide filename with correct path.
-* 	return 0 for success, -1 if a failure occures
+	Get the OTP pad for filename. 
+	filename has to be a regluar entropy file with absolute path.
 */
 {
-	FILE *fpin, *fpout;
-	int c;
-	long file_length;
-
-	if(src == NULL) {
-		g_printerr("source NULL\n");
-		return OTP_ERR_KEYGEN_ERROR3;
-	}
-
-	if((fpin = fopen(src, "r")) == NULL) {
-		g_printerr("couldn't open source\n");
-		return OTP_ERR_KEYGEN_ERROR3;
-	}
-
-	if((fpout = fopen(src, "a")) == NULL) {
-		g_printerr("couldn't open source for writing\n");
-		fclose(fpin);
-		return OTP_ERR_KEYGEN_ERROR3;
-	}
-
-	fseek(fpin, -1, SEEK_END);
-	file_length = ftell(fpin);
-
-	while(file_length >= 0) {
-		c = fgetc(fpin);
-		fputc(c, fpout);
-		fseek(fpin, -2, SEEK_CUR);
-		file_length--;
-	}
-
-	fclose(fpin);
-	fclose(fpout);
-
-	return OTP_OK;
-} // end loop_invert()
-
-
-unsigned int keygen_id_get()
-/*
-*	get a random id from /dev/urandom
-*/
-{
-	int fp_urand;
-	unsigned int id;
-
-
-	if((fp_urand = open("/dev/urandom", O_RDONLY)) < 0 ) {
-		g_printerr("device open error\n");
-		return 0;
-	}
-
-	if(read(fp_urand, &id, sizeof(id)) != sizeof(id)) {
-		g_printerr("read error\n");
-		close(fp_urand);
-		return 0;
-	}
-
-	close(fp_urand);
-
-	return id;
-} // end keygen_id_get()
-
-struct otp *keygen_get_pad(char *filename) {
 	struct otp *pad;
-	char *alice_relative;
-	char **splited;
-	int i;
+	gchar *alice_relative;
 	
-	if(filename == NULL) {
-		g_printerr("Input NULL\n");
-		return NULL;
-	}
-	
-	splited = g_strsplit(filename, PATH_DELI, -1);
-	
-	/* get the relative filename*/
-	i = 0;
-	while(splited[i] != NULL) i++;
 
-	alice_relative = splited[i-1];
+	/* get relative filename*/	
+	alice_relative = g_path_get_basename(key_data->alice);
 	
 	/* generate pad from file */	
-	pad = otp_pad_create_from_file(key_data.config, alice_relative);
+	pad = otp_pad_create_from_file(key_data->config, alice_relative);
 	
-	g_strfreev(splited);
+	g_free(alice_relative);
 	
 	return pad;
-}
+} // end keygen_get_pad()
 
-GThread *keygen_keys_generate_from_device(const char *alice_file, 
-		const char *bob_file, const char *device, gsize size, 
-		gboolean is_loopkey, void* config)
+
+gchar bit2char(gshort buf[8]) 
 /*
-*	generate the key pair for alice and bob out of a character device
-*	alice_file and bob_file must be correct filenames including the correct absoute path
-*	size should be strictly positiv
-*	is_loopkey is true if one would like to generate a loop key, else false
-*	device must be a character device
+*	Input a buf which elements are 1 or 0 and the function will output
+*	a char as output.
 */
 {
-	GThread *key_device_thread;
-	key_data.config = (struct otp_config *)config;
+	gshort i, byte;
 	
-	if(alice_file == NULL || bob_file == NULL || device == NULL || config == NULL) {
-		g_printerr("input NULL\n");
-		otp_conf_decrement_number_of_keys_in_production(key_data.config);
-		return NULL;
-	}
-	
-	key_data.alice = g_strdup(alice_file);
-	key_data.bob = g_strdup(bob_file);
-	if(is_loopkey) {
-		key_data.size = size / 2;
-	} else key_data.size = size;
-	key_data.file = g_strdup(device);
-	key_data.is_loopkey = is_loopkey;
-	
-	// initialize g_thread if not already done.
-	// The program will abort if no thread system is available!
-	if (!g_thread_supported()) g_thread_init (NULL);
+	/* Convert the buffer into one byte */
+	byte = 0;
+	for(i = 0; i < 8; i++) byte += buf[i] * (1<<i);
 
-	if((key_device_thread = g_thread_create(key_from_device ,NULL, TRUE, NULL)) == NULL) {
-		otp_conf_decrement_number_of_keys_in_production(key_data.config);
-		g_printerr("couldn't create thread");
-	}
+	return (gchar)byte;
+} // end bit2char()
 
-	return key_device_thread;
-}
-
-gpointer key_from_device(gpointer data) 
+gint improved_neumann(gchar buffer[BUFFSIZE]) 
 /*
-*	Thread which collects the entropy from a char device
+*	This function does the improved neumann algortihm on the input buffer and returns
+*	the number of bytes that could be generated and are now stored in the same buffer.
 */
 {
-	int fp_dev, fp_alice;
-	unsigned int blk_size;
+	gint size, i, j, count;
+	gchar current;
+	size = 0;
+	count = 0;
+	current = 0;
 	
-	if((fp_dev = open(key_data.file, O_RDONLY)) < 0) {
-		g_printerr("couldn't open device\n");
-		otp_conf_decrement_number_of_keys_in_production(key_data.config);
-		return 0;
+	for(i = 0; i < BUFFSIZE; i++) {
+		for(j = 0; j < 2; j++) {
+			switch((int)((buffer[i] >> i*4)&0xF)) {
+				case 1:	case 5:	case 13:
+					count += 2;
+					break;
+				case 3:
+					count++;
+					break;
+				case 4: case 6:	case 7:
+					count++;
+					if(count > 7) break;
+					current += (1 << count);
+					count++;
+					break;
+				case 2:	case 9:	case 14:
+					current += (1 << count);
+					count += 2;
+					break;
+				case 8:	case 10: case 11:
+					current += (1 << count);
+					count++;
+					if(count > 7) break;
+					current += (1 << count);
+					count++;
+					break;
+				case 12:
+					current += (1 << count);
+					count++;
+					break;
+				default:
+					break;
+			}
+			if(count > 7) {
+				buffer[size] = current;
+				size++;
+				count = 0;
+			}
+		}
+	}
+	return size;
+} // end improved_neumann()
+
+gint keys_from_source(KeyData *key_data, GFile *source) 
+/*
+*	keys_from_source takes a KeyData struct and an entropy source and generates the alice key.
+*/
+{
+	GInputStream *fp_source;
+	gssize size;
+	gchar buffer[BUFFSIZE];
+	
+	fp_source = (GInputStream *) g_file_read(source, NULL, NULL);
+	
+	if(fp_source == NULL) {
+		g_printerr("couldn't open entropy source stream\n");
+		return -1;
 	}
 	
-	struct stat rfstat;
-	
-	if(stat(key_data.file, &rfstat) < 0) {
-		g_printerr("couldn't get stat\n");
-		close(fp_dev);
-		otp_conf_decrement_number_of_keys_in_production(key_data.config);
-		return 0;
-	}
-	
-	if(!S_ISCHR(rfstat.st_mode)) {
-		g_printerr("no character device\n");
-		close(fp_dev);
-		otp_conf_decrement_number_of_keys_in_production(key_data.config);
-		return 0;
-	}
-	
-	blk_size = rfstat.st_blksize;
-	
-	
-	if((fp_alice = open(key_data.alice, O_RDWR | O_CREAT | O_APPEND, 00644)) < 0) {
-		g_printerr("couldn't open alice_file\n");
-		close(fp_dev);
-		otp_conf_decrement_number_of_keys_in_production(key_data.config);
-		return 0;
-	}
-	
-	unsigned char buf[blk_size];
-	
-	while(key_data.size > 0) {
-		if(key_data.size > blk_size) {
-			read(fp_dev, buf, blk_size);
-			write(fp_alice, buf, blk_size);
-			key_data.size -= blk_size;
+	while(1) {
+		if(key_data->size == 0) {
+			break;	
+		} else if(key_data->size >= BUFFSIZE) {
+			size = BUFFSIZE;
+		} else if(key_data->size < BUFFSIZE) {
+			size = key_data->size;
+
 		} else {
-			read(fp_dev, buf, key_data.size);
-			write(fp_alice, buf, key_data.size);
-			key_data.size = 0;
+			g_printerr("unknown size error\n");
+			g_input_stream_close(fp_source, NULL, NULL);
+			return -1;
+		}
+		
+		if((size = g_input_stream_read(fp_source, buffer, size, NULL, NULL)) == -1) {
+			g_input_stream_close(fp_source, NULL, NULL);
+			g_printerr("read error\n");
+			return -1;
+		}
+		
+		if((size = g_output_stream_write(key_data->fp_alice, buffer, size, NULL, NULL)) == -1) {
+			g_input_stream_close(fp_source, NULL, NULL);
+			g_printerr("write error\n");
+			return -1;
+		}	
+		key_data->size -= size;
+	}
+
+	g_input_stream_close(fp_source, NULL, NULL);
+	return 0;
+} // end keys_from_source()
+
+void free_key_data(KeyData *key_data) 
+/*
+*	Free the KeyData struct
+*/
+{
+	g_free(key_data->alice);
+	g_free(key_data->bob);
+	g_free(key_data->src);
+	g_free(key_data->entropy_pool);
+	g_mutex_free(key_data->keygen_mutex);
+	g_output_stream_close(key_data->fp_alice, NULL,  NULL);
+	g_free(key_data);
+} // end free_key_data()
+
+
+/* ------------------------- ACCESS -------------------------*/
+
+OtpError keygen_keys_generate(char *alice_file, char *bob_file,
+		gsize size, const char *entropy_source, void *config)
+/*
+*	Generate the keyfiles alice and bob from the source entropy_source, which
+*	can be either a regular entropy file, a character device or NULL for the
+*	internal key generator
+*/
+{
+	KeyData *key_data;
+	gchar *tmp_file;
+	
+	if(alice_file == NULL || bob_file == NULL || config == NULL) {
+		g_printerr("input NULL\n");
+		otp_conf_decrement_number_of_keys_in_production(config);
+		return OTP_ERR_KEYGEN_ERROR1;
+	}
+	
+	/* Check if file already exists */
+	if(g_file_query_exists(g_file_new_for_commandline_arg(alice_file), NULL)) {
+		g_printerr("file already exists!\n");
+		return OTP_ERR_FILE_EXISTS;
+	}
+
+	/* fill key_data struct */
+	key_data = (KeyData *)g_malloc0(sizeof(KeyData));	
+	key_data->config = (struct otp_config *)config;
+	key_data->alice = g_strdup(alice_file);
+
+	if(g_strcmp0(g_path_get_basename(alice_file), g_path_get_basename(bob_file))) {
+		key_data->bob = g_strdup(bob_file);
+		key_data->size = size;
+		key_data->is_loopkey = FALSE;
+	} else {
+		key_data->bob = g_strdup(alice_file);
+		key_data->size = size / 2;
+		key_data-> is_loopkey = TRUE;
+	}
+	key_data->keysize = key_data->size;
+	key_data->src = g_strdup(entropy_source);
+	key_data->entropy_pool = (gchar *)g_malloc0(POOLSIZE*sizeof(gchar));
+	key_data->position = 0;
+	key_data->pool_level = 0.0;
+	
+	/* initialize g_thread if not already done.
+	   The program will abort if no thread system is available! */
+	if (!g_thread_supported()) g_thread_init (NULL);
+	
+	/* Create the mutex */
+	key_data->keygen_mutex = g_mutex_new();
+	
+	/* Try to create alice file */
+	tmp_file = g_strdup_printf("%s%s%s",g_get_tmp_dir(), G_DIR_SEPARATOR_S, g_path_get_basename(key_data->alice));
+	key_data->fp_alice = (GOutputStream *)g_file_create(g_file_new_for_commandline_arg(tmp_file), 
+															G_FILE_CREATE_PRIVATE, NULL, NULL);
+	g_free(tmp_file);
+	if(key_data->fp_alice == NULL) {
+		free_key_data(key_data);
+		return OTP_ERR_FILE_EXISTS;
+	}	
+
+	/* Try to start thread for key generation */
+	if(g_thread_create(keygen_main_thread, (gpointer)key_data, TRUE, NULL) == NULL) {
+		otp_conf_decrement_number_of_keys_in_production(key_data->config);
+		g_printerr("couldn't create thread");
+		free_key_data(key_data);
+		return OTP_ERR_KEYGEN_ERROR1;
+	}
+
+	return OTP_OK;
+} // end keygen_keys_generate
+
+guint keygen_id_get()
+/* return a random id */
+{
+	return (guint)g_random_int();
+}	 // end keygen_id_get()
+
+/* ------------------------- THREADS ------------------------*/
+
+gpointer keygen_main_thread(gpointer data)
+/*
+*	This is the main thread which decides which kind of entropy source to take the entropy from
+*	and generates the alice and bob keys. the data should be a pointer to a KeyData struct.
+*/
+{
+	KeyData *key_data;
+	struct otp *pad;
+	gchar *tmp_file, *bob_file;
+	GFile *source;
+	GFileInfo *info;
+	gsize size;
+	gboolean error;
+	GThread *t_audio, *t_random, *t_prng, *t_threads, *t_pool;
+	
+	key_data = (KeyData *)data;
+	error = FALSE;
+
+	if(key_data->src == NULL) {
+		/* integrated keygen */
+		if((t_random = g_thread_create(devrand, (gpointer)key_data, TRUE, NULL)) == NULL) g_printerr("fail: /dev/random\n");
+		if((t_audio = g_thread_create(audio, (gpointer)key_data, TRUE, NULL)) == NULL) g_printerr("fail: /dev/audio\n");
+		if((t_threads = g_thread_create(threads, (gpointer)key_data, TRUE, NULL)) == NULL) g_printerr("fail: thread timing\n");
+		if((t_prng = g_thread_create(prng, (gpointer)key_data, TRUE, NULL)) == NULL) g_printerr("fail PRNG\n");
+		if((t_pool = g_thread_create(keygen_pool_read, (gpointer)key_data, TRUE, NULL)) == NULL) {
+			g_printerr("pool function failed, abort key generation\n");
+			error = TRUE;
+		} else {
+			g_thread_join(t_random);
+			g_thread_join(t_audio);
+			g_thread_join(t_threads);
+			g_thread_join(t_prng);
+			g_thread_join(t_pool);
+		}
+	} else {	
+		source = g_file_new_for_commandline_arg(key_data->src);
+		info = g_file_query_info(source, "*",G_FILE_QUERY_INFO_NONE, NULL, NULL);
+		switch(g_file_info_get_file_type(info)) {
+			case G_FILE_TYPE_REGULAR:
+				size = g_file_info_get_size(info);
+				if(size < key_data->size) {
+					g_printerr("Entropy File to small\n");
+					error = TRUE;
+					break;
+				}
+				if(keys_from_source(key_data, source) != 0) {
+					g_printerr("error in entropy source\n");
+					error = TRUE;
+				}
+				break;
+			case G_FILE_TYPE_SPECIAL:
+				if(keys_from_source(key_data, source) != 0) {
+					g_printerr("error in entropy source\n");
+					error = TRUE;
+				}
+				break;
+			default:
+				g_printerr("unsupported source\n");
+				error = TRUE;
+				break;
 		}
 	}
 	
-	close(fp_dev);
-	close(fp_alice);
-	
-	if(key_data.is_loopkey) {
-		keygen_loop_invert(key_data.alice);
-	} else {
-		keygen_invert(key_data.alice, key_data.bob);
-	}
-	
-	char *alice_done = g_strdup_printf("%s%s%s", key_data.alice, FILE_SUFFIX_DELI, FILE_SUFFIX);
-	char *bob_done = g_strdup_printf("%s%s%s", key_data.bob, FILE_SUFFIX_DELI, FILE_SUFFIX);
-	
-	rename(key_data.alice, alice_done);
-	rename(key_data.bob, bob_done);
+	if(!error) {
+		tmp_file = g_strdup_printf("%s%s%s",g_get_tmp_dir(), G_DIR_SEPARATOR_S, g_path_get_basename(key_data->alice));
+		if(key_data->is_loopkey) {
+			bob_file = tmp_file;
+		} else {
+			bob_file = key_data->bob;
+		}
+		if(keygen_invert(tmp_file, bob_file) != OTP_OK) {
+			g_printerr("error in creation of bob key\n");
+		} else {
+			g_file_move(g_file_new_for_commandline_arg(tmp_file), 
+						g_file_new_for_commandline_arg(key_data->alice), 
+						G_FILE_COPY_NONE, NULL, NULL, NULL, NULL);
+			pad = keygen_get_pad(key_data);
+			g_signal_emit_by_name(G_OBJECT(otp_conf_get_trigger(key_data->config)), "keygen_key_done_signal", 100.0, pad);
+		}
+		g_free(tmp_file);
+	} else g_printerr("error!!!\n");
 
-	struct otp *pad = keygen_get_pad(alice_done);
-	if(pad == NULL) g_printerr("pad NULL\n");
+	otp_conf_decrement_number_of_keys_in_production(key_data->config);
+	free_key_data(key_data);
 
-	g_free(alice_done);
-	g_free(bob_done);
-	
-	g_free(key_data.alice);
-	g_free(key_data.bob);
-	g_free(key_data.file);
-	
-	otp_conf_decrement_number_of_keys_in_production(key_data.config);
-	
-	g_signal_emit_by_name(G_OBJECT(otp_conf_get_trigger(key_data.config)), "keygen_key_done_signal", 100.0, pad);
-	
-	return 0;
-}
+	return NULL;
+} // end keygen_main_thread()
 
-GThread *keygen_keys_generate_from_file(const char *alice_file,	const char *bob_file, 
-										const char *entropy_src_file, gsize size, gboolean is_loopkey, 
-										void* config)
+gpointer devrand(gpointer data) 
 /*
-*	generate the key pair for alice and bob out of a entropy file
-*	alice, bob and file must be correct filenames including the correct absolute path
-*	size should be strictly positiv in bytes.
-*	loop is zero if it should generate a loop key
+*	Thread which collects entropy from the standart unix random device
 */
-{
-	GThread *key_file_thread;
+{	
+	KeyData *key_data;	
+	GInputStream *fp_rand;
+	gchar buffer[BUFFSIZE];
+	gssize size;
 	
-	key_data.config = (struct otp_config *)config;
-	
-	if(alice_file == NULL || bob_file == NULL || entropy_src_file == NULL || config == NULL) {
-		g_printerr("input error\n");
-		otp_conf_decrement_number_of_keys_in_production(key_data.config);
-		return NULL;
-	}
+	key_data = (KeyData *)data;
 
-	key_data.alice = g_strdup(alice_file);
-	key_data.bob = g_strdup(bob_file);
-	key_data.file = g_strdup(entropy_src_file);
-	key_data.is_loopkey = is_loopkey;
-	if(is_loopkey) {
-		key_data.size = size / 2;
-	} else key_data.size = size;
-
-	// initialize g_thread if not already done.
-	// The program will abort if no thread system is available!
-	if (!g_thread_supported()) g_thread_init (NULL);
-
-	if((key_file_thread = g_thread_create(key_from_file ,NULL, TRUE, NULL)) == NULL) {
-		g_printerr("couldn't create thread");
-		otp_conf_decrement_number_of_keys_in_production(key_data.config);
-	}
-
-	return key_file_thread;
-}
-
-gpointer key_from_file(gpointer data)
-/*
-*	thread function which creates a keyfile from a file.
-*/
-{
-	FILE *fp_alice, *fp_file;
-	unsigned int file_length;
-	int c;
-
-	if((fp_file = fopen(key_data.file, "r")) == NULL) {
-		g_printerr("couldn't open file for reading\n");
-		otp_conf_decrement_number_of_keys_in_production(key_data.config);
-		return NULL;
-	}
-
-// check if the entropy file has enough entropy to generate the key
-	fseek(fp_file, -1, SEEK_END);
-	if((file_length = ftell(fp_file)) < key_data.size) {
-		g_printerr("file doesn't have enough entropy\n");
-		fclose(fp_file);
-		otp_conf_decrement_number_of_keys_in_production(key_data.config);
-		return NULL;
-	}
-	rewind(fp_file);
-
-	if((fp_alice = fopen(key_data.alice, "w")) == NULL) {
-		g_printerr("couldn't open keyfile alice for writing\n");
-		fclose(fp_file);
-		otp_conf_decrement_number_of_keys_in_production(key_data.config);
-		return NULL;
-	}
-
-	while(key_data.size > 0) {
-		c = fgetc(fp_file);
-		fputc(c, fp_alice);
-		key_data.size--;
-	}
-
-	fclose(fp_file);
-	fclose(fp_alice);
-
-	if(key_data.is_loopkey) {
-		keygen_loop_invert(key_data.alice);
-	} else keygen_invert(key_data.alice, key_data.bob);
-	
-	char *alice_done = g_strdup_printf("%s%s%s", key_data.alice, FILE_SUFFIX_DELI, FILE_SUFFIX);
-	char *bob_done = g_strdup_printf("%s%s%s", key_data.bob, FILE_SUFFIX_DELI, FILE_SUFFIX);
-	
-	rename(key_data.alice, alice_done);
-	rename(key_data.bob, bob_done);
-
-	struct otp *pad = keygen_get_pad(alice_done);
-	if(pad == NULL) g_printerr("pad NULL\n");
-	
-	g_free(alice_done);
-	g_free(bob_done);
-	
-	g_free(key_data.alice);
-	g_free(key_data.bob);
-	
-	otp_conf_decrement_number_of_keys_in_production(key_data.config);
-	
-	g_signal_emit_by_name(G_OBJECT(otp_conf_get_trigger(key_data.config)), "keygen_key_done_signal", 100.0, pad);
-	
-	return 0;
-}
-
-
-GThread *keygen_keys_generate(char *alice_file, char *bob_file,
-		gsize size, gboolean is_loopkey, void* config)
-/*
-*	generate the key pair for alice and bob
-*	alice and bob must be the correct filenames including the correct absoute path.
-*	Size should be strictly positiv in bytes.
-*/
-{
-	GThread *key_thread;
-	key_data.config = (struct otp_config *)config;
-	
-// check if the function inputs are correct
-	if(alice_file == NULL || bob_file == NULL || config == NULL) {
-		g_printerr("input error\n");
-		otp_conf_decrement_number_of_keys_in_production(key_data.config);
-		return NULL;
-	}
-
-// initialize g_thread if not already done.
-// The program will abort if no thread system is available!
-	if (!g_thread_supported()) g_thread_init (NULL);
-
-// set key_data
-	if(is_loopkey) {
-		key_data.size = size/2;
-	} else key_data.size = size;
-	key_data.is_loopkey = is_loopkey;
-	key_data.alice = g_strdup(alice_file);
-	key_data.bob = g_strdup(bob_file);
-
-	if((key_thread = g_thread_create(start_generation, NULL, TRUE, NULL)) == NULL) {
-		g_printerr("couldn't start keygen\n");
-		otp_conf_decrement_number_of_keys_in_production(key_data.config);
-	}
-
-	return key_thread;
-}
-
-
-gpointer start_generation(gpointer data)
-/*
-*	start threaded key generation
-*/
-{
-// define threads
-	GThread *p1, *p2, *p3, *p4;
-#ifdef FAST
-	GThread *p5;
-#endif
-
-// create mutex
-	keygen_mutex = g_mutex_new();
-
-// create threads
-	if((p2 = g_thread_create(devrand, NULL, TRUE, NULL)) == NULL) g_printerr("fail: /dev/random\n");
-	if((p1 = g_thread_create(audio, NULL, TRUE, NULL)) == NULL) g_printerr("fail: /dev/audio\n");
-	if((p3 = g_thread_create(threads, NULL, TRUE, NULL)) == NULL) g_printerr("fail: thread timing\n");
-	if((p4 = g_thread_create(sysstate, NULL, TRUE, NULL)) == NULL) g_printerr("fail: system state\n");
-#ifdef FAST
-	if((p5 = g_thread_create(prng, NULL, TRUE, NULL)) == NULL) g_printerr("fail PRNG\n");
-#endif
-
-
-// wait for threads to return
-	g_thread_join (p1);
-	g_thread_join (p2);
-	g_thread_join (p3);
-	g_thread_join (p4);
-#ifdef FAST
-	g_thread_join (p5);
-#endif
-
-// destroy mutex
-	g_mutex_free(keygen_mutex);
-
-// create the inverted key
-	if(key_data.size != 0) {
-		g_printerr("could not finish writing process\n");
-		key_data.size = 0;
-		otp_conf_decrement_number_of_keys_in_production(key_data.config);
-		return 0;
-	}
-
-	if(key_data.is_loopkey) {
-		keygen_loop_invert(key_data.alice);
-	} else {
-		keygen_invert(key_data.alice, key_data.bob);
-	}
-	
-	char *alice_done = g_strdup_printf("%s%s%s", key_data.alice, FILE_SUFFIX_DELI, FILE_SUFFIX);
-	char *bob_done = g_strdup_printf("%s%s%s", key_data.bob, FILE_SUFFIX_DELI, FILE_SUFFIX);
-	
-	rename(key_data.alice, alice_done);
-	rename(key_data.bob, bob_done);
-	
-	struct otp *pad = keygen_get_pad(alice_done);
-	if(pad == NULL) g_printerr("pad NULL\n");
-	
-	g_free(alice_done);
-	g_free(bob_done);
-	
-	g_free(key_data.alice);
-	g_free(key_data.bob);
-	
-	otp_conf_decrement_number_of_keys_in_production(key_data.config);
-
-	g_signal_emit_by_name(G_OBJECT(otp_conf_get_trigger(key_data.config)), "keygen_key_done_signal", 100.0, pad);
-	
-	return 0;
-} // end start_generation();
-
-
-unsigned char bit2char(short buf[8])
-/*
-* bit2char takes an array of 8 bits, and output an ascii char. The buf array should only contain
-* 0 or 1, to get an useful result
-*/
-{
-	short i,l,in;
-	unsigned char out;
-	l = 1;
-	in = 0;
-	for(i = 0; i < 8; i++) {
-		in += buf[i] * l;
-		l *= 2;
-	}
-	out = (unsigned char)in;
-	return out;
-} // end bit2char()
-
-
-gpointer devrand(gpointer data)
-/*
-* devrand() collects entropie from the /dev/random device and writes it into the alice keyfile
-*/
-{
-	int fp_rand, fp_alice;
-	unsigned char c1;
-	unsigned char buffer[BUFFSIZE];
-	int size;
-
-	if((fp_rand = open("/dev/random", O_RDONLY)) < 0) {
+	fp_rand = (GInputStream *) g_file_read(g_file_new_for_commandline_arg("/dev/random"), NULL, NULL);
+	if(fp_rand == NULL) {
 		g_printerr("could not open /dev/random \n");
 		return 0;
 	}
-	if((fp_alice = open(key_data.alice, O_RDWR|O_CREAT|O_APPEND, 00644)) < 0) {
-		g_printerr("could not open alice file \n");
-		close(fp_rand);
-		return 0;
-	}
 
-	size = 0;
 	while(1) {
-		if(read(fp_rand, &c1, 1) < 0) {
-			g_print("read error\n");
+		if(key_data->size == 0) break;
+		if((size = g_input_stream_read(fp_rand, buffer, BUFFSIZE, NULL, NULL)) == -1) {
+			g_printerr("read error\n");
+		} else {
+			g_mutex_lock(key_data->keygen_mutex);
+				keygen_pool_write(buffer, size, key_data);
+			g_mutex_unlock(key_data->keygen_mutex);
 		}
-
-		buffer[size] = (unsigned char)((c1 % CHARSIZE) + OFFSET);
-		size++;
-
-		if(size == BUFFSIZE) {
-			g_mutex_lock(keygen_mutex);
-			if(key_data.size < size) {
-				g_mutex_unlock(keygen_mutex);
-				break;
-			}
-			if(write(fp_alice, &buffer, BUFFSIZE) < 0) {
-				g_printerr("write error\n");
-				g_mutex_unlock(keygen_mutex);
-				break;
-			}
-			key_data.size -= size;
-			g_mutex_unlock(keygen_mutex);
-			size = 0;
-		}
-		usleep(5);
+		g_usleep(100);
 	}
 
-	close(fp_rand);
-	close(fp_alice);
+	g_input_stream_close(fp_rand, NULL, NULL);
 	return 0;
 } // end devrand()
 
-
+gpointer audio(gpointer data)
 /*
-*	a helper function for the threads function
+*	audio() collect entropie from /dev/audio and unbias it with the improved Neumann Algorithm to
+*	get a better distribution.
+*	For the entropy collection only the last bit of the audio channle is taken.
 */
-gpointer stub(gpointer data) {
+{
+	KeyData *key_data;
+	GInputStream *fp_audio;
+	gshort readbuf[8];
+	gchar writebuf[BUFFSIZE];
+	guint count;
+	gssize size;
+
+	key_data = (KeyData *)data;
+	
+	/* create audio file stream */
+	fp_audio = (GInputStream *) g_file_read(g_file_new_for_commandline_arg("/dev/audio"), NULL, NULL);
+	
+	if(fp_audio == NULL) {
+		g_printerr("couldn't open /dev/audio \n");
+		return 0;
+	}
+	
+	/* read from input and write to output */
+	count = 0;
+	while(1) {
+		if(key_data->size == 0) break;
+		if(g_input_stream_read(fp_audio, readbuf, 8, NULL, NULL) != 8) {
+			g_printerr("audio read error\n");	
+		} else if(count < BUFFSIZE) {
+			writebuf[count] = bit2char(readbuf);
+			count++;
+		} else {
+			size = improved_neumann(writebuf);
+			g_mutex_lock(key_data->keygen_mutex);
+				keygen_pool_write(writebuf, size, key_data);
+			g_mutex_unlock(key_data->keygen_mutex);
+			count = 0;
+		}	
+		g_usleep(100);
+	}
+	/* close file streams */
+	g_input_stream_close(fp_audio, NULL, NULL);
+	
 	return 0;
-} // end stub ()
+} // end audio()
 
 
-gpointer threads(gpointer data)
+gpointer stub(gpointer data) 
+/*
+*	Stub Thread for thread timing measurement
+*/
+{
+	return 0;
+} // end stub()
+
+gpointer threads(gpointer data) 
 /*
 *	threads() collects entropie from thread timing, by just mesuring the time it takes
 *	to open and close the stub() thread. This function takes one sample every second
 * 	and writes the entropie into the alice keyfile
 */
 {
-	short i;
-	unsigned char diff;
-	struct timeval start, finish;
-	int fp_alice;
+	KeyData *key_data;
+	GTimer *timer;
 	GThread *tid;
-
-	if((fp_alice = open(key_data.alice,O_RDWR|O_CREAT|O_APPEND,00644)) < 0) {
-		g_printerr("could not open alice file \n");
-		return 0;
-	}
-
+	gint i;
+	gchar c;
+	gulong ms;
+	
+	key_data = (KeyData *)data;
+	timer = g_timer_new();
 	while(1) {
-		gettimeofday(&start, NULL);
+		if(key_data->size == 0) break;
+		g_timer_start(timer);
 		for(i = 0; i < 100; i++) {
 			if((tid = g_thread_create(stub, NULL, TRUE, NULL)) != NULL) g_thread_join(tid);
 		}
-		gettimeofday(&finish, NULL);
-		diff = (unsigned char)(((finish.tv_usec - start.tv_usec) % CHARSIZE) + OFFSET);
-
-		g_mutex_lock(keygen_mutex);
-		if(key_data.size == 0) {
-			g_mutex_unlock(keygen_mutex);
-			break;
-		}
-		if(write(fp_alice, &diff, 1) < 0) {
-			g_printerr("write error\n");
-			g_mutex_unlock(keygen_mutex);
-			break;
-		}
-		key_data.size--;
-		g_mutex_unlock(keygen_mutex);
-
-		sleep(1);
+		g_timer_stop(timer);
+		g_timer_elapsed(timer, &ms);
+		c = (char) ((ms % CHARSIZE) + OFFSET);
+		g_mutex_lock(key_data->keygen_mutex);
+			keygen_pool_write(&c, 1, key_data);
+		g_mutex_unlock(key_data->keygen_mutex);
+		g_usleep(1000000);
 	}
-
-	close(fp_alice);
+	g_timer_destroy(timer);
 	return 0;
 } // end threads()
 
 
-gpointer audio(gpointer data)
-/*
-	audio() collect entropie from /dev/audio and xor it with a value from /dev/urandom to
-	get a better distribution even if no sound is running.
-	This function generates one bit of entropie out of 7 samples, generates an ascii char
-	and write this into the alice keyfile
-*/
-{
-	int fp_audio, fp_urand, fp_alice;
-	short i;
-	unsigned char c, d, oldc;
-	short buf[8];
-	unsigned char buffer[BUFFSIZE];
-	int size;
-
-	if((fp_audio = open("/dev/audio", O_RDONLY | O_NONBLOCK)) < 0) {
-		g_printerr("could not open /dev/audio \n");
-		return 0;
-	}
-	if((fp_urand = open("/dev/urandom", O_RDONLY)) < 0) {
-		g_printerr("could not open /dev/urandom \n");
-		close(fp_audio);
-		return 0;
-	}
-	if((fp_alice = open(key_data.alice, O_RDWR|O_CREAT|O_APPEND, 00644)) < 0) {
-		g_printerr("could not open alice file \n");
-		close(fp_audio);
-		close(fp_urand);
-		return 0;
-	}
-
-	i = 0;
-	size = 0;
-	oldc = '\0';
-
-	while(1) {
-		if(read(fp_audio, &c, 1) < 0) {
-			if(errno != EAGAIN) {
-				g_printerr("error while reading /dev/audio, exiting thread\n");
-				break;
-			}
-		} else {
-			buf[i] = ((unsigned short)c) % 2;
-			i++;
-		}
-		if(i == 8) {
-			g_mutex_lock(keygen_mutex);
-			if(read(fp_urand, &d, 1) < 0) {
-				g_printerr("read error\n");
-				g_mutex_unlock(keygen_mutex);
-				break;
-			}
-			g_mutex_unlock(keygen_mutex);
-			c = bit2char(buf);
-			if(c == oldc) usleep(500);
-			oldc = c;
-			buffer[size] = (unsigned char)(((d  ^ c) % CHARSIZE) + OFFSET);
-			size++;
-			if(size == BUFFSIZE) {
-					g_mutex_lock(keygen_mutex);
-					if(key_data.size < size) {
-						g_mutex_unlock(keygen_mutex);
-						break;
-					}
-					if(write(fp_alice, &buffer, BUFFSIZE) < 0) {
-						g_printerr("write error\n");
-						g_mutex_unlock(keygen_mutex);
-						break;
-					}
-					key_data.size -= size;
-					g_mutex_unlock(keygen_mutex);
-					size = 0;
-			}
-			i = 0;
-		}
-		usleep(100);
-	}
-	close(fp_audio);
-	close(fp_urand);
-	close(fp_alice);
-	return 0;
-} // end audio()
-
-
-gpointer sysstate(gpointer data)
-/*
-*	sysstate() collects entropy by adding up system time user time and minor pagefaults and generates one byte of entropy
-*	if the current state is different from the last state. Because I use microseconds as measurement, the time depends on
-*	the CPU strenght and only the time of the current program is measured the output is not predictable or manipulatable
-*	from outside.
-*/
-{
-	int minflt, fp_alice, who;
-	double systime, usertime;
-	unsigned int result = 0, old_result = 0;
-	char c;
-	struct rusage usage;
-	who = RUSAGE_SELF;
-
-	if((fp_alice = open(key_data.alice, O_RDWR|O_CREAT|O_APPEND, 00644)) < 0){
-		g_printerr("could not open alice file");
-		return 0;
-	}
-
-	while (1) {
-		if(getrusage(who, &usage) < 0) {
-			g_printerr("resurce usage not supported, exit thread\n");
-			break;
-		}
-		usleep(1000);
-		minflt = usage.ru_minflt;
-		systime = usage.ru_stime.tv_sec*1000000+usage.ru_stime.tv_usec;
-		usertime = usage.ru_utime.tv_sec*1000000+usage.ru_utime.tv_usec;
-		result = minflt + (unsigned int)systime + (unsigned int)usertime;
-		result = (result % CHARSIZE) + OFFSET;
-
-		if(result != old_result) {
-			c = (char)result;
-			g_mutex_lock(keygen_mutex);
-			write(fp_alice, &c, 1);
-			key_data.size--;
-			g_mutex_unlock(keygen_mutex);
-		}
-		if(key_data.size == 0) {
-			break;
-		}
-
-		old_result = result;
-	}
-	close(fp_alice);
-	return 0;
-} // end sysstate()
+gpointer sysstate(gpointer data);
 
 
 gpointer prng(gpointer data)
 /*
-*	prng collects entropy from the pseudo random generator /dev/urandom. This function is only used if the FAST flag is set.
-*	This function weakens the key, and is only used to fasten the generation process.
+*	prng collects entropy from the pseudo random generator /dev/urandom. If this device is not available it will
+*	use the glib random number generator.
 */
 {
-	int fp_alice, fp_prng;
-	unsigned short c;
+	KeyData *key_data;
+	GInputStream *fp_prng;
+	gchar buffer[BUFFSIZE];
+	gsize size;
+	gint i;
+	
+	key_data = (KeyData *)data;
+	
+	fp_prng = (GInputStream *)g_file_read(g_file_new_for_commandline_arg("/dev/urandom"), NULL, NULL);
+	if(fp_prng == NULL) g_printerr("/dev/random not available, taking glib prng\n");
 
-	if((fp_alice = open(key_data.alice, O_RDWR|O_CREAT|O_APPEND, 00644)) < 0) {
-		g_printerr("could not open alice file\n");
-		return 0;
-	}
-
-	if((fp_prng = open("/dev/urandom", O_RDONLY)) < 0) {
-		g_printerr("could not open /dev/urandom\n");
-		close(fp_alice);
-		return 0;
-	}
-
-	while(1) {
-		g_mutex_lock(keygen_mutex);
-		if(read(fp_prng, &c, 1) != 1) {
-			g_printerr("read error\n");
-			g_mutex_unlock(keygen_mutex);
-			break;
+	while(1) {	
+		if(key_data->size == 0) break;
+		if(fp_prng == NULL) {
+			for(i = 0; i < BUFFSIZE; i++) buffer[i] = (char)g_random_int_range(OFFSET, CHARSIZE + OFFSET);
+			size = BUFFSIZE;
+		} else {
+			size = g_input_stream_read(fp_prng, buffer, BUFFSIZE, NULL, NULL);
 		}
-		g_mutex_unlock(keygen_mutex);
-
-		c = (c % CHARSIZE) + OFFSET;
-
-		g_mutex_lock(keygen_mutex);
-		if(key_data.size == 0) {
-			g_mutex_unlock(keygen_mutex);
-			break;
+		if(size >= 0) {
+			g_mutex_lock(key_data->keygen_mutex);
+				keygen_pool_write(buffer, size, key_data);
+			g_mutex_unlock(key_data->keygen_mutex);
 		}
-		if(write(fp_alice, &c, 1) != 1) {
-			g_printerr("write error\n");
-			g_mutex_unlock(keygen_mutex);
-			break;
-		}
-		key_data.size--;
-		g_mutex_unlock(keygen_mutex);
-
-
-		usleep(5);
+		g_usleep(10000);
 	}
-
-	close(fp_alice);
-	close(fp_prng);
+	if(fp_prng != NULL)	g_input_stream_close(fp_prng, NULL, NULL);
 	return 0;
 } // end prng;

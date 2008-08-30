@@ -137,6 +137,7 @@ struct otp_config {
 	double msg_key_improbability_limit;	/* entropy for message encryption with 
  * less probable content will be rejected */
  	unsigned int number_of_keys_in_production;		/* The Number of keys currently in production */
+	unsigned int max_number_of_keys_in_production;		/* The max number of keys that can be produced on the same time*/
  	GObject* keygen_signal_trigger;		/* Trigger to emit signal on */
 };
 
@@ -546,7 +547,7 @@ OtpError otp_generate_key_pair(struct otp_config *config,
 *	key generator (default), out of an entropy file or out of a character device. 
 *	Currently there can only be one key at the moment generated. */
 {
-	if (alice == NULL || bob == NULL || config == NULL || size <= 0) {
+	if (alice == NULL || bob == NULL || size <= 0) {
 		return OTP_ERR_INPUT;
 	}
 	/* Check for things like '/'. Alice and Bob will become filenames */
@@ -556,87 +557,40 @@ OtpError otp_generate_key_pair(struct otp_config *config,
 	}
 	
 	/* Check if the keygen is already in use and if not set: one key in generation. */
-	if(otp_conf_get_number_of_keys_in_production(config) > 0) return OTP_ERR_GENKEY_KEYGEN_IN_USE;
-	otp_conf_increment_number_of_keys_in_production(config);
-	
+/*	if(otp_conf_get_number_of_keys_in_production(config) > 0) return OTP_ERR_GENKEY_KEYGEN_IN_USE; */
+	if(config->number_of_keys_in_production < config->max_number_of_keys_in_production) {
+		otp_conf_increment_number_of_keys_in_production(config);
+	} else {
+		return OTP_ERR_GENKEY_KEYGEN_IN_USE;
+	}
+
 	gchar *alice_file, *bob_file;
-	unsigned int id;
-	struct stat rfstat;
+	guint id;
+	gint i;
+	OtpError error;
+
+	for(i = 0; i < 10; i++) {	
+		/* create filenames with the correct path*/
+		id = keygen_id_get();
 	
-	/* create filenames with the correct path*/
-	id = keygen_id_get();
-	
-	alice_file = (gchar *)g_strdup_printf("%s%s%s%s%s%s%.8X", 
-			otp_conf_get_path(config), PATH_DELI,
-			alice, FILE_DELI, bob, FILE_DELI, id);
-	bob_file = (gchar *)g_strdup_printf("%s%s%s%s%s%s%.8X", 
-			otp_conf_get_export_path(config), PATH_DELI,
-			bob, FILE_DELI, alice, FILE_DELI, id);
+		alice_file = (gchar *)g_strdup_printf("%s%s%s%s%s%s%.8X.entropy", 
+				otp_conf_get_path(config), PATH_DELI,
+				alice, FILE_DELI, bob, FILE_DELI, id);
+		bob_file = (gchar *)g_strdup_printf("%s%s%s%s%s%s%.8X.entropy", 
+				otp_conf_get_export_path(config), PATH_DELI,
+				bob, FILE_DELI, alice, FILE_DELI, id);
 #ifdef DEBUG
 	g_printf("%s: genkey: '%s' '%s' \n",config->client_id, alice_file, bob_file);
 #endif
 	
-	if(stat(alice_file, &rfstat) == 0) {
-		g_free(alice_file);
-		g_free(bob_file);
-		return OTP_ERR_FILE_EXISTS;
-	}
+		/* generate keys if possible */	
+		error = keygen_keys_generate(alice_file, bob_file, size, source, (void *)config);
 
-	/* choose the correct source and generate the key if possible */	
-	if(source == NULL) { /* use the integrated keygen */
-		if(keygen_keys_generate(alice_file, bob_file, size, 
-									(strcmp(alice, bob) == 0), (void *)config) == NULL) {
-			g_free(alice_file);
-			g_free(bob_file);
-			return OTP_ERR_KEYGEN_ERROR1;
-		}
 		g_free(alice_file);
 		g_free(bob_file);
-		return OTP_OK;
-	} else { /* use a file as source */
-		if(stat(source, &rfstat) < 0) { /* using a real file as source */
-#ifdef PRINT_ERRORS
-			g_printf("%s: sourcefile doesn't exist\n",config->client_id);
-#endif
-			otp_conf_decrement_number_of_keys_in_production(config);
-			g_free(alice_file);
-			g_free(bob_file);
-			return OTP_ERR_FILE;
-		}
-		if(S_ISREG(rfstat.st_mode)) {
-			if(keygen_keys_generate_from_file(alice_file, bob_file, source, size, 
-									(strcmp(alice, bob) == 0), (void *)config) == NULL) {
-				g_free(alice_file);
-				g_free(bob_file);
-				return OTP_ERR_KEYGEN_ERROR1;
-			}
-			g_free(alice_file);
-			g_free(bob_file);
-			return OTP_OK;
-		} else if(S_ISCHR(rfstat.st_mode)) { /* using a stream as source */
-			if(keygen_keys_generate_from_device(alice_file, bob_file, source, size, 
-									(strcmp(alice, bob) == 0), (void *)config) == NULL) {
-				g_free(alice_file);
-				g_free(bob_file);
-				return OTP_ERR_KEYGEN_ERROR1;
-			}
-			g_free(alice_file);
-			g_free(bob_file);
-			return OTP_OK;
-		} else {
-#ifdef PRINT_ERRORS
-			g_printf("%s: sourcefile type is not supported\n",config->client_id);
-#endif
-			otp_conf_decrement_number_of_keys_in_production(config);
-			g_free(alice_file);
-			g_free(bob_file);
-			return OTP_ERR_FILE;
-		}
-		otp_conf_decrement_number_of_keys_in_production(config);
-		g_free(alice_file);
-		g_free(bob_file);
-		return OTP_ERR_FILE;
+		if(error != OTP_ERR_FILE_EXISTS) break;
 	}
+	return error;
 }
 
 
@@ -922,7 +876,8 @@ OtpError otp_conf_create_signal(struct otp_config *config)
 struct otp_config* otp_conf_create(
 				const gchar* client_id,
 				const gchar* path,
-				const gchar* export_path)
+				const gchar* export_path,
+				unsigned int max_keys_in_production)
 /* Creation of the config stucture of the library, sets some parameters
  * Default values:
  * Sets msg_key_improbability_limit = DEFAULT_IMPROBABILITY
@@ -940,6 +895,7 @@ struct otp_config* otp_conf_create(
 	config->random_msg_tail_max_len = DEFAULT_RNDLENMAX;
 	config->pad_count = 0; /* Initialize with no associated pads */
 	config->number_of_keys_in_production = 0; /* Initialize with no keys in generation */
+	config->max_number_of_keys_in_production = max_keys_in_production;
 
 #ifdef DEBUG
 	g_printf("%s: config created with: %s, %s, %s, %e, %i\n", config->client_id, config->client_id,
