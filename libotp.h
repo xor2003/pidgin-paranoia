@@ -122,9 +122,11 @@ struct otp_config* otp_pad_get_conf(const struct otp* mypad);
  * 					Without tailing path delimiter ('/').
  * export_path:		The path where to export new created keys. 
  * 					Without tailing path delimiter.
- * 					for the other converstation partner i.e. 'bob' */
+ * 					for the other converstation partner i.e. 'bob' 
+ *max_keys_in_production:	The maximal number of keys, that can be produced on the same time.
+ * 					*/
 struct otp_config* otp_conf_create(const gchar* client_id,
-				const gchar* path, const gchar* export_path);
+				const gchar* path, const gchar* export_path, unsigned int max_keys_in_production);
 
 /* Freeing of the otp_config struct
  * This fails with OTP_ERR_CONFIG_PAD_COUNT if there are any pads open in this config */
