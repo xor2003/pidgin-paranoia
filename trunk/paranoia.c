@@ -147,7 +147,6 @@ static void par_keygen_update_status(GObject *my_object,
 /* needed to save the keygen status by the keygen thread(s) */
 {
 	keygen->status = percent;
-	keygen->updated = TRUE;
 	
 	if (alice_pad != NULL) {
 		par_keylist_add_key(klist, alice_pad);
@@ -157,6 +156,8 @@ static void par_keygen_update_status(GObject *my_object,
 				otp_pad_get_src(alice_pad), otp_pad_get_dest(alice_pad),
 				otp_pad_get_id(alice_pad));
 	}
+	
+	keygen->updated = TRUE;
 	return;
 }
 
@@ -169,7 +170,7 @@ static gboolean par_keygen_poll_result(void* data)
 				PURPLE_CONV_TYPE_IM, keygen->conv_name, keygen->owner);
 		char* msg;
 		
-		if(keygen->status < 100) {
+		if(keygen->new_pad == NULL) {
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 				"%5.2f percent of the key done.\n", keygen->status);
 			if (conv) {
