@@ -420,7 +420,7 @@ PurpleCmdId par_cmd_id;
 
 #define PARANOIA_HELP_STR "Welcome to the One-Time Pad CLI.\n\
 /otp help: shows this message \n\
-/otp genkey &lt;size&gt; &lt;entropy \
+/otp genkey &lt;size&gt; &lt;external entropy \
 source&gt;: generates a key pair of &lt;size&gt; kiB\n\
 /otp on: tries to enable the encryption\n\
 /otp off: disables the encryption\n/otp info: shows details about the used key\n\
@@ -1328,7 +1328,7 @@ static gboolean plugin_load(PurplePlugin *plugin)
 	purple_signal_connect(blist_handle, "buddy-signed-off", plugin, 
 			PURPLE_CALLBACK(par_buddy_signed_off), NULL);
 			
-	otp_signal_connect(otp_conf, "keygen_key_done_signal", &par_keygen_update_status);
+	otp_signal_connect(otp_conf, "keygen-status-update", &par_keygen_update_status);
 
 	/* register commands ("/otp" + a string of args) */
 	par_cmd_id = purple_cmd_register ("otp", "s", PURPLE_CMD_P_DEFAULT,

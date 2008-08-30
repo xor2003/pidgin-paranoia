@@ -35,7 +35,7 @@ exactly works.
 Commands are entered by typing a message beginning with /otp.
 
 /otp help: shows this message 
-/otp genkey <size> <entropy source>: generates a key pair of <size> kiB
+/otp genkey <size> <external entropy source>: generates a key pair of <size> kiB
 /otp on: tries to enable the encryption
 /otp off: disables the encryption
 /otp info: shows details about the used key

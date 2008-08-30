@@ -9,6 +9,10 @@ Simon Wenner:
  * Paranoia: key list uses move-to-front transform
  * Paranoia: A pop-up at the end and status messages while generating new keys
  * Paranoia: '/otp reload' command added to regenerate the key list
+ * Pranopia: key generator live status feedback
+
+Pascal Sachs:
+ * Keygen: ???
 
 Version 0.2.0
 --------------------------------------------------------------------------------
