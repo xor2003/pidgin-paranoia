@@ -1030,6 +1030,14 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 				purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
 						"Message decrypted but there is a warning! %.8X\n", syndrome);
 			}
+			if (syndrome == OTP_WARN_MSG_CHECK_COMPAT) {
+				purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
+						"Info: The message was not checked for consitency since your buddy uses 0.2\n");
+			}
+			if (syndrome == OTP_WARN_MSG_CHECK_FAIL) {
+				purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
+						"Warning: The consistency check of the last message failed!\n");
+			}
 		}
 #endif
 
