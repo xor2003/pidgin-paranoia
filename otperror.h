@@ -42,8 +42,17 @@ typedef enum {
  * The used entropy failed statistical tests */
 	OTP_WARN_KEY_NOT_RANDOM	= 0x00000001,
 
-	OTP_WARN2	= 0x00000002,
-	OTP_WARN3	= 0x00000004,
+/* function: otp_decrypt
+ * origin: otp_ischecksum
+ * The CRC32 check failed, the message has been modified */
+
+	OTP_WARN_MSG_CHECK_FAIL	= 0x00000002,
+/* function: otp_decrypt
+ * origin: otp_ischecksum
+ * The CRC32 check failed, the reason is that your buddy uses an 
+ * old version (i.e pidgin-paranoia 0.2) */
+	OTP_WARN_MSG_CHECK_COMPAT	= 0x00000004,
+
 	OTP_WARN4	= 0x00000008,
 	OTP_WARN5	= 0x00000010,
 	OTP_WARN6	= 0x00000020,
@@ -114,6 +123,11 @@ typedef enum {
  * origin: otp_generate_key_pair
  * The keygen is already in use and is blocked (TODO) */
 	OTP_ERR_GENKEY_KEYGEN_IN_USE	= 0x00300000,
+	
+/* function: otp_encrypt, otp_decrypt
+ * origin: otp_ischecksum
+ * The keygen is already in use and is blocked (TODO) */
+	OTP_ERR_CHECKSUM	= 0x00400000,
 	
 /* ------------------------ otptester ------------------------------ */
 	

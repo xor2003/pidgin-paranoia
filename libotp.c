@@ -31,11 +31,13 @@
 				 * creation function */
 #define ERASEBLOCKSIZE 1024				/* The blocksize used in the key
 				 * eraseure function */
-#define DEFAULT_RNDLENMAX 25			/* Default value: Maximal length of the added
+#define DEFAULT_RNDLENMAX 20			/* Default value: Maximal length of the added
 				 * random-length tail onto the encrypted message */
 #define MIN_PADDING 5			/* The mininal length of this tailing string 
 								* This allows future checks if the message
-								* was decrypted correctly. */
+								* was decrypted correctly. 
+								* DO NOT SET THIS SMALLER THAN 5 unless 
+								* you undefine CHECKMSG !*/
 #define DEFAULT_IMPROBABILITY 1E-12		/* Default value: If a key with less
 				 * probability then this occurs, throw the key away */
 
@@ -59,6 +61,9 @@
  * but not critical. */
 
 #define CHECKKEY                /* Histogram/repeat checking of the key (Needs testing) */
+
+#define CHECKMSG                /* Check the message for consitency, 
+* 								needs MIN_PADDING >= 5 */
 
 //#ifdef IMMED_CLOSE_FILES		
 /* This enforces the old behaviour where the 
@@ -169,7 +174,7 @@ static void otp_printint(gchar* m, gsize len, const gchar* hint, const struct ot
 	gsize i;
 	g_printf("%s:\t%s:\t", config->client_id, hint);
 	for (i = 0; i < len; i++) {
-		g_printf("%i ", m[i]);
+		g_printf("%02X ", (guchar)m[i]);
 	}
 	g_printf("\n");
 }
@@ -452,6 +457,88 @@ static void otp_base64_decode(gchar **message, gsize* plen)
 	return;
 }
 
+#ifdef CHECKMSG
+
+#define CRC32POLY 0x04C11DB7 /* CRC-32 Polynome */
+static void otp_calc_crc32(guchar byte, guint32 * crc) {
+/* Add a byte to the CRC32 checksum */
+	gint32 bit = 0;
+	gint32 hbit;
+	int i;
+	
+	for( i = 0; i < 8; i++) {
+		bit = ((byte)&1L<<(i));
+		hbit = (*crc & 0x80000000) ? 1 : 0;
+		if (hbit != bit)
+			*crc = (*crc << 1) ^ CRC32POLY;
+		else
+			*crc = *crc<<1;
+	}
+}
+
+
+
+static OtpError otp_ischecksum(gchar ** message, gsize len, gboolean checkorwrite) {
+/* If checkorwrite is TRUE, the checksum is calculated and written into the free
+ * space left over by MIN_PADDING, else it is read an compared with the 
+ * message string. */
+	gsize i;
+	guint32 mcrc = 0;
+	guchar* pmcrc = (guchar *) &mcrc;
+	guint32 ccrc = 0;
+	guchar* pccrc = (guchar *) &ccrc;
+	gboolean isinmessage = TRUE;
+	
+	OtpError syndrome = OTP_WARN_MSG_CHECK_FAIL;
+	for (i = 0; i < len-1; i++) {
+		if ( (guchar) *(*message+i) == 0 ) isinmessage = FALSE;
+		if ( isinmessage == TRUE ) {
+			//g_printf("!!! %i:%02X\n", i, (guchar) *(*message+i));
+			otp_calc_crc32( (guchar) *(*message+i), &mcrc);
+		} else {
+			//g_printf("nnn %u\n", len - i - 1);
+			//g_printf("!!! %i:%02X\n", i, (guchar) *(*message+i));
+			if ( len - i - 1 > 4 ) {
+				//mcrc = 0x12345678;
+				if ( checkorwrite == TRUE ) {
+					*(pccrc+0) = *(*message+i+4);
+					*(pccrc+1) = *(*message+i+3);
+					*(pccrc+2) = *(*message+i+2);
+					*(pccrc+3) = *(*message+i+1);
+#ifdef DEBUG
+					g_printf("%s: checkmsg: '0x%08X' '0x%08X' \n",
+							"paranoia", ccrc, mcrc);
+#endif
+					if (ccrc != mcrc) {
+						if (ccrc == 0x00000000) {
+							syndrome = OTP_WARN_MSG_CHECK_COMPAT;
+#ifdef PRINT_ERRORS
+							g_printf("%s: checkmsg: '0x%08X' '0x%08X' \n",
+									"paranoia", ccrc, mcrc);
+#endif
+						} else {
+							syndrome = OTP_WARN_MSG_CHECK_FAIL;
+#ifdef PRINT_ERRORS
+							g_printf("%s: checkmsg: '0x%08X' '0x%08X' \n",
+									"paranoia", ccrc, mcrc);
+#endif
+						}
+					} else syndrome = OTP_OK;
+				} else {
+					*(*message+i+1) = *(pmcrc+3);
+					*(*message+i+2) = *(pmcrc+2);
+					*(*message+i+3) = *(pmcrc+1);
+					*(*message+i+4) = *(pmcrc+0);
+					syndrome = OTP_OK;
+				}
+				break;
+			}
+		}
+	}
+	return syndrome;
+}
+#endif
+
 static OtpError otp_udecrypt(gchar** message, struct otp* pad, gsize decryptpos)
 /* Decrypt the message  */
 {
@@ -463,11 +550,18 @@ static OtpError otp_udecrypt(gchar** message, struct otp* pad, gsize decryptpos)
 	syndrome = otp_get_decryptkey_from_file(key, pad, len, decryptpos);
 	if (syndrome > OTP_WARN) return syndrome;
 #ifdef DEBUG_MSG
+	otp_printint(*message, len, "before decrypt", pad->config);
+#endif
+#ifdef DEBUG_MSG
 	otp_printint(*key, len, "decryptkey", pad->config);
 #endif
 	otp_xor(message, key, len);
 #ifdef DEBUG_MSG 
-	otp_printint(*key,len, "decrypt-xor", pad->config);
+	otp_printint(*message,len, "decrypt-xor", pad->config);
+#endif
+
+#ifdef CHECKMSG
+	syndrome = otp_ischecksum(message,len,TRUE);
 #endif
 	return syndrome;
 }
@@ -505,9 +599,13 @@ static OtpError otp_uencrypt(gchar** message, struct otp* pad)
 #ifdef DEBUG_MSG
 	otp_printint(*key,len, "encryptkey", pad->config);
 #endif
+
+#ifdef CHECKMSG
+	syndrome = otp_ischecksum(message,len,FALSE);
+#endif
 	otp_xor(message, key, len);
 #ifdef DEBUG_MSG 
-	otp_printint(*key,len, "encrypt-xor", pad->config);
+	otp_printint(*message,len, "encrypt-check", pad->config);
 #endif
 	otp_base64_encode(message, len);
 	return syndrome;

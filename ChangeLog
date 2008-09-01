@@ -11,6 +11,12 @@ Simon Wenner:
  * Paranoia: '/otp reload' command added to regenerate the key list
  * Pranopia: key generator live status feedback
 
+Christian Wäckerlin:
+ * libotp: Added CRC32 test to ensure that the messages are unmodified.
+  - This breaks compatibility with versions smaller than 0.2!
+  - Compatible with version 0.2, libotp aknowledges that 0.2 has no CRC32 and 
+    does not complain that the message has changed.
+
 Pascal Sachs:
  * Keygen: ???
 
