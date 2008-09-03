@@ -18,7 +18,12 @@ Christian Wäckerlin:
     does not complain that the message has changed.
 
 Pascal Sachs:
- * Keygen: ???
+ * Keygen: Changed I/O System from clib to GIO
+ * Keygen: Better performance and less CPU usage on key generation
+ * Keygen: Security Improvement through new entropy pool system
+ * Keygen: Entropy source check moved from libotp to keygen
+ * Keygen: Added ability to generate multiple keys simultaneous
+ * Keygen: Code cleanup and minor bug fixes
 
 Version 0.2.0
 --------------------------------------------------------------------------------
