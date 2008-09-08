@@ -462,6 +462,7 @@ static void otp_base64_decode(gchar **message, gsize* plen)
 #define CRC32POLY 0x04C11DB7 /* CRC-32 Polynome */
 static void otp_calc_crc32(guchar byte, guint32 * crc) {
 /* Add a byte to the CRC32 checksum */
+// TODO: On x86 Linux, char is signed by default. On ARM Linux, char is unsigned by default.
 	gint32 bit = 0;
 	gint32 hbit;
 	int i;
@@ -478,7 +479,7 @@ static void otp_calc_crc32(guchar byte, guint32 * crc) {
 
 
 
-static OtpError otp_ischecksum(gchar ** message, gsize len, gboolean checkorwrite) {
+static OtpError otp_ischecksum(gchar **message, gsize len, gboolean checkorwrite) {
 /* If checkorwrite is TRUE, the checksum is calculated and written into the free
  * space left over by MIN_PADDING, else it is read an compared with the 
  * message string. */
