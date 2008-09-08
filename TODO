@@ -5,9 +5,6 @@
 Version 0.3
 ============
 	paranoia
-	 * add a message queue thread (???)
-	 	* enhanced session management (auto ack)
-	 	* send entropy warnings
 	 * string freeze
 
 	libotp
@@ -19,6 +16,10 @@ Version 0.3
 Version 0.4
 ============
  	paranoia
+ 	 * enhanced session management (auto ack)
+ 	 	without threads, maybe through invisible conversations,
+ 	 	needs changes in libpurple
+	 * send entropy warnings (inside messages?)
  	 * gettext support (translations)
 	 * optimize key list (hashtables)
 

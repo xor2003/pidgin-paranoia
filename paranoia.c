@@ -1034,10 +1034,11 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 			if (syndrome == OTP_WARN_MSG_CHECK_COMPAT) {
 				purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
 						"Info: The message was not checked for consitency since your buddy uses 0.2\n");
-				purple_conversation_write(conv, NULL, 
-						"The consistency check of the last message failed! "
-						"Your buddy's paranoia plugin version is too old.", 
-						PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_ERROR, time(NULL));
+				//TODO: needed?
+				//purple_conversation_write(conv, NULL, 
+				//		"The consistency check of the last message failed! "
+				//		"Your buddy's paranoia plugin version is too old.", 
+				//		PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_ERROR, time(NULL));
 			} else if (syndrome == OTP_WARN_MSG_CHECK_FAIL) {
 				purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
 						"Warning: The consistency check of the last message failed!\n");
