@@ -62,7 +62,7 @@ struct otp* encryptpad = NULL;
 struct otp* decryptpad = NULL;
 
 /* Signal */
-static void key_generation_done(GObject *my_object, gdouble percent, struct otp* a_pad) 
+static void keygen_update_status(GObject *my_object, gdouble percent, struct otp* a_pad)
 {
 	if (a_pad != NULL) {
 		if (results) g_printf(" + %5.2f percent of the key done\n", percent);
@@ -76,9 +76,14 @@ static void key_generation_done(GObject *my_object, gdouble percent, struct otp*
 		g_rename(fullbobfile, newbobfile);
 		g_free(fullbobfile);
 		g_free(newbobfile);
-	} else
-		g_printf(" ! keygen\n");
-	block_genkey = FALSE;
+	} else {
+		if ( verbose )
+			g_printf(" * Keygen                : '%f'\n", percent);
+		}
+		if ( percent >= 100.0 ) {
+			usleep(1000*1000);
+			block_genkey = FALSE;
+		}
 	return;
 }
 
@@ -90,7 +95,7 @@ OtpError create_config()
 	config = otp_conf_create("otptester", 
 			PARANOIA_PATH, DESKTOP_PATH, 1);
 	otp_signal_connect(config, 
-			"keygen-status-update", &key_generation_done);
+			SIGNALNAME, &keygen_update_status);
 	return OTP_OK;
 }
 
@@ -132,6 +137,7 @@ OtpError genkey()
 				g_printf(" * Syndrome             : %.8X\n",syndrome);
 				
 	while (block_genkey) usleep(10000);
+
 	block_genkey = TRUE;
 	
 	if (verbose) {
