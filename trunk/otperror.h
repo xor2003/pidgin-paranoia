@@ -45,8 +45,8 @@ typedef enum {
 /* function: otp_decrypt
  * origin: otp_ischecksum
  * The CRC32 check failed, the message has been modified */
-
 	OTP_WARN_MSG_CHECK_FAIL	= 0x00000002,
+
 /* function: otp_decrypt
  * origin: otp_ischecksum
  * The CRC32 check failed, the reason is that your buddy uses an 
