@@ -24,6 +24,7 @@
  * Changing this makes your one-time-pad incompatible */
 
 #define PAD_EMPTYCHAR '\0'        /* Char that is used to mark the pad as used. */
+#define CRC32POLY 0x04C11DB7 	/* CRC-32 Polynome */
 
 /*  ------------------- Constants (you can change them) ------------ */
 
@@ -459,77 +460,65 @@ static void otp_base64_decode(gchar **message, gsize* plen)
 
 #ifdef CHECKMSG
 
-#define CRC32POLY 0x04C11DB7 /* CRC-32 Polynome */
 static void otp_calc_crc32(guchar byte, guint32 * crc) {
-/* Add a byte to the CRC32 checksum */
-// TODO: On x86 Linux, char is signed by default. On ARM Linux, char is unsigned by default.
+/* Add a byte to the CRC32 checksum 
+Note: Shift operators are endian-safe, so 0xABCD >> 8 always gives 0x00AB */
+// TODO: Ensure that this is endian-safe
+
 	gint32 bit = 0;
 	gint32 hbit;
 	int i;
 	
 	for( i = 0; i < 8; i++) {
-		bit = ((byte)&1L<<(i));
-		hbit = (*crc & 0x80000000) ? 1 : 0;
-		if (hbit != bit)
-			*crc = (*crc << 1) ^ CRC32POLY;
+		bit = ( (byte)&1L << (i) );
+		hbit = ( *crc & 0x80000000 ) ? 1 : 0;
+		if ( hbit != bit )
+			*crc = ( *crc << 1 ) ^ CRC32POLY;
 		else
-			*crc = *crc<<1;
+			*crc = *crc << 1;
 	}
 }
 
 
 
-static OtpError otp_ischecksum(gchar **message, gsize len, gboolean checkorwrite) {
-/* If checkorwrite is TRUE, the checksum is calculated and written into the free
+static OtpError otp_ischecksum(gchar **message, gsize len, gboolean check_or_write) {
+/* If check_or_write is TRUE, the checksum is calculated and written into the free
  * space left over by MIN_PADDING, else it is read an compared with the 
  * message string. */
+// TODO: Ensure that this is endian-safe
 	gsize i;
-	guint32 mcrc = 0;
-	guchar* pmcrc = (guchar *) &mcrc;
-	guint32 ccrc = 0;
-	guchar* pccrc = (guchar *) &ccrc;
-	gboolean isinmessage = TRUE;
-	
+	guint32 message_crc = 0x00000000;
+	guint32* checksum_crc_pointer = NULL; /* This will point into the message at the checksum memory */
+	guint32 checksum_crc;
 	OtpError syndrome = OTP_WARN_MSG_CHECK_FAIL;
-	for (i = 0; i < len-1; i++) {
-		if ( (guchar) *(*message+i) == 0 ) isinmessage = FALSE;
-		if ( isinmessage == TRUE ) {
-			//g_printf("!!! %i:%02X\n", i, (guchar) *(*message+i));
-			otp_calc_crc32( (guchar) *(*message+i), &mcrc);
-		} else {
-			//g_printf("nnn %u\n", len - i - 1);
-			//g_printf("!!! %i:%02X\n", i, (guchar) *(*message+i));
-			if ( len - i - 1 > 4 ) {
-				//mcrc = 0x12345678;
-				if ( checkorwrite == TRUE ) {
-					*(pccrc+0) = *(*message+i+4);
-					*(pccrc+1) = *(*message+i+3);
-					*(pccrc+2) = *(*message+i+2);
-					*(pccrc+3) = *(*message+i+1);
-#ifdef DEBUG
-					g_printf("%s: checkmsg: '0x%08X' '0x%08X' \n",
-							"paranoia", ccrc, mcrc);
-#endif
-					if (ccrc != mcrc) {
-						if (ccrc == 0x00000000) {
+
+	for (i = 0; i < len-1; i++) { /* Loop through the message */
+		if ( (guchar) *( *message + i) != 0 ) {
+			otp_calc_crc32( (guchar) *( *message + i ), &message_crc); /* add byte to checksum */
+		} else { /* we found the end of the base64 encoded part */
+			if ( len - i - 1 > sizeof( guint32 ) ) {
+				/* Set the checksum_crc pointer into the message memory */
+				checksum_crc_pointer = (guint32*) (*message+i+1);
+				checksum_crc = GINT32_FROM_LE( *checksum_crc_pointer );
+				if ( check_or_write == TRUE ) {
+					if ( checksum_crc != message_crc) {
+						if ( checksum_crc == 0x00000000) {
 							syndrome = OTP_WARN_MSG_CHECK_COMPAT;
 #ifdef PRINT_ERRORS
 							g_printf("%s: checkmsg: '0x%08X' '0x%08X' \n",
-									"paranoia", ccrc, mcrc);
+									"paranoia", checksum_crc, message_crc);
 #endif
 						} else {
 							syndrome = OTP_WARN_MSG_CHECK_FAIL;
 #ifdef PRINT_ERRORS
 							g_printf("%s: checkmsg: '0x%08X' '0x%08X' \n",
-									"paranoia", ccrc, mcrc);
+									"paranoia", checksum_crc, message_crc);
 #endif
 						}
 					} else syndrome = OTP_OK;
 				} else {
-					*(*message+i+1) = *(pmcrc+3);
-					*(*message+i+2) = *(pmcrc+2);
-					*(*message+i+3) = *(pmcrc+1);
-					*(*message+i+4) = *(pmcrc+0);
+					/* Write the calculated checksum into the message */
+					*checksum_crc_pointer = GINT32_TO_LE( message_crc ); 
 					syndrome = OTP_OK;
 				}
 				break;
