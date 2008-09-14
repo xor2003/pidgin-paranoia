@@ -39,13 +39,13 @@ typedef struct {
 	gdouble pool_level;
 } KeyData;
 
-gpointer keygen_main_thread(gpointer data);
-gpointer devrand(gpointer data);
-gpointer audio(gpointer data);
-gpointer stub(gpointer data);
-gpointer threads(gpointer data);
-gpointer sysstate(gpointer data);
-gpointer prng(gpointer data);
+static gpointer keygen_main_thread(gpointer data);
+static gpointer devrand(gpointer data);
+static gpointer audio(gpointer data);
+static gpointer stub(gpointer data);
+static gpointer threads(gpointer data);
+//static gpointer sysstate(gpointer data);
+static gpointer prng(gpointer data);
 
 /* defines */
 #define BUFFSIZE 32
@@ -55,7 +55,7 @@ gpointer prng(gpointer data);
 #define OFFSET 0
 
 /* ---------------- Entropy Pool Functions ------------------*/
-void keygen_pool_write(gchar *buffer, gsize size, KeyData *key_data) 
+static void keygen_pool_write(gchar *buffer, gsize size, KeyData *key_data) 
 /*
 *	Write size bytes of entropy from buffer to the entropy pool
 */
@@ -70,7 +70,7 @@ void keygen_pool_write(gchar *buffer, gsize size, KeyData *key_data)
 	key_data->pool_level += (gdouble)size/POOLSIZE;
 }
 
-gpointer keygen_pool_read(gpointer data)
+static gpointer keygen_pool_read(gpointer data)
 /*
 *	read from the entropy pool and write to the alice keyfile
 */
@@ -113,7 +113,7 @@ gpointer keygen_pool_read(gpointer data)
 }
 
 /* ------------------------- TOOLS --------------------------*/
-OtpError keygen_invert(gchar *src, gchar *dest)
+static OtpError keygen_invert(gchar *src, gchar *dest)
 /*
 *	Write the bytewise inverse of src to dest
 *	src and dest must be a valide filename with correct path
@@ -163,7 +163,7 @@ OtpError keygen_invert(gchar *src, gchar *dest)
 } // end invert()
 
 
-struct otp *keygen_get_pad(KeyData *key_data) 
+static struct otp *keygen_get_pad(KeyData *key_data) 
 /*
 	Get the OTP pad for filename. 
 	filename has to be a regluar entropy file with absolute path.
@@ -185,7 +185,7 @@ struct otp *keygen_get_pad(KeyData *key_data)
 } // end keygen_get_pad()
 
 
-gchar bit2char(gshort buf[8]) 
+static gchar bit2char(gshort buf[8]) 
 /*
 *	Input a buf which elements are 1 or 0 and the function will output
 *	a char as output.
@@ -200,7 +200,7 @@ gchar bit2char(gshort buf[8])
 	return (gchar)byte;
 } // end bit2char()
 
-gint improved_neumann(gchar buffer[BUFFSIZE]) 
+static gint improved_neumann(gchar buffer[BUFFSIZE]) 
 /*
 *	This function does the improved neumann algortihm on the input buffer and returns
 *	the number of bytes that could be generated and are now stored in the same buffer.
@@ -255,7 +255,7 @@ gint improved_neumann(gchar buffer[BUFFSIZE])
 	return size;
 } // end improved_neumann()
 
-gint keys_from_source(KeyData *key_data, GFile *source) 
+static gint keys_from_source(KeyData *key_data, GFile *source) 
 /*
 *	keys_from_source takes a KeyData struct and an entropy source and generates the alice key.
 */
@@ -303,7 +303,7 @@ gint keys_from_source(KeyData *key_data, GFile *source)
 	return 0;
 } // end keys_from_source()
 
-void free_key_data(KeyData *key_data) 
+static void free_key_data(KeyData *key_data) 
 /*
 *	Free the KeyData struct
 */
@@ -349,6 +349,7 @@ OtpError keygen_keys_generate(char *alice_file, char *bob_file,
 	key_data->alice = g_strdup(alice_file);
 
 	if(g_strcmp0(g_path_get_basename(alice_file), g_path_get_basename(bob_file))) {
+		// FIXME: leak?
 		key_data->bob = g_strdup(bob_file);
 		key_data->size = size;
 		key_data->is_loopkey = FALSE;
@@ -371,7 +372,8 @@ OtpError keygen_keys_generate(char *alice_file, char *bob_file,
 	key_data->keygen_mutex = g_mutex_new();
 	
 	/* Try to create alice file */
-	tmp_file = g_strdup_printf("%s%s%s",g_get_tmp_dir(), G_DIR_SEPARATOR_S, g_path_get_basename(key_data->alice));
+	tmp_file = g_strdup_printf("%s%s%s", g_get_tmp_dir(), G_DIR_SEPARATOR_S, g_path_get_basename(key_data->alice));
+	// FIXME: Leak and use g_strconcat
 	key_data->fp_alice = (GOutputStream *)g_file_create(g_file_new_for_commandline_arg(tmp_file), 
 															G_FILE_CREATE_PRIVATE, NULL, NULL);
 	g_free(tmp_file);
@@ -399,7 +401,7 @@ guint keygen_id_get()
 
 /* ------------------------- THREADS ------------------------*/
 
-gpointer keygen_main_thread(gpointer data)
+static gpointer keygen_main_thread(gpointer data)
 /*
 *	This is the main thread which decides which kind of entropy source to take the entropy from
 *	and generates the alice and bob keys. the data should be a pointer to a KeyData struct.
@@ -413,6 +415,7 @@ gpointer keygen_main_thread(gpointer data)
 	gsize size;
 	gboolean error;
 	GThread *t_audio, *t_random, *t_prng, *t_threads, *t_pool;
+	GError *err = NULL;
 	
 	key_data = (KeyData *)data;
 	error = FALSE;
@@ -435,7 +438,7 @@ gpointer keygen_main_thread(gpointer data)
 		}
 	} else {	
 		source = g_file_new_for_commandline_arg(key_data->src);
-		info = g_file_query_info(source, "*",G_FILE_QUERY_INFO_NONE, NULL, NULL);
+		info = g_file_query_info(source, "*", G_FILE_QUERY_INFO_NONE, NULL, NULL);
 		switch(g_file_info_get_file_type(info)) {
 			case G_FILE_TYPE_REGULAR:
 				size = g_file_info_get_size(info);
@@ -463,7 +466,9 @@ gpointer keygen_main_thread(gpointer data)
 	}
 	
 	if(!error) {
-		tmp_file = g_strdup_printf("%s%s%s",g_get_tmp_dir(), G_DIR_SEPARATOR_S, g_path_get_basename(key_data->alice));
+		tmp_file = g_strdup_printf("%s%s%s", g_get_tmp_dir(), G_DIR_SEPARATOR_S, 
+				g_path_get_basename(key_data->alice));
+				//FIXME: leak! and use g_strconcat
 		if(key_data->is_loopkey) {
 			bob_file = tmp_file;
 		} else {
@@ -474,7 +479,9 @@ gpointer keygen_main_thread(gpointer data)
 		} else {
 			g_file_move(g_file_new_for_commandline_arg(tmp_file), 
 						g_file_new_for_commandline_arg(key_data->alice), 
-						G_FILE_COPY_NONE, NULL, NULL, NULL, NULL);
+						G_FILE_COPY_NONE, NULL, NULL, NULL, &err);
+			g_printerr("error while moving file: %s\n", err->message);
+			g_error_free(err);
 			pad = keygen_get_pad(key_data);
 			g_signal_emit_by_name(G_OBJECT(otp_conf_get_trigger(key_data->config)), SIGNALNAME, 100.0, pad);
 		}
@@ -487,7 +494,7 @@ gpointer keygen_main_thread(gpointer data)
 	return NULL;
 } // end keygen_main_thread()
 
-gpointer devrand(gpointer data) 
+gpointer devrand(gpointer data)
 /*
 *	Thread which collects entropy from the standart unix random device
 */
@@ -521,7 +528,7 @@ gpointer devrand(gpointer data)
 	return 0;
 } // end devrand()
 
-gpointer audio(gpointer data)
+static gpointer audio(gpointer data)
 /*
 *	audio() collect entropie from /dev/audio and unbias it with the improved Neumann Algorithm to
 *	get a better distribution.
@@ -570,7 +577,7 @@ gpointer audio(gpointer data)
 } // end audio()
 
 
-gpointer stub(gpointer data) 
+static gpointer stub(gpointer data) 
 /*
 *	Stub Thread for thread timing measurement
 */
@@ -578,7 +585,7 @@ gpointer stub(gpointer data)
 	return 0;
 } // end stub()
 
-gpointer threads(gpointer data) 
+static gpointer threads(gpointer data) 
 /*
 *	threads() collects entropie from thread timing, by just mesuring the time it takes
 *	to open and close the stub() thread. This function takes one sample every second
@@ -613,10 +620,10 @@ gpointer threads(gpointer data)
 } // end threads()
 
 
-gpointer sysstate(gpointer data);
+//static gpointer sysstate(gpointer data);
+// FIXME: nedded?
 
-
-gpointer prng(gpointer data)
+static gpointer prng(gpointer data)
 /*
 *	prng collects entropy from the pseudo random generator /dev/urandom. If this device is not available it will
 *	use the glib random number generator.
