@@ -459,7 +459,6 @@ static void otp_base64_decode(gchar **message, gsize* plen)
 }
 
 #ifdef CHECKMSG
-
 static void otp_calc_crc32(guchar byte, guint32 * crc) {
 /* Add a byte to the CRC32 checksum 
 Note: Shift operators are endian-safe, so 0xABCD >> 8 always gives 0x00AB */
@@ -478,53 +477,72 @@ Note: Shift operators are endian-safe, so 0xABCD >> 8 always gives 0x00AB */
 			*crc = *crc << 1;
 	}
 }
+#endif
 
-
-
-static OtpError otp_ischecksum(gchar **message, gsize len, gboolean check_or_write) {
+#ifdef CHECKMSG
+static OtpError otp_ischecksum(gchar **message, gsize len, 
+		gboolean check_or_write, const struct otp_config* config) {
 /* If check_or_write is TRUE, the checksum is calculated and written into the free
  * space left over by MIN_PADDING, else it is read an compared with the 
  * message string. */
 // TODO: Ensure that this is endian-safe
 	gsize i;
 	guint32 message_crc = 0x00000000;
-	guint32* checksum_crc_pointer = NULL; /* This will point into the message at the checksum memory */
-	guint32 checksum_crc;
+	guint32* checksum_crc_pointer = NULL; /* This will point into 
+	* the message at the checksum memory */
+	guint32 checksum_crc = 0x00000000;
 	OtpError syndrome = OTP_WARN_MSG_CHECK_FAIL;
+	gboolean checksum_found_in_message = FALSE;
 
 	for (i = 0; i < len-1; i++) { /* Loop through the message */
-		if ( (guchar) *( *message + i) != 0 ) {
-			otp_calc_crc32( (guchar) *( *message + i ), &message_crc); /* add byte to checksum */
+		if ( (guchar) *( *message + i) != 0 ) { 
+			/* add byte to checksum */
+			otp_calc_crc32( (guchar) *( *message + i ), &message_crc);
 		} else { /* we found the end of the base64 encoded part */
 			if ( len - i - 1 > sizeof( guint32 ) ) {
 				/* Set the checksum_crc pointer into the message memory */
 				checksum_crc_pointer = (guint32*) (*message+i+1);
 				checksum_crc = GINT32_FROM_LE( *checksum_crc_pointer );
-				if ( check_or_write == TRUE ) {
-					if ( checksum_crc != message_crc) {
-						if ( checksum_crc == 0x00000000) {
-							syndrome = OTP_WARN_MSG_CHECK_COMPAT;
-#ifdef PRINT_ERRORS
-							g_printf("%s: checkmsg: '0x%08X' '0x%08X' \n",
-									"paranoia", checksum_crc, message_crc);
-#endif
-						} else {
-							syndrome = OTP_WARN_MSG_CHECK_FAIL;
-#ifdef PRINT_ERRORS
-							g_printf("%s: checkmsg: '0x%08X' '0x%08X' \n",
-									"paranoia", checksum_crc, message_crc);
-#endif
-						}
-					} else syndrome = OTP_OK;
-				} else {
-					/* Write the calculated checksum into the message */
-					*checksum_crc_pointer = GINT32_TO_LE( message_crc ); 
-					syndrome = OTP_OK;
-				}
-				break;
+				checksum_found_in_message = TRUE;
 			}
+			break;
 		}
 	}
+
+	if (checksum_found_in_message == FALSE) {
+#ifdef PRINT_ERRORS
+		g_printf("%s: checkmsg: the checksum can not be written into the message!' \n",
+						config->client_id);
+#endif
+		syndrome = OTP_WARN_MSG_CHECK_FAIL;
+	} else {
+#ifdef DEBUG_MSG
+		otp_printint(*message, len, "checkmessage before", config);
+#endif
+		if ( check_or_write == TRUE ) { /* Check checksum */
+			if ( checksum_crc != message_crc) {
+				if ( checksum_crc == 0x00000000) {
+					syndrome = OTP_WARN_MSG_CHECK_COMPAT;
+#ifdef PRINT_ERRORS
+					g_printf("%s: checkmsg: '0x%08X' '0x%08X' \n",
+							config->client_id, checksum_crc, message_crc);
+#endif
+					} else {
+						syndrome = OTP_WARN_MSG_CHECK_FAIL;
+#ifdef PRINT_ERRORS
+						g_printf("%s: checkmsg: '0x%08X' '0x%08X' \n",
+								config->client_id, checksum_crc, message_crc);
+#endif
+					}
+				} else syndrome = OTP_OK;
+			} else { /* Write checksum */
+				*checksum_crc_pointer = GINT32_TO_LE( message_crc ); 
+				syndrome = OTP_OK;
+			}
+#ifdef DEBUG_MSG
+		otp_printint(*message, len, "checkmessage after", config);
+#endif
+		}
 	return syndrome;
 }
 #endif
@@ -551,7 +569,7 @@ static OtpError otp_udecrypt(gchar** message, struct otp* pad, gsize decryptpos)
 #endif
 
 #ifdef CHECKMSG
-	syndrome = otp_ischecksum(message,len,TRUE);
+	syndrome = otp_ischecksum(message, len, TRUE, pad->config);
 #endif
 	return syndrome;
 }
@@ -591,7 +609,7 @@ static OtpError otp_uencrypt(gchar** message, struct otp* pad)
 #endif
 
 #ifdef CHECKMSG
-	syndrome = otp_ischecksum(message,len,FALSE);
+	syndrome = otp_ischecksum(message, len, FALSE, pad->config);
 #endif
 	otp_xor(message, key, len);
 #ifdef DEBUG_MSG 
