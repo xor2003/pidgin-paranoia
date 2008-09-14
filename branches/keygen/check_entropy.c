@@ -8,6 +8,7 @@ int main(int argc, char **argv) {
 	char byte;
 	double zero_rate, one_rate;
 	int halfbyte[16];
+	int changes[4], last, check;
 	short lastbit;
 
 	for(i = 0; i < 16; i++) halfbyte[i] = 0;
@@ -30,12 +31,31 @@ int main(int argc, char **argv) {
 
 	zero = 0;
 	one = 0;
+	last = 0;
+	check = 0;
+	for(i = 0; i < 4; i++) changes[i] = 0;
+	for(i = 0; i < 16; i++) halfbyte[i] = 0;
 
 	while((c = fgetc(fp)) != EOF) {
 		byte = (char)c;
 		for(i = 0; i < 8; i++) {
-			if(((c >> i) & 0x01) == 1) one++;
-			else zero++;
+			if(((c >> i) & 0x01) == 1) {
+				one++;
+				if(check) {
+					if(last == 0) changes[1]++;
+					if(last == 1) changes[3]++;
+					check = 0;
+				} else check = 1;
+				last = 1;
+			} else {
+				zero++;
+				if(check) {
+					if(last == 0) changes[0]++;
+					if(last == 1) changes[2]++;
+					check = 0;
+				} else check = 1;
+				last = 0;
+			}
 			if(((c >> i) & 0x01) == lastbit) {
 				count++;
 			} else {
@@ -52,6 +72,10 @@ int main(int argc, char **argv) {
 	one_rate = (double)one/(zero + one);
 
 	printf("rate of 0: %f\nrate of 1: %f\n", zero_rate, one_rate);
+	printf("changes 00: %i\n", changes[0]);
+	printf("changes 01: %i\n", changes[1]);
+	printf("changes 10: %i\n", changes[2]);
+	printf("changes 11: %i\n", changes[3]);
 	for(i = 0; i < 16; i++) printf("Halfbyte rate for %i: %f\n", i, ((double)halfbyte[i]*4/(zero + one)));
 	printf("longest race: %i\n", race);
 	fclose(fp);
