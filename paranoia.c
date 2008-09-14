@@ -1036,14 +1036,14 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 						"Info: The message was not checked for consitency since your buddy uses 0.2\n");
 				//TODO: needed?
 				//purple_conversation_write(conv, NULL, 
-				//		"The consistency check of the last message failed! "
+				//		"The consistency check of the next message failed! "
 				//		"Your buddy's paranoia plugin version is too old.", 
 				//		PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_ERROR, time(NULL));
 			} else if (syndrome == OTP_WARN_MSG_CHECK_FAIL) {
 				purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
-						"Warning: The consistency check of the last message failed!\n");
+						"Warning: The consistency check of the next message failed!\n");
 				purple_conversation_write(conv, NULL, 
-						"The consistency check of the last message failed!", 
+						"The consistency check of the next message failed!", 
 						PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_ERROR, time(NULL));
 			}
 		}
