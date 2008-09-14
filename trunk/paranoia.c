@@ -46,7 +46,7 @@
 #define SHOW_STATUS
 #define CENSORSHIP
 
-/* Requires GNOMElib 2.14! Bob's keyfile is placed onto the desktop. 
+/* Requires GNOMElib > 2.14! Bob's keyfile is placed onto the desktop. 
  * If not set, the file is placed in the home directory. */
 #define USEDESKTOP
 
@@ -182,27 +182,29 @@ static gboolean par_keygen_poll_result(void* data)
 			}
 		} else {
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-				"100.0 percent of the key done.\n");
-			//TODO for RELEASE only show if !conv
-			msg = g_strdup_printf("%s->%s (%s), %i Bytes\n\n"
-					"Your own key is stored in the directory '~/.paranoia'.\n"
-					"Your buddy's key is stored on your desktop. "
-					"Please send this key in a secure way to your partner.",
-					otp_pad_get_src(keygen->new_pad),
-					otp_pad_get_dest(keygen->new_pad),
-					otp_pad_get_id(keygen->new_pad),
-					otp_pad_get_filesize(keygen->new_pad));
-			purple_notify_info(NULL, "Paranoia Key Generator", 
-					"A new key pair has been created!",
-					msg);
+					"100.0 percent of the key done.\n");
 			if (conv) {
 				/* write to conv if available */
 				purple_conversation_write(conv, NULL, 
-					"Key generation successfully completed.", 
+					"Key generation successfully completed.\n "
+					"Your own key is stored in the directory '~/.paranoia'.\n"
+					"Your buddy's key is stored on your desktop. "
+					"Please send this key in a secure way to your partner.", 
 					PURPLE_MESSAGE_NO_LOG, time(NULL));
-				// TODO: write stuff from above too
+			} else {
+				/* show a nice pop-up */
+				msg = g_strdup_printf("%s->%s (%s), %i Bytes\n\n"
+						"Your own key is stored in the directory '~/.paranoia'.\n"
+						"Your buddy's key is stored on your desktop. "
+						"Please send this key in a secure way to your partner.",
+						otp_pad_get_src(keygen->new_pad),
+						otp_pad_get_dest(keygen->new_pad),
+						otp_pad_get_id(keygen->new_pad),
+						otp_pad_get_filesize(keygen->new_pad));
+				purple_notify_info(NULL, "Paranoia Key Generator", 
+						"A new key pair has been created!", msg);
+				g_free(msg);
 			}
-			g_free(msg);
 			/* cleanup */
 			purple_timeout_remove(keygen->timer_handle);
 			g_free(keygen);
@@ -210,8 +212,6 @@ static gboolean par_keygen_poll_result(void* data)
 		}
 		keygen->updated = FALSE;
 	}
-	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-				"POLL!!!! for the keygen result.\n"); //FIXME: remove it
 	return TRUE;
 }
 
@@ -631,11 +631,8 @@ static void par_cli_init_keygen(PurpleConversation* conv, int size, gchar** para
 	char* other_acc_stp = par_strip_jabber_ressource(other_acc);
 	OtpError syndrome;
 	
-	purple_conversation_write(conv, NULL, 
-			"Generating keys. Please wait...", 
-			PURPLE_MESSAGE_NO_LOG, time(NULL)); //FIXME: remove it
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-			"Generate new key: my_acc: %s, other_acc: %s, size: %ikiB\n",
+			"Key generation request received. my_acc: %s, other_acc: %s, size: %ikiB\n",
 			my_acc_stp, other_acc_stp, size);
 
 	if (param_array[1] == NULL) {
@@ -666,7 +663,7 @@ static void par_cli_init_keygen(PurpleConversation* conv, int size, gchar** para
 				"Key generation successfully started. This will take some "
 				"minutes depending on the desired key length.",
 				PURPLE_MESSAGE_NO_LOG, time(NULL));
-		/* init and start the polling for the result */
+		/* init and start polling for the result */
 		keygen = (struct kg_data *) g_malloc(sizeof(struct kg_data));
 		keygen->status = 0.0;
 		keygen->updated = FALSE;
@@ -926,7 +923,7 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 			"Recived Msg: %s\n", *message);
 
-	// TODO: only strip all the (X)HTML crap on specific protocols (Jabber, MSN. ???)
+	// TODO: only strip all the (X)HTML crap on specific protocols (Jabber, MSN, ???)
 	// detect the protcol id:
 	// purple_account_get_protocol_id(account)
 
@@ -1034,11 +1031,6 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 			if (syndrome == OTP_WARN_MSG_CHECK_COMPAT) {
 				purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
 						"Info: The message was not checked for consitency since your buddy uses 0.2\n");
-				//TODO: needed?
-				//purple_conversation_write(conv, NULL, 
-				//		"The consistency check of the next message failed! "
-				//		"Your buddy's paranoia plugin version is too old.", 
-				//		PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_ERROR, time(NULL));
 			} else if (syndrome == OTP_WARN_MSG_CHECK_FAIL) {
 				purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
 						"Warning: The consistency check of the next message failed!\n");
@@ -1161,7 +1153,7 @@ static void par_im_msg_sending(PurpleAccount *account,
 				} else {
 					if (syndrome != OTP_OK) {
 						purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
-								"Entropy waring sent but there is a warning! %.8X\n", syndrome);
+								"Entropy warning sent but there is a warning! %.8X\n", syndrome);
 					}
 				}
 				
@@ -1174,7 +1166,7 @@ static void par_im_msg_sending(PurpleAccount *account,
 						otp_pad_get_entropy(used_key->pad));
 				purple_conversation_write(used_key->conv, NULL, 
 						warning_msg, PURPLE_MESSAGE_NO_LOG, time(NULL));
-				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, warning_msg);
+				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "%s\n", warning_msg);
 				g_free(warning_msg);
 			}
 		}
