@@ -78,7 +78,7 @@
 
 //#define DEBUG_MSG
 /* Produces lots of output
- * Enables the function otp_printint and dumps the way of the 
+ * Enables the function printint and dumps the way of the 
  * message and key byte by byte. */
 
 /*  -------------------------- Includes ---------------------------- */
@@ -158,7 +158,7 @@ void otp_marshal_VOID__DOUBLE_PAD (GClosure     *closure,
                                         
 /*  ----------------- Private Functions of the Library------------ */
 
-static void otp_xor(gchar** message, gchar** key, gsize len)
+static void xor(gchar** message, gchar** key, gsize len)
 /* XOR message and key. This function is the core of the library. */
 {
 	gsize i;
@@ -169,7 +169,7 @@ static void otp_xor(gchar** message, gchar** key, gsize len)
 }
 
 #ifdef DEBUG_MSG
-static void otp_printint(gchar* m, gsize len, const gchar* hint, const struct otp_config* config)
+static void printint(gchar* m, gsize len, const gchar* hint, const struct otp_config* config)
 /* Helper function for debugging */
 {
 	gsize i;
@@ -181,7 +181,7 @@ static void otp_printint(gchar* m, gsize len, const gchar* hint, const struct ot
 }
 #endif
 
-static void otp_calc_entropy(struct otp* pad)
+static void calc_entropy(struct otp* pad)
 /* Calculate the free entropy */
 {
 	gsize entropy = pad->filesize/2-pad->position-OTP_PROTECTED_ENTROPY;
@@ -192,7 +192,7 @@ static void otp_calc_entropy(struct otp* pad)
 	}
 }
 
-static OtpError otp_open_keyfile(struct otp* pad)
+static OtpError open_keyfile(struct otp* pad)
 /* Opens a keyfile with memory mapping */
 {
 	struct stat fstat;
@@ -265,7 +265,7 @@ static OtpError otp_open_keyfile(struct otp* pad)
 	return OTP_OK;
 }
 
-static void otp_close_keyfile(struct otp* pad)
+static void close_keyfile(struct otp* pad)
 /* Closes a keyfile with memory mapping */
 {
 	if (pad->file_is_open == FALSE) {
@@ -291,7 +291,7 @@ static void otp_close_keyfile(struct otp* pad)
 	return;
 }
 
-static gsize otp_seek_pos(const struct otp* pad)
+static gsize seek_pos(const struct otp* pad)
 /* Seeks the position where the pad can be used for encryption */
 {
 	gsize pos = 0;
@@ -305,7 +305,7 @@ static gsize otp_seek_pos(const struct otp* pad)
 	return pos;
 }
 
-static gboolean otp_id_is_valid(const gchar* id_str)
+static gboolean id_is_valid(const gchar* id_str)
 /* Check if the ID is valid */
 {
 	if ( strlen(id_str) == OTP_ID_LENGTH * sizeof(gchar)) {
@@ -315,7 +315,7 @@ static gboolean otp_id_is_valid(const gchar* id_str)
 	}
 }
 
-static gboolean otp_key_is_random(gchar** key, gsize len, 
+static gboolean key_is_random(gchar** key, gsize len, 
 		const struct otp_config* config)
 /* Checks the key by statistical means
  *
@@ -349,7 +349,7 @@ static gboolean otp_key_is_random(gchar** key, gsize len,
 	return TRUE;
 }
 
-static OtpError otp_get_encryptkey_from_file(gchar** key, struct otp* pad, 
+static OtpError get_encryptkey_from_file(gchar** key, struct otp* pad, 
 			gsize len, const struct otp_config* config)
 /* Gets the key to encrypt from the keyfile */
 {
@@ -367,7 +367,7 @@ static OtpError otp_get_encryptkey_from_file(gchar** key, struct otp* pad,
 		return OTP_ERR_KEY_EMPTY;
 	}
 	if (pad->file_is_open == FALSE) {
-		syndrome = otp_open_keyfile(pad);
+		syndrome = open_keyfile(pad);
 		if (syndrome > OTP_WARN) return syndrome;
 	}
 	*key = (gchar*)g_malloc((len)*sizeof(gchar));
@@ -379,13 +379,13 @@ static OtpError otp_get_encryptkey_from_file(gchar** key, struct otp* pad,
 	/* TODO v0.3: What should i do if the key is rejected?
 	 * ATM it just fails and destroys the keyblock.*/
 #ifdef KEYOVERWRITE
-	if ((otp_key_is_random(key, len-1, config) == FALSE) && (pad->using_protected_pos == FALSE)) {
+	if ((key_is_random(key, len-1, config) == FALSE) && (pad->using_protected_pos == FALSE)) {
 		syndrome = syndrome | OTP_WARN_KEY_NOT_RANDOM;
 		/* not using protected entropy, make the used key unusable
 		 * in the keyfile */
 		for (i = 0; i < (len - 1); i++) datpos[i] = PAD_EMPTYCHAR;
 		pad->position = pad->position + len -1;
-		otp_calc_entropy(pad);
+		calc_entropy(pad);
 		return syndrome;
 	}
 #endif
@@ -401,14 +401,14 @@ static OtpError otp_get_encryptkey_from_file(gchar** key, struct otp* pad,
 	/* In all cases where the protected entropy is not used */
 		pad->position = pad->position + len -1;
 	}
-	otp_calc_entropy(pad);
+	calc_entropy(pad);
 #ifdef IMMED_CLOSE_FILES
-	otp_close_keyfile(pad);
+	close_keyfile(pad);
 #endif
 	return syndrome;
 }
 
-static OtpError otp_get_decryptkey_from_file(gchar** key, struct otp* pad, 
+static OtpError get_decryptkey_from_file(gchar** key, struct otp* pad, 
 			gsize len, gsize decryptpos)
 /* Gets the key to decrypt from the keyfile */
 {
@@ -420,7 +420,7 @@ static OtpError otp_get_decryptkey_from_file(gchar** key, struct otp* pad,
 		return syndrome;
 	}
 	if (pad->file_is_open == FALSE) {
-		syndrome = otp_open_keyfile(pad);
+		syndrome = open_keyfile(pad);
 		if (syndrome > OTP_WARN) return syndrome;
 	}
 	if (syndrome > OTP_WARN) return syndrome;
@@ -431,12 +431,12 @@ static OtpError otp_get_decryptkey_from_file(gchar** key, struct otp* pad,
 	for (i = 0; i <= (len -1); i++) vkey[i] = datpos[len - i];
 	*key = vkey;
 #ifdef IMMED_CLOSE_FILES
-	otp_close_keyfile(pad);
+	close_keyfile(pad);
 #endif
 	return syndrome;
 }
 
-static void otp_base64_encode(gchar** message, gsize len)
+static void base64_encode(gchar** message, gsize len)
 /* Encodes message into the base64 form */
 {
 	gchar* msg = g_base64_encode( (guchar*)*message, len);
@@ -448,7 +448,7 @@ static void otp_base64_encode(gchar** message, gsize len)
 	return;
 }
 
-static void otp_base64_decode(gchar **message, gsize* plen)
+static void base64_decode(gchar **message, gsize* plen)
 /* Decodes message from the base64 form
  * The function needs the length as pointer because the length will change*/
 {
@@ -459,7 +459,7 @@ static void otp_base64_decode(gchar **message, gsize* plen)
 }
 
 #ifdef CHECKMSG
-static void otp_calc_crc32(guchar byte, guint32 * crc) {
+static void calc_crc32(guchar byte, guint32 * crc) {
 /* Add a byte to the CRC32 checksum 
 Note: Shift operators are endian-safe, so 0xABCD >> 8 always gives 0x00AB */
 // TODO: Ensure that this is endian-safe
@@ -480,7 +480,7 @@ Note: Shift operators are endian-safe, so 0xABCD >> 8 always gives 0x00AB */
 #endif
 
 #ifdef CHECKMSG
-static OtpError otp_ischecksum(gchar **message, gsize len, 
+static OtpError is_checksum(gchar **message, gsize len, 
 		gboolean check_or_write, const struct otp_config* config) {
 /* If check_or_write is TRUE, the checksum is calculated and written into the free
  * space left over by MIN_PADDING, else it is read an compared with the 
@@ -497,7 +497,7 @@ static OtpError otp_ischecksum(gchar **message, gsize len,
 	for (i = 0; i < len-1; i++) { /* Loop through the message */
 		if ( (guchar) *( *message + i) != 0 ) { 
 			/* add byte to checksum */
-			otp_calc_crc32( (guchar) *( *message + i ), &message_crc);
+			calc_crc32( (guchar) *( *message + i ), &message_crc);
 		} else { /* we found the end of the base64 encoded part */
 			if ( len - i - 1 > sizeof( guint32 ) ) {
 				/* Set the checksum_crc pointer into the message memory */
@@ -517,7 +517,7 @@ static OtpError otp_ischecksum(gchar **message, gsize len,
 		syndrome = OTP_WARN_MSG_CHECK_FAIL;
 	} else {
 #ifdef DEBUG_MSG
-		otp_printint(*message, len, "checkmessage before", config);
+		printint(*message, len, "checkmessage before", config);
 #endif
 		if ( check_or_write == TRUE ) { /* Check checksum */
 			if ( checksum_crc != message_crc) {
@@ -540,41 +540,41 @@ static OtpError otp_ischecksum(gchar **message, gsize len,
 				syndrome = OTP_OK;
 			}
 #ifdef DEBUG_MSG
-		otp_printint(*message, len, "checkmessage after", config);
+		printint(*message, len, "checkmessage after", config);
 #endif
 		}
 	return syndrome;
 }
 #endif
 
-static OtpError otp_udecrypt(gchar** message, struct otp* pad, gsize decryptpos)
+static OtpError decrypt(gchar** message, struct otp* pad, gsize decryptpos)
 /* Decrypt the message  */
 {
 	gsize len = (strlen(*message)+1)* sizeof(gchar);
 	gchar* space1 = ""; // TODO FIXME
 	gchar** key = &space1;
-	otp_base64_decode(message, &len);
+	base64_decode(message, &len);
 	OtpError syndrome = OTP_OK;
-	syndrome = otp_get_decryptkey_from_file(key, pad, len, decryptpos);
+	syndrome = get_decryptkey_from_file(key, pad, len, decryptpos);
 	if (syndrome > OTP_WARN) return syndrome;
 #ifdef DEBUG_MSG
-	otp_printint(*message, len, "before decrypt", pad->config);
+	printint(*message, len, "before decrypt", pad->config);
 #endif
 #ifdef DEBUG_MSG
-	otp_printint(*key, len, "decryptkey", pad->config);
+	printint(*key, len, "decryptkey", pad->config);
 #endif
-	otp_xor(message, key, len);
+	xor(message, key, len);
 #ifdef DEBUG_MSG 
-	otp_printint(*message,len, "decrypt-xor", pad->config);
+	printint(*message,len, "decrypt-xor", pad->config);
 #endif
 
 #ifdef CHECKMSG
-	syndrome = otp_ischecksum(message, len, TRUE, pad->config);
+	syndrome = is_checksum(message, len, TRUE, pad->config);
 #endif
 	return syndrome;
 }
 
-static OtpError otp_uencrypt(gchar** message, struct otp* pad)
+static OtpError encrypt(gchar** message, struct otp* pad)
 /* Encrypt the message  */
 {
 	gsize len = (strlen(*message)+1) * sizeof(gchar);
@@ -589,7 +589,7 @@ static OtpError otp_uencrypt(gchar** message, struct otp* pad)
 #ifdef RNDMSGLEN
 	if (pad->using_protected_pos == FALSE) { /* No random tail for signals */
 		/* get one byte from keyfile for random length */
-		syndrome = otp_get_encryptkey_from_file(rand, pad, 1+1, pad->config);
+		syndrome = get_encryptkey_from_file(rand, pad, 1+1, pad->config);
 		pad->encrypt_start_pos += 1;
 		if ( syndrome > OTP_WARN ) return syndrome;
 		rnd = (guchar)*rand[0]*pad->config->random_msg_tail_max_len/255 
@@ -602,20 +602,20 @@ static OtpError otp_uencrypt(gchar** message, struct otp* pad)
 		len += rnd;
 	}
 #endif
-	syndrome = otp_get_encryptkey_from_file(key, pad, len, pad->config);
+	syndrome = get_encryptkey_from_file(key, pad, len, pad->config);
 	if ( syndrome > OTP_WARN ) return syndrome;
 #ifdef DEBUG_MSG
-	otp_printint(*key,len, "encryptkey", pad->config);
+	printint(*key,len, "encryptkey", pad->config);
 #endif
 
 #ifdef CHECKMSG
-	syndrome = otp_ischecksum(message, len, FALSE, pad->config);
+	syndrome = is_checksum(message, len, FALSE, pad->config);
 #endif
-	otp_xor(message, key, len);
+	xor(message, key, len);
 #ifdef DEBUG_MSG 
-	otp_printint(*message,len, "encrypt-check", pad->config);
+	printint(*message,len, "encrypt-check", pad->config);
 #endif
-	otp_base64_encode(message, len);
+	base64_encode(message, len);
 	return syndrome;
 }
 
@@ -635,12 +635,12 @@ OtpError otp_pad_erase_entropy(struct otp* pad)
 	/* Using up all entropy */
 	OtpError syndrome = OTP_OK;
 	while (syndrome <= OTP_WARN ) {
-		syndrome = otp_get_encryptkey_from_file(key, pad, len, pad->config);
+		syndrome = get_encryptkey_from_file(key, pad, len, pad->config);
 	}
 	syndrome = OTP_OK;
 	len = 1+1;
 	while (syndrome <= OTP_WARN) {
-		syndrome = otp_get_encryptkey_from_file(key, pad, len, pad->config);
+		syndrome = get_encryptkey_from_file(key, pad, len, pad->config);
 	}
 	if (syndrome == OTP_ERR_KEY_EMPTY) syndrome = OTP_OK;
 	return syndrome;
@@ -715,7 +715,7 @@ OtpError otp_encrypt_warning(struct otp* pad, gchar** message, gsize protected_p
 	pad->encrypt_start_pos = pad->position;
 	gchar* old_msg = g_strdup(*message);
 #ifdef UCRYPT
-	syndrome = otp_uencrypt(message, pad);
+	syndrome = encrypt(message, pad);
 	if (syndrome > OTP_WARN) {
 		pad->using_protected_pos = FALSE;
 #ifdef PRINT_ERRORS
@@ -751,7 +751,7 @@ gchar* otp_id_get_from_message(const struct otp_config* config, const gchar *msg
 	}
 	gchar* id_str = g_strdup(m_array[1]);
 	g_strfreev(m_array);
-	if (otp_id_is_valid(id_str) == TRUE) {
+	if (id_is_valid(id_str) == TRUE) {
 		return id_str;
 	} else {
 		g_free(id_str);
@@ -806,16 +806,16 @@ struct otp* otp_pad_create_from_file(
 	g_strfreev(p_array);
 	g_strfreev(f_array);
 
-	if (otp_id_is_valid(pad->id) == FALSE) {
+	if (id_is_valid(pad->id) == FALSE) {
 		otp_pad_destroy(pad);
 		return NULL;
 	}
 
-	if (otp_open_keyfile(pad) > OTP_WARN) return NULL;
+	if (open_keyfile(pad) > OTP_WARN) return NULL;
 
-	pad->position = otp_seek_pos(pad);
-	otp_calc_entropy(pad);
-	otp_close_keyfile(pad);
+	pad->position = seek_pos(pad);
+	calc_entropy(pad);
+	close_keyfile(pad);
 	
 #ifdef DEBUG 
 	g_printf("%s: pad created: %u pads open.\n", config->client_id, config->pad_count);
@@ -845,14 +845,14 @@ OtpError otp_encrypt(struct otp* pad, gchar** message)
 {
 	OtpError syndrome = OTP_OK;
 #ifdef DEBUG_MSG 
-	otp_printint(*message,strlen(*message), "before encrypt", pad->config);
+	printint(*message,strlen(*message), "before encrypt", pad->config);
 #endif
 	if (pad == NULL || message == NULL || *message == NULL) return OTP_ERR_INPUT;
 	pad->using_protected_pos = FALSE;
 	pad->encrypt_start_pos = pad->position;
 	gchar* old_msg = g_strdup(*message);
 #ifdef UCRYPT
-	syndrome = otp_uencrypt(message, pad);
+	syndrome = encrypt(message, pad);
 	if (syndrome > OTP_WARN) {
 #ifdef PRINT_ERRORS
 		g_printf("%s: encrypt failed: %.8X\n",pad->config->client_id, syndrome);
@@ -871,7 +871,7 @@ OtpError otp_encrypt(struct otp* pad, gchar** message)
 	g_free(pos_str);
 	*message = new_msg;
 #ifdef DEBUG_MSG 
-	otp_printint(*message,strlen(*message), "after encrypt", pad->config);
+	printint(*message,strlen(*message), "after encrypt", pad->config);
 #endif
 	g_free(old_msg);
 	return syndrome;
@@ -882,7 +882,7 @@ OtpError otp_decrypt(struct otp* pad, gchar** message)
    returns TRUE if it could decrypt the message  */
 {
 #ifdef DEBUG_MSG 
-	otp_printint(*message, strlen(*message), "before decrypt", pad->config);
+	printint(*message, strlen(*message), "before decrypt", pad->config);
 #endif
 	OtpError syndrome = OTP_OK;
 	if (pad == NULL) return OTP_ERR_INPUT;
@@ -912,7 +912,7 @@ OtpError otp_decrypt(struct otp* pad, gchar** message)
 	g_strfreev(m_array);
 
 #ifdef UCRYPT
-	syndrome = otp_udecrypt(message, pad, decryptpos);
+	syndrome = decrypt(message, pad, decryptpos);
 	if (syndrome > OTP_WARN) {
 #ifdef PRINT_ERRORS
 		g_printf("%s: decrypt failed: %.8X\n",pad->config->client_id, syndrome);
@@ -924,7 +924,7 @@ OtpError otp_decrypt(struct otp* pad, gchar** message)
 #endif
 
 #ifdef DEBUG_MSG 
-	otp_printint(*message,strlen(*message), "after decrypt", pad->config);
+	printint(*message,strlen(*message), "after decrypt", pad->config);
 #endif
 	g_free(old_msg);
 	return syndrome;
@@ -1293,7 +1293,7 @@ void otp_pad_use_less_memory(struct otp* pad)
 #ifdef PRINT_ERRORS
 		g_printf("%s: file and memory map closed.\n", pad->config->client_id);
 #endif
-		otp_close_keyfile(pad);
+		close_keyfile(pad);
 	} else {
 #ifdef PRINT_ERRORS
 		g_printf("%s: this pad has no open file.\n", pad->config->client_id);
