@@ -46,15 +46,12 @@
  * All defines needed for full opt functionality! Regarded
  * as stable. The encryption is worthless without those! */
 
-#define UCRYPT                  /* Encryption and decryption only enabled if defined */
-#define KEYOVERWRITE    /* Overwrite the used key-sequence in the keyfile */
-
 /*  ------------------- Defines (optional) ------------------------
  * These defines give new, additional features. */
 
 #define RNDMSGLEN               /* Add a random-length string onto the message */
 
-#define PRINT_ERRORS
+//#define PRINT_ERRORS
 /* Print errors to the terminal if enabled (Recommanded)*/
 
 /*  ------------------- Defines (in development) ------------------------
@@ -92,13 +89,12 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <unistd.h>
-/* to create directories */
-//#include <dirent.h>
+/* to create directories and for I/O */
+#include <glib/gstdio.h>
 
 /* GNOMElib */
 #include <glib.h>
 #include <glib-object.h>
-#include <glib/gstdio.h>
 
 
 /* The public functions of this library */
@@ -107,10 +103,6 @@
 
 /* Key generation functions*/
 #include "keygen.h"
-
-#if defined PRINT_ERRORS
-#include <stdio.h>
-#endif
 
 /* ------------------- Private data structures -------------------- */
 
@@ -148,14 +140,12 @@ struct otp_config {
 };
 
 /*  ----------------- Marshal function definition ------------ */
-void otp_marshal_VOID__DOUBLE_PAD (GClosure     *closure,
-                                        GValue       *return_value,
-                                        guint         n_param_values,
-                                        const GValue *param_values,
-                                        gpointer      invocation_hint,
-                                        gpointer      marshal_data);
-                                        
-                                        
+// TODO: what does it do exactly?
+void otp_marshal_VOID__DOUBLE_PAD (GClosure *closure,
+		GValue *return_value, guint n_param_values,
+		const GValue *param_values, gpointer invocation_hint,
+		gpointer marshal_data);
+
 /*  ----------------- Private Functions of the Library------------ */
 
 static void xor(gchar** message, gchar** key, gsize len)
@@ -378,7 +368,6 @@ static OtpError get_encryptkey_from_file(gchar** key, struct otp* pad,
 #ifdef CHECKKEY
 	/* TODO v0.3: What should i do if the key is rejected?
 	 * ATM it just fails and destroys the keyblock.*/
-#ifdef KEYOVERWRITE
 	if ((key_is_random(key, len-1, config) == FALSE) && (pad->using_protected_pos == FALSE)) {
 		syndrome = syndrome | OTP_WARN_KEY_NOT_RANDOM;
 		/* not using protected entropy, make the used key unusable
@@ -389,15 +378,12 @@ static OtpError get_encryptkey_from_file(gchar** key, struct otp* pad,
 		return syndrome;
 	}
 #endif
-#endif
 	if (pad->using_protected_pos == FALSE) {
-#ifdef KEYOVERWRITE
 		/* Make the used key unusable in the keyfile unless the entropy
 		 * is protected */
 		for (i = 0; i < (len - 1); i++) {
 			datpos[i] = PAD_EMPTYCHAR;
 		}
-#endif
 	/* In all cases where the protected entropy is not used */
 		pad->position = pad->position + len -1;
 	}
@@ -559,8 +545,6 @@ static OtpError decrypt(gchar** message, struct otp* pad, gsize decryptpos)
 	if (syndrome > OTP_WARN) return syndrome;
 #ifdef DEBUG_MSG
 	printint(*message, len, "before decrypt", pad->config);
-#endif
-#ifdef DEBUG_MSG
 	printint(*key, len, "decryptkey", pad->config);
 #endif
 	xor(message, key, len);
@@ -678,7 +662,7 @@ OtpError otp_generate_key_pair(struct otp_config *config,
 	for(i = 0; i < 10; i++) {	
 		/* create filenames with the correct path*/
 		id = keygen_id_get();
-	
+	// TODO
 		alice_file = (gchar *)g_strdup_printf("%s%s%s%s%s%s%.8X.entropy", 
 				otp_conf_get_path(config), PATH_DELI,
 				alice, FILE_DELI, bob, FILE_DELI, id);
@@ -714,7 +698,6 @@ OtpError otp_encrypt_warning(struct otp* pad, gchar** message, gsize protected_p
 	pad->position = pad->filesize/2-OTP_PROTECTED_ENTROPY-protected_pos;
 	pad->encrypt_start_pos = pad->position;
 	gchar* old_msg = g_strdup(*message);
-#ifdef UCRYPT
 	syndrome = encrypt(message, pad);
 	if (syndrome > OTP_WARN) {
 		pad->using_protected_pos = FALSE;
@@ -725,7 +708,6 @@ OtpError otp_encrypt_warning(struct otp* pad, gchar** message, gsize protected_p
 		*message = old_msg;
 		return syndrome;
 	}
-#endif
 	/* Our position in the pad */
 	gchar* pos_str = g_strdup_printf("%" G_GSIZE_FORMAT "", pad->encrypt_start_pos);
 	/*Something like "3EF9|34EF4588|M+Rla2w=" */
@@ -851,7 +833,6 @@ OtpError otp_encrypt(struct otp* pad, gchar** message)
 	pad->using_protected_pos = FALSE;
 	pad->encrypt_start_pos = pad->position;
 	gchar* old_msg = g_strdup(*message);
-#ifdef UCRYPT
 	syndrome = encrypt(message, pad);
 	if (syndrome > OTP_WARN) {
 #ifdef PRINT_ERRORS
@@ -861,7 +842,6 @@ OtpError otp_encrypt(struct otp* pad, gchar** message)
 		*message = old_msg;
 		return syndrome;
 	}
-#endif
 
 	/* Our position in the pad*/
 	gchar* pos_str = g_strdup_printf("%" G_GSIZE_FORMAT "", pad->encrypt_start_pos);
@@ -911,7 +891,6 @@ OtpError otp_decrypt(struct otp* pad, gchar** message)
 	*message = new_msg;
 	g_strfreev(m_array);
 
-#ifdef UCRYPT
 	syndrome = decrypt(message, pad, decryptpos);
 	if (syndrome > OTP_WARN) {
 #ifdef PRINT_ERRORS
@@ -921,7 +900,6 @@ OtpError otp_decrypt(struct otp* pad, gchar** message)
 		*message = old_msg;
 		return syndrome;
 	}
-#endif
 
 #ifdef DEBUG_MSG 
 	printint(*message,strlen(*message), "after decrypt", pad->config);
@@ -1310,18 +1288,16 @@ OtpError otp_signal_connect(struct otp_config* config, gchar *signal_name, gpoin
 	return OTP_OK;
 }
 
-void otp_marshal_VOID__DOUBLE_PAD (GClosure     *closure,
-									GValue       *return_value,
-									guint         n_param_values,
-									const GValue *param_values,
-									gpointer      invocation_hint,
-									gpointer      marshal_data)
+void otp_marshal_VOID__DOUBLE_PAD (GClosure *closure,
+		GValue *return_value, guint n_param_values,
+		const GValue *param_values, gpointer invocation_hint,
+		gpointer marshal_data)
 /* Marshal function for double, struct otp transmission with signal */	
 {
-	typedef void (*GMarshalFunc_VOID__DOUBLE_PAD) (gpointer     data1,  	/* pointer on Object */
-													double       arg_1, 	/* First Argument */
-													struct otp*  arg_2, 	/* Second Argument */
-													gpointer     data2); 	/*  Pointer on User Data*/
+	typedef void (*GMarshalFunc_VOID__DOUBLE_PAD) (gpointer data1,  	/* pointer on Object */
+													double arg_1, 	/* First Argument */
+													struct otp* arg_2, 	/* Second Argument */
+													gpointer data2); 	/*  Pointer on User Data*/
 	/* local variables */
 	GMarshalFunc_VOID__DOUBLE_PAD callback;
 	GCClosure *cc = (GCClosure*) closure;
