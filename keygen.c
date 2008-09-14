@@ -329,7 +329,7 @@ OtpError keygen_keys_generate(char *alice_file, char *bob_file,
 */
 {
 	KeyData *key_data;
-	gchar *tmp_file;
+	gchar *tmp_file, *alice_base, *bob_base;
 	
 	if(alice_file == NULL || bob_file == NULL || config == NULL) {
 		g_printerr("input NULL\n");
@@ -347,9 +347,11 @@ OtpError keygen_keys_generate(char *alice_file, char *bob_file,
 	key_data = (KeyData *)g_malloc0(sizeof(KeyData));	
 	key_data->config = (struct otp_config *)config;
 	key_data->alice = g_strdup(alice_file);
-
-	if(g_strcmp0(g_path_get_basename(alice_file), g_path_get_basename(bob_file))) {
-		// FIXME: leak?
+	
+	alice_base = g_path_get_basename(alice_file);
+	bob_base = g_path_get_basename(bob_file);
+	
+	if(g_strcmp0(alice_base, bob_base)) {
 		key_data->bob = g_strdup(bob_file);
 		key_data->size = size;
 		key_data->is_loopkey = FALSE;
@@ -358,6 +360,9 @@ OtpError keygen_keys_generate(char *alice_file, char *bob_file,
 		key_data->size = size / 2;
 		key_data-> is_loopkey = TRUE;
 	}
+	g_free(alice_base);
+	g_free(bob_base);
+	
 	key_data->keysize = key_data->size;
 	key_data->src = g_strdup(entropy_source);
 	key_data->entropy_pool = (gchar *)g_malloc0(POOLSIZE*sizeof(gchar));
@@ -372,11 +377,14 @@ OtpError keygen_keys_generate(char *alice_file, char *bob_file,
 	key_data->keygen_mutex = g_mutex_new();
 	
 	/* Try to create alice file */
-	tmp_file = g_strdup_printf("%s%s%s", g_get_tmp_dir(), G_DIR_SEPARATOR_S, g_path_get_basename(key_data->alice));
-	// FIXME: Leak and use g_strconcat
+	alice_base = g_path_get_basename(key_data->alice);
+	tmp_file = g_strconcat(g_get_tmp_dir(), G_DIR_SEPARATOR_S, alice_base, NULL);
+
 	key_data->fp_alice = (GOutputStream *)g_file_create(g_file_new_for_commandline_arg(tmp_file), 
 															G_FILE_CREATE_PRIVATE, NULL, NULL);
 	g_free(tmp_file);
+	g_free(alice_base);
+	
 	if(key_data->fp_alice == NULL) {
 		free_key_data(key_data);
 		return OTP_ERR_FILE_EXISTS;
@@ -409,7 +417,7 @@ static gpointer keygen_main_thread(gpointer data)
 {
 	KeyData *key_data;
 	struct otp *pad;
-	gchar *tmp_file, *bob_file;
+	gchar *tmp_file, *bob_file, *alice_base;
 	GFile *source;
 	GFileInfo *info;
 	gsize size;
@@ -466,9 +474,9 @@ static gpointer keygen_main_thread(gpointer data)
 	}
 	
 	if(!error) {
-		tmp_file = g_strdup_printf("%s%s%s", g_get_tmp_dir(), G_DIR_SEPARATOR_S, 
-				g_path_get_basename(key_data->alice));
-				//FIXME: leak! and use g_strconcat
+		alice_base = g_path_get_basename(key_data->alice);
+		tmp_file = g_strconcat(g_get_tmp_dir(), G_DIR_SEPARATOR_S, alice_base, NULL);
+
 		if(key_data->is_loopkey) {
 			bob_file = tmp_file;
 		} else {
@@ -480,12 +488,15 @@ static gpointer keygen_main_thread(gpointer data)
 			g_file_move(g_file_new_for_commandline_arg(tmp_file), 
 						g_file_new_for_commandline_arg(key_data->alice), 
 						G_FILE_COPY_NONE, NULL, NULL, NULL, &err);
-			g_printerr("error while moving file: %s\n", err->message);
-			g_error_free(err);
+			if(err != NULL) {
+				g_printerr("error while moving file: %s\n", err->message);
+				g_error_free(err);
+			}
 			pad = keygen_get_pad(key_data);
 			g_signal_emit_by_name(G_OBJECT(otp_conf_get_trigger(key_data->config)), SIGNALNAME, 100.0, pad);
 		}
 		g_free(tmp_file);
+		g_free(alice_base);
 	} else g_printerr("error!!!\n");
 
 	otp_conf_decrement_number_of_keys_in_production(key_data->config);
