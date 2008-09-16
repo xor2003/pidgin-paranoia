@@ -43,7 +43,9 @@ Ideas
  * Pass controle messages over invisible conversations. Needs changes in purple.
 
 Known bugs
- * there are some anomalies if both set /otp off and one user tries to reenable
- * Sometimes the first "Encryption enabled." message gets lost due to timing problems
+ * There are some anomalies if both set /otp off and one user tries to reenable.
  * Finch eats our <otp> markers.
+ * Sometimes the first "Encryption enabled." message gets lost due to timing problems. (still an issiu?)
+ * If you use the history plugin, the 'encryption enabled' messages are placed 
+   above the history (pidgin/history.so). (wontfix)
  
