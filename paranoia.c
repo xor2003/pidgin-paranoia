@@ -51,6 +51,7 @@
 #define USEDESKTOP
 
 /* ----------------- General Paranoia Stuff ------------------ */
+#define PARANOIA_HEADER_MARKER "***"
 #define PARANOIA_HEADER "*** Encrypted with the Pidgin-Paranoia plugin: "
 #define PARANOIA_REQUEST "*** Request for conversation with the Pidgin-\
 Paranoia plugin (%s): I'm paranoid, please download the One-Time Pad \
@@ -96,11 +97,14 @@ static void par_add_header(char** message)
 static gboolean par_has_header(char** message)
 /* checks for a paranoia header and removes it if found */
 {
-	if (g_str_has_prefix(*message, PARANOIA_HEADER)) {
-		char* new_msg = g_strdup(*message + strlen(PARANOIA_HEADER));
-		g_free(*message);
-		*message = new_msg;
-		return TRUE;	
+	/* cheap check for optimisation */
+	if (g_str_has_prefix(*message, PARANOIA_HEADER_MARKER)) {
+		if (g_str_has_prefix(*message, PARANOIA_HEADER)) {
+			char* new_msg = g_strdup(*message + strlen(PARANOIA_HEADER));
+			g_free(*message);
+			*message = new_msg;
+			return TRUE;	
+		}
 	}
 	return FALSE;
 }
@@ -324,6 +328,7 @@ static gboolean par_session_check_req(const char* alice, const char* bob,
 						PURPLE_MESSAGE_NO_LOG, time(NULL));
 				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "REQUEST checked: otp_enabled = TRUE.\n");
 				/* Send an ACK message to confirm */
+				/* There are cases where send an encrypted request and an ACK */
 				purple_timeout_add_seconds(1, (GSourceFunc)par_session_ack_timeout, 
 						(gpointer)temp_key);
 			}
