@@ -10,6 +10,8 @@ Simon Wenner:
  * Paranoia: A pop-up at the end and status messages while generating new keys
  * Paranoia: '/otp reload' command added to regenerate the key list
  * Pranopia: key generator live status feedback
+ * Paranoia: enhanced session management: ACK message is sent on request
+  - Compatible with 0.2 by accident :-)
 
 Christian Wäckerlin:
  * libotp: Added CRC32 test to ensure that the messages are unmodified.
