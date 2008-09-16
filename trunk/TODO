@@ -16,11 +16,14 @@ Version 0.3
 Version 0.4
 ============
  	paranoia
- 	 * enhanced session management (auto ack)
- 	 	without threads, maybe through invisible conversations,
- 	 	needs changes in libpurple
-	 * send entropy warnings (inside messages?)
+	 * send entropy warnings (delayed with a timer)
  	 * gettext support (translations)
+ 	 
+Version 0.5
+============
+ 	paranoia
+ 	 * No pop-up at the beginning of a conversation
+ 	 	maybe through invisible conversations, needs changes in libpurple
 	 * optimize key list (hashtables)
 
 Version 1.0

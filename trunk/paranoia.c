@@ -58,7 +58,7 @@ plugin (%s) to communicate encrypted."
 #define PARANOIA_REQUEST_LEN 60
 #define PARANOIA_STATUS "&lt;otp&gt; "
 
-#define PARANOIA_ACK "%!()!%paranoia ack" // not used atm
+#define PARANOIA_ACK "%!()!%paranoia ack"
 #define PARANOIA_EXIT "%!()!%paranoia exit"
 #define PARANOIA_START "%!()!%paranoia start"
 #define PARANOIA_STOP "%!()!%paranoia stop"
@@ -241,17 +241,16 @@ static gboolean par_session_send_request(const char* my_acc_name,
 	return TRUE;
 }
 
-/*
-// sends an otp acknowledge message
-void par_session_ack(PurpleConversation *conv) {
 
-	// send PARANOIA_ACK
+/* sends an otp acknowledge message */
+static void par_session_send_ack(PurpleConversation *conv) 
+{
 
 	purple_conv_im_send_with_flags (PURPLE_CONV_IM(conv), PARANOIA_ACK, 
 		PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_RAW);
 
 	return;
-} */
+}
 
 
 static void par_session_send_close(PurpleConversation *conv)
@@ -262,6 +261,20 @@ static void par_session_send_close(PurpleConversation *conv)
 			PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_RAW);
 
 	return;
+}
+
+static gboolean par_session_ack_timeout(gpointer a_key)
+/* timout handler to send delayed ACK messages */
+{
+	struct key *my_key = (struct key *)a_key;
+	
+	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "The ACK timeout passed.\n");
+	if (my_key->conv) {
+		par_session_send_ack(my_key->conv);
+		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "ACK message sent.\n");
+	}
+	
+	return FALSE;
 }
 
 static gboolean par_session_check_req(const char* alice, const char* bob, 
@@ -310,6 +323,9 @@ static gboolean par_session_check_req(const char* alice, const char* bob,
 						"Encryption enabled.", 
 						PURPLE_MESSAGE_NO_LOG, time(NULL));
 				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "REQUEST checked: otp_enabled = TRUE.\n");
+				/* Send an ACK message to confirm */
+				purple_timeout_add_seconds(1, (GSourceFunc)par_session_ack_timeout, 
+						(gpointer)temp_key);
 			}
 		} else {
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "REQUEST failed! No key available.\n");
@@ -330,20 +346,22 @@ static gboolean par_session_check_msg(struct key* used_key,
 	if (!g_str_has_prefix(*message_decrypted, PARANOIA_PREFIX)) {
 		return FALSE;
 	}
-	/*
-	if(g_strcmp0(*message_decrypted, PARANOIA_ACK) == 0) {
-		// TODO: move ACK inside the first sent message
-		used_key->opt->has_plugin = TRUE;
+	/* check ACK, START, STOP, EXIT and NO_ENTROPY */
+	if (g_strcmp0(*message_decrypted, PARANOIA_ACK) == 0) {
+		used_key->opt->active = TRUE;
+		used_key->opt->handshake_done = TRUE;
 		if(used_key->opt->auto_enable) {
 			used_key->opt->otp_enabled = TRUE;
 			purple_conversation_write(conv, NULL, 
-				"Encryption enabled.", 
-				PURPLE_MESSAGE_NO_LOG, time(NULL));
-			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "PARANOIA_ACK detected! otp_enabled=TRUE \n");
+					"Encryption enabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+					"PARANOIA_ACK detected! otp_enabled=TRUE\n");
+		} else {
+			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+					"PARANOIA_ACK detected!\n");	
 		}
 		return TRUE;
-	} */
-	/* check START, STOP, EXIT and NO_ENTROPY */
+	}
 	if (g_strcmp0(*message_decrypted, PARANOIA_EXIT) == 0) {
 		used_key->opt->otp_enabled = FALSE;
 		purple_conversation_write(conv, NULL, 
@@ -1026,7 +1044,7 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 			if (syndrome != OTP_OK) {
 				purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
 						"Message decrypted but there is a warning! %.8X\n", syndrome);
-				//TODO: Warn the user?
+				// TODO: Warn the user?
 			}
 			if (syndrome == OTP_WARN_MSG_CHECK_COMPAT) {
 				purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
@@ -1053,8 +1071,6 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Key Activated! active and handshake_done are now TRUE;\n");
 		}
 
-		// TODO: detect ACK message
-
 		/* (Auto) enable the encryption? */
 		if (!used_key->opt->otp_enabled && used_key->opt->auto_enable) {
 			used_key->opt->otp_enabled = TRUE;
@@ -1062,7 +1078,7 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 					"Encryption enabled.", 
 					PURPLE_MESSAGE_NO_LOG, time(NULL));
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "This conversation was already initialized! otp_enabled is now TRUE\n");
-			/* detect REQUEST; needed for a auto-init */
+			/* detect REQUEST; needed for a auto-init (was encryptet, TODO: maybe replaceble with ACK) */
 			if(g_ascii_strncasecmp(*message, PARANOIA_REQUEST, PARANOIA_REQUEST_LEN) == 0) {
 				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "He sends us an encrypted REQUEST message. otp_enabled is now TRUE\n");
 				return TRUE;
@@ -1124,8 +1140,7 @@ static void par_im_msg_sending(PurpleAccount *account,
 						"All your entropy has been used. Encryption disabled. "
 						"The last Message could not be sent.", 
 						PURPLE_MESSAGE_NO_LOG, time(NULL));
-				// TODO: display the message in the msg too
-				// 	     and hide the real one
+				// TODO: display the message in the msg too and hide the real one
 				/* delete the remaining entropy */
 				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 						"You have not enough entropy! no_entropy = TRUE\n");
@@ -1160,7 +1175,7 @@ static void par_im_msg_sending(PurpleAccount *account,
 				par_add_header(message);
 				return;
 			} else {
-				// TODO: send an entropy warning (inside the real msg)
+				// TODO: send an entropy warning (with timer)
 				char *warning_msg = g_strdup_printf (
 						"Your entropy is low! %" G_GSIZE_FORMAT " bytes left.",
 						otp_pad_get_entropy(used_key->pad));
@@ -1355,7 +1370,7 @@ gboolean plugin_unload(PurplePlugin *plugin)
 {
 	/* send PARANOIA_EXIT to all open conversations */
 	struct key* key_ptr = klist->head;
-	while (key_ptr != NULL) {
+	while (key_ptr != NULL) { // keylist violation
 		if (key_ptr->conv != NULL) {
 			par_session_send_close(key_ptr->conv);
 		}
