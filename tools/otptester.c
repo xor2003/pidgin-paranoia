@@ -64,26 +64,28 @@ struct otp* decryptpad = NULL;
 /* Signal */
 static void keygen_update_status(GObject *my_object, gdouble percent, struct otp* a_pad)
 {
-	if (a_pad != NULL) {
-		if (results) g_printf(" + %5.2f percent of the key done\n", percent);
-		if (encryptpad != NULL) otp_pad_destroy(encryptpad);
-		encryptpad = a_pad;
-		if (*pbobfile != NULL) g_free(*pbobfile);
-		*pbobfile = g_strconcat(otp_pad_get_dest(encryptpad), FILE_DELI, otp_pad_get_src(encryptpad), FILE_DELI, otp_pad_get_id(encryptpad), FILE_SUFFIX_DELI, FILE_SUFFIX, NULL);
-		gchar *fullbobfile = g_strconcat(otp_conf_get_export_path(config), PATH_DELI, *pbobfile, NULL);
-		gchar *newbobfile = g_strconcat(otp_conf_get_path(config), PATH_DELI,  *pbobfile, NULL);
-		g_printf("%s %s\n", fullbobfile, newbobfile);
-		g_rename(fullbobfile, newbobfile);
-		g_free(fullbobfile);
-		g_free(newbobfile);
-	} else {
-		if ( verbose )
-			g_printf(" * Keygen                : '%f'\n", percent);
-		}
-		if ( percent >= 100.0 ) {
-			usleep(1000*1000);
+	if (results) 
+		g_printf(" + %5.0f/%u bytes (%5.2f %%) of the key done\n", percent*genkeysize/100, genkeysize, percent);
+	else
+		if (verbose) 
+			g_printf(" * %5.2f percent of the key done\n", percent);
+
+	if ( percent >= 100.0 ) {
+
+		if (a_pad != NULL) {
+			if (encryptpad != NULL) otp_pad_destroy(encryptpad);
+			encryptpad = a_pad;
+			if (*pbobfile != NULL) g_free(*pbobfile);
+			*pbobfile = g_strconcat(otp_pad_get_dest(encryptpad), FILE_DELI, otp_pad_get_src(encryptpad), FILE_DELI, otp_pad_get_id(encryptpad), FILE_SUFFIX_DELI, FILE_SUFFIX, NULL);
+			gchar *fullbobfile = g_strconcat(otp_conf_get_export_path(config), PATH_DELI, *pbobfile, NULL);
+			gchar *newbobfile = g_strconcat(otp_conf_get_path(config), PATH_DELI,  *pbobfile, NULL);
+			g_printf("%s %s\n", fullbobfile, newbobfile);
+			g_rename(fullbobfile, newbobfile);
+			g_free(fullbobfile);
+			g_free(newbobfile);
 			block_genkey = FALSE;
 		}
+	}
 	return;
 }
 
@@ -136,7 +138,7 @@ OtpError genkey()
 		if ( verbose && syndrome >  OTP_OK) 
 				g_printf(" * Syndrome             : %.8X\n",syndrome);
 				
-	while (block_genkey) usleep(10000);
+	while (block_genkey) usleep(1000*100);
 
 	block_genkey = TRUE;
 	
