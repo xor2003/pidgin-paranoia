@@ -353,10 +353,9 @@ static gboolean par_session_check_msg(struct key* used_key,
 	}
 	/* check ACK, START, STOP, EXIT and NO_ENTROPY */
 	if (g_strcmp0(*message_decrypted, PARANOIA_ACK) == 0) {
-		used_key->opt->active = TRUE;
-		used_key->opt->handshake_done = TRUE;
-		if(used_key->opt->auto_enable) {
+		if(used_key->opt->auto_enable && !used_key->opt->handshake_done) {
 			used_key->opt->otp_enabled = TRUE;
+			used_key->opt->handshake_done = TRUE;
 			purple_conversation_write(conv, NULL, 
 					"Encryption enabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
@@ -365,6 +364,7 @@ static gboolean par_session_check_msg(struct key* used_key,
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 					"PARANOIA_ACK detected!\n");	
 		}
+		used_key->opt->active = TRUE;
 		return TRUE;
 	}
 	if (g_strcmp0(*message_decrypted, PARANOIA_EXIT) == 0) {
