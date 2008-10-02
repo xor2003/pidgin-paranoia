@@ -197,7 +197,7 @@ static gboolean par_keygen_poll_result(void* data)
 					PURPLE_MESSAGE_NO_LOG, time(NULL));
 			} else {
 				/* show a nice pop-up */
-				msg = g_strdup_printf("%s->%s (%s), %i Bytes\n\n"
+				msg = g_strdup_printf("%s->%s (%s), %" G_GSIZE_FORMAT " Bytes\n\n"
 						"Your own key is stored in the directory '~/.paranoia'.\n"
 						"Your buddy's key is stored on your desktop. "
 						"Please send this key in a secure way to your partner.",
