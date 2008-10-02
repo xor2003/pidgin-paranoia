@@ -3,7 +3,7 @@
 --------------------------------------------------------------------------------
 This file explains how to install pidgin-paranoia.
 
-This procedure was tested on Debian Testing (amd64/i386) and Ubuntu 7.10 (i386).
+This procedure was tested on Debian Lenny (amd64/i386) and Ubuntu 8.04 (i386).
 
 If you use Debian or a Debian derivate like Ubuntu, you can use the debian packages.
 If you want, you can build the package using the debian/ directory in SVN (see HACKING).
@@ -19,7 +19,7 @@ Comments:
  * To save time it is recommended to read the whole text first and to install 
    everything at once.
 
- * The plugin requires libpurple >= 2.2.0 and libglib >= 2.12.
+ * The plugin requires libpurple >= 2.2.0 and libglib >= 2.14.
 
  * The installation should work with other distributions (and maybe even on other OS)
    You just need to find out the names of the required tools and you need to
@@ -36,7 +36,7 @@ Comments:
 2: Install the tools needed to compile Pidgin-paranoia:
 
   2.1: Install compilers and stuff:
-    # aptitude install build-essential
+    # aptitude install build-essential automake libtool
 
   2.2: Install the headers for libpurple and gnomelib:
     # aptitude install libpurple-dev libglib2.0-dev
