@@ -340,7 +340,14 @@ OtpError keygen_keys_generate(char *alice_file, char *bob_file,
 	/* Check if file already exists */
 	if(g_file_query_exists(g_file_new_for_commandline_arg(alice_file), NULL)) {
 		g_printerr("file already exists!\n");
+		otp_conf_decrement_number_of_keys_in_production(config);
 		return OTP_ERR_FILE_EXISTS;
+	}
+
+	if(entropy_source != NULL && !g_file_query_exists(g_file_new_for_commandline_arg(entropy_source), NULL)) {
+		g_printerr("Source doesn't exist\n");
+		otp_conf_decrement_number_of_keys_in_production(config);
+		return OTP_ERR_KEYGEN_ERROR1;
 	}
 
 	/* fill key_data struct */
