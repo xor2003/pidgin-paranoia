@@ -197,7 +197,7 @@ static gboolean par_keygen_poll_result(void* data)
 					PURPLE_MESSAGE_NO_LOG, time(NULL));
 			} else {
 				/* show a nice pop-up */
-				msg = g_strdup_printf("%s->%s (%s), %" G_GSIZE_FORMAT " Bytes\n\n"
+				msg = g_strdup_printf("%s->%s (%s), %" G_GSIZE_FORMAT " bytes\n\n"
 						"Your own key is stored in the directory '~/.paranoia'.\n"
 						"Your buddy's key is stored on your desktop. "
 						"Please send this key in a secure way to your partner.",
@@ -424,7 +424,7 @@ static gboolean par_session_check_msg(struct key* used_key,
 }
 
 static void par_session_reset_conv(PurpleConversation *conv)
-/* searches all pointer to conf and resets them to NULL */
+/* searches all pointers to conversations and resets them to NULL */
 {	
 	struct key* tmp_ptr = klist->head;
 
@@ -447,7 +447,8 @@ PurpleCmdId par_cmd_id;
 /otp genkey &lt;size&gt; &lt;external entropy \
 source&gt;: generates a key pair of &lt;size&gt; kiB\n\
 /otp on: tries to enable the encryption\n\
-/otp off: disables the encryption\n/otp info: shows details about the used key\n\
+/otp off: disables the encryption\n\
+/otp info: shows details about the used key\n\
 /otp list: shows all keys for this conversation\n\
 /otp list-all: shows all available keys\n\
 /otp reload: reloads all your key files"
@@ -701,7 +702,7 @@ static void par_cli_init_keygen(PurpleConversation* conv, int size, gchar** para
 					"Generation of two entropy files of %ikiB size started.\n", size);
 		} else {
 			purple_conversation_write(conv, NULL,
-					"There was a warning issued!\n",
+					"There was a warning issued!\n", //TODO: wtf?
 					PURPLE_MESSAGE_NO_LOG, time(NULL));
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 					"Generation of two entropy files of %ikiB size started with a warning! %.8X\n",
@@ -775,7 +776,7 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 		int old_count = par_keylist_count_keys(klist);
 		par_keylist_reload(otp_conf, klist);
 		char* msg = g_strdup_printf("Key list regenerated. Number of available "
-					"keys: old %i, new %i.",
+					"keys: old %i, new %i.", // TODO: show added/removed number of keys
 					old_count, par_keylist_count_keys(klist));
 		purple_conversation_write(conv, NULL, msg, 
 					PURPLE_MESSAGE_NO_LOG, time(NULL));
@@ -802,7 +803,7 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 		}
 		if (size <= 0) {
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-					"The size value is not a positive int!\n");
+					"The size value is not a positive integer!\n");
 			g_strfreev(param_array);
 			par_cli_set_default_error(error);
 			return PURPLE_CMD_RET_FAILED;
@@ -1039,7 +1040,7 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 		syndrome = otp_decrypt(used_key->pad, message);
 		if (syndrome > OTP_WARN) {
 			purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
-					"Could not decrypt the message! That's a serious error! %.8X\n", syndrome);
+					"Could not decrypt the message! This is a serious error! %.8X\n", syndrome);
 			/* notify the user */
 			*flags = *flags | PURPLE_MESSAGE_ERROR;
 			g_free(*message);
@@ -1048,7 +1049,7 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 		} else {
 			if (syndrome != OTP_OK) {
 				purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
-						"Message decrypted but there is a warning! %.8X\n", syndrome);
+						"Message decrypted but there was a warning! %.8X\n", syndrome);
 				// TODO: Warn the user?
 			}
 			if (syndrome == OTP_WARN_MSG_CHECK_COMPAT) {
@@ -1158,7 +1159,7 @@ static void par_im_msg_sending(PurpleAccount *account,
 								"Warning erasing entropy! %.8X\n", syndrome);
 					} else {
 						purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-								"Error erasing entropy! %.8X\n", syndrome);
+								"Error while erasing entropy! %.8X\n", syndrome);
 					}
 				}
 				/* delete message and send no entropy msg */
@@ -1168,12 +1169,12 @@ static void par_im_msg_sending(PurpleAccount *account,
 				syndrome = otp_encrypt_warning(used_key->pad, message, 0);
 				if (syndrome > OTP_WARN) {
 					purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
-							"Could not send an entropy warning. That's a serious error! %.8X\n", syndrome);
+							"Could not send an entropy warning. This is a serious error! %.8X\n", syndrome);
 				// TODO: notify the user?
 				} else {
 					if (syndrome != OTP_OK) {
 						purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
-								"Entropy warning sent but there is a warning! %.8X\n", syndrome);
+								"Entropy warning sent but there was a warning! %.8X\n", syndrome);
 					}
 				}
 				
@@ -1200,7 +1201,7 @@ static void par_im_msg_sending(PurpleAccount *account,
 		syndrome = otp_encrypt(used_key->pad, message);
 		if (syndrome > OTP_WARN) {
 			purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
-					"Could not encrypt the message. That's a serious error! %.8X\n", syndrome);
+					"Could not encrypt the message. This is a serious error! %.8X\n", syndrome);
 			/* notify the user */
 			purple_conversation_write(used_key->conv, NULL, 
 						"The last outgoing message could not be encrypted. "
@@ -1210,7 +1211,7 @@ static void par_im_msg_sending(PurpleAccount *account,
 		} else {
 			if (syndrome != OTP_OK) {
 				purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
-						"Message encrypted but there is a warning! %.8X\n", syndrome);
+						"Message encrypted but there was a warning! %.8X\n", syndrome);
 			}
 		}
 #endif
