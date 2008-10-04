@@ -45,7 +45,7 @@ Ideas
 Known bugs
  * There are some anomalies if both set /otp off and one user tries to reenable.
  * Finch eats our <otp> markers.
- * Sometimes the first "Encryption enabled." message gets lost due to timing problems. (still an issiu?)
+ * If your system has no audio device, key generation can take much longer.
  * If you use the history plugin, the 'encryption enabled' messages are placed 
    above the history (pidgin/history.so). (wontfix)
  
