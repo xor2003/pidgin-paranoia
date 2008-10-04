@@ -21,13 +21,14 @@ Please read the file INSTALL.
 
 3. General advices
 --------------------------------------------------------------------------------
-TODO: update it for 0.3
 
 Plase note that when not correctly used, many things can go wrong.
 Keeping your keyfiles secret and using good entropy-sources will help!
-Maybe /dev/urandom is not the best choice but /dev/random is way to slow ...
-Read "INFO" for detailed information how the encryption and decryption
-exactly works.
+If you do not pass any source argument to the '/otp genkey' command, the 
+internal keygenerator will be used. This entropy source should be sufficiant, 
+but if you habe a better entropy source use it instead. Do not use /dev/urandom.
+Read "INFO" for detailed information about the internal keygenerator and how 
+the encryption and decryption exactly works.
 
 4. Command line interface in pidgin
 --------------------------------------------------------------------------------
