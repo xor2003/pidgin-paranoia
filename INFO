@@ -82,9 +82,9 @@ A string formed like "3234|34EF4588|M+Rla2w=" is transmitted.
 To prevent the adversary from knowing the exact length of the message, a random
 length tail of \0-bytes is added and encrypted.
 To know that the message has not been modified (by the adversary or due to some 
-other reason like some server truncating long messages), a CRC32 checksum is written 
-into the \0-tail at position 1-4 (4 bytes unsigned integer, little endian). The user
-gets a warning if the checksum is not correct.
+other reason like some server truncating long messages), a CRC32 checksum is 
+written into the \0-tail at position 1-4 (4 bytes unsigned integer, 
+little endian). The user gets a warning if the checksum is not correct.
 
 
 2.3 Decryption:
@@ -141,6 +141,7 @@ audio device:	Entropy is taken from the /dev/audio device and antibiased with
 		the improved newman algorithm to improve the quality of the entropy.
 		It is recommended to play some music during the key generation 
 		process to improve the entropy quality.
+
 /dev/random:	Entropy is taken from the /dev/random device and mixed into the
 		entropy pool.
 
