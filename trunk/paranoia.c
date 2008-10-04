@@ -384,7 +384,7 @@ static gboolean par_session_check_msg(struct key* used_key,
 					PURPLE_MESSAGE_NO_LOG, time(NULL));
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 					"PARANOIA_START detected. otp_enabled = TRUE\n");
-			/* if the other sider has an active key and we don't (FIXME maybe removeable in 0.3) */
+			/* if the other sider has an active key and we don't (FIXME maybe removeable in 0.4) */
 			if (!used_key->opt->active) {
 				used_key->opt->active = TRUE;
 			}
@@ -568,26 +568,41 @@ static void par_cli_show_key_details(PurpleConversation *conv)
 	char* disp_string = NULL;
 
 	if(used_key != NULL) {
-		disp_string = g_strdup_printf("There %s %i %s available for this"
-				" conversation.\nCurrently active key infos:\nSource:\t\t%s\n"
-				"Destination:\t%s\nID:\t\t\t%s\nSize:\t\t\t%" G_GSIZE_FORMAT 
-				"\nPosition:\t\t%" G_GSIZE_FORMAT "\n"
-				"Entropy:\t\t%" G_GSIZE_FORMAT "\n"
-				"OTP enabled:\t%i\nAuto enable:\t%i\nNo entropy:\t%i", 
-				num == 1 ? "is" : "are",
-				num,
-				num == 1 ? "key" : "keys",
-				otp_pad_get_src(used_key->pad), otp_pad_get_dest(used_key->pad), 
-				otp_pad_get_id(used_key->pad), 
-				otp_pad_get_filesize(used_key->pad), 
-				otp_pad_get_position(used_key->pad), 
-				otp_pad_get_entropy(used_key->pad), 
-				used_key->opt->otp_enabled, used_key->opt->auto_enable, 
-				used_key->opt->no_entropy); //FIXME: it's redundant!
+		if (num == 1) {
+			disp_string = g_strdup_printf("There is %i key available for this"
+					" conversation.\nCurrently active key infos:\nSource:\t\t%s\n"
+					"Destination:\t%s\nID:\t\t\t%s\nSize:\t\t\t%" G_GSIZE_FORMAT 
+					"\nPosition:\t\t%" G_GSIZE_FORMAT "\n"
+					"Entropy:\t\t%" G_GSIZE_FORMAT "\n"
+					"OTP enabled:\t%i\nAuto enable:\t%i\nNo entropy:\t%i",
+					num,
+					otp_pad_get_src(used_key->pad), otp_pad_get_dest(used_key->pad), 
+					otp_pad_get_id(used_key->pad), 
+					otp_pad_get_filesize(used_key->pad), 
+					otp_pad_get_position(used_key->pad), 
+					otp_pad_get_entropy(used_key->pad), 
+					used_key->opt->otp_enabled, used_key->opt->auto_enable, 
+					used_key->opt->no_entropy);
+		} else {
+			disp_string = g_strdup_printf("There are %i keys available for this"
+					" conversation.\nCurrently active key infos:\nSource:\t\t%s\n"
+					"Destination:\t%s\nID:\t\t\t%s\nSize:\t\t\t%" G_GSIZE_FORMAT 
+					"\nPosition:\t\t%" G_GSIZE_FORMAT "\n"
+					"Entropy:\t\t%" G_GSIZE_FORMAT "\n"
+					"OTP enabled:\t%i\nAuto enable:\t%i\nNo entropy:\t%i", 
+					num,
+					otp_pad_get_src(used_key->pad), otp_pad_get_dest(used_key->pad), 
+					otp_pad_get_id(used_key->pad), 
+					otp_pad_get_filesize(used_key->pad), 
+					otp_pad_get_position(used_key->pad), 
+					otp_pad_get_entropy(used_key->pad), 
+					used_key->opt->otp_enabled, used_key->opt->auto_enable, 
+					used_key->opt->no_entropy);
+		}
 	} else {
 		if (num > 1) {
 			disp_string = g_strdup_printf("There are %i keys available for this"
-					" conversation, but none is active.", num); 
+					" conversation, but none is active.", num);
 		} else if (num == 1) {
 			disp_string = g_strdup("There is one key available for this"
 					" conversation, but it is not active.");
@@ -776,7 +791,7 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 		int old_count = par_keylist_count_keys(klist);
 		par_keylist_reload(otp_conf, klist);
 		char* msg = g_strdup_printf("Key list regenerated. Number of available "
-					"keys: old %i, new %i.", // TODO: show added/removed number of keys
+					"keys: old list %i, new list %i.", // TODO: show added/removed number of keys
 					old_count, par_keylist_count_keys(klist));
 		purple_conversation_write(conv, NULL, msg, 
 					PURPLE_MESSAGE_NO_LOG, time(NULL));
@@ -978,12 +993,7 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 						&& (g_strcmp0(otp_pad_get_dest(tmp_ptr->pad), dest_copy) == 0)) {
 							
 				// TODO: Maybe just check active keys?
-					
-				//if (tmp_ptr->conv == NULL) {
-					/* save conversation ptr */
-				//	tmp_ptr->conv = conv;
-				//	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Conversation pointer saved! (A)\n");
-				//}
+				
 				if (tmp_ptr->opt->otp_enabled) {
 					purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 							"Found an enabled key with ID: %s. otp_enabled = FALSE\n", 
@@ -1134,7 +1144,7 @@ static void par_im_msg_sending(PurpleAccount *account,
 		}
 
 		/* check for remaining entropy */
-		// TODO 0.3 first try to encrypt and act afterwards (?)
+		// TODO 0.4 first try to encrypt and act afterwards (?)
 		if (otp_pad_get_entropy(used_key->pad) < ENTROPY_LIMIT) {
 			if (otp_pad_get_entropy(used_key->pad) < strlen(*message) 
 						+ otp_conf_get_random_msg_tail_max_len(otp_conf)) {
