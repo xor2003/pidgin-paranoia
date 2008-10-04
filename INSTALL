@@ -19,7 +19,7 @@ Comments:
  * To save time it is recommended to read the whole text first and to install 
    everything at once.
 
- * The plugin requires libpurple >= 2.2.0 and libglib >= 2.14.
+ * The plugin requires libpurple >= 2.2.0 and libglib >= 2.16.
 
  * The installation should work with other distributions (and maybe even on other OS)
    You just need to find out the names of the required tools and you need to
