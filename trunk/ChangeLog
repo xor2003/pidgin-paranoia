@@ -14,10 +14,11 @@ Simon Wenner:
   - Compatible with 0.2 by accident :-)
 
 Christian Wäckerlin:
- * libotp: Added CRC32 test to ensure that the messages are unmodified.
-  - This breaks compatibility with versions smaller than 0.2!
+ * libotp: Added CRC32 test to ensure that the messages are unmodified
+  - This breaks compatibility with versions smaller than 0.2
   - Compatible with version 0.2, libotp aknowledges that 0.2 has no CRC32 and 
-    does not complain that the message has changed.
+    does not complain that the message has changed
+ * Code cleanup and minor bug fixes
 
 Pascal Sachs:
  * Keygen: Changed I/O System from clib to GIO
