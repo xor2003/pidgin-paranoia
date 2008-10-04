@@ -2,8 +2,8 @@ Source: pidgin-paranoia
 Section: net
 Priority: extra
 Maintainer: Christian Wäckerlin <christian@waeckerlin.com>
-Build-Depends: debhelper (>= 5), autotools-dev, libpurple-dev (>= 2.2.0), libglib2.0-dev (>= 2.12), build-essential
-Standards-Version: 3.7.3
+Build-Depends: debhelper (>= 5), autotools-dev, libpurple-dev (>= 2.2.0), libglib2.0-dev (>= 2.16), build-essential
+Standards-Version: 3.8
 Homepage: http://pidgin-paranoia.sourceforge.net
 
 Package: pidgin-paranoia
