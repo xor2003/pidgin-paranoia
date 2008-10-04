@@ -39,8 +39,8 @@ maybe quantum computers those cryptosystems could be broken.
 2. Description of the encryption/decryption protocol implemented in libotp library:
 --------------------------------------------------------------------------------
 
-This section describes libotp and it is independent of the application the library is 
-used in.
+This section describes libotp and it is independent of the application the 
+library is used in.
 
 2.1 The key files:
 --------------------------------------------------------------------------------
@@ -109,8 +109,8 @@ receives a message the plugin searches for a matching key in the key list.
 --------------------------------------------------------------------------------
 When a conversation starts and at least one matching key is available, the 
 plugin sends a special request message: "*** Request for conversation with the 
-Pidgin-Paranoia plugin ($(comma separated IDs)): I'm paranoid, please download 
-the One-Time Pag plugin to communicate encrypted.". If the receiving user has 
+Pidgin-Paranoia plugin ($(comma separated IDs)) I'm paranoid, please download 
+the One-Time Pad plugin for encrypted communication.". If the receiving user has 
 the plugin and a matching key this message won't be displayed entirely. Instead 
 the plugin automatically sends an encrypted acknowledge message.
 If the plugin is able to decrypt this message, it activates the encryption for 
@@ -124,7 +124,6 @@ If the opposite client sends an unencypted message, our plugin stops
 sending encrypted messages too.
 
 
-
 4 Key generation
 --------------------------------------------------------------------------------
 This section describes the key generation procedure and the possible options.
@@ -135,7 +134,7 @@ source can either be an entropy file or a character device.
 4.1 Internal key generator
 --------------------------------------------------------------------------------
 The internal key generator takes the entropy from different sources and mixes
-them together into the entropy pool. If the pool is two time filled the entropy
+them together into the entropy pool. If the pool is two time filled, the entropy
 is writen into the keyfile. At the moment there are 4 different sources used:
 
 audio device:	Entropy is taken from the /dev/audio device and antibiased with 
