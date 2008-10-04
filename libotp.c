@@ -81,7 +81,6 @@
 /*  -------------------------- Includes ---------------------------- */
 
 /* GNUlibc includes */
-#include <stdlib.h>
 #include <string.h>
 //#include <math.h>
 /* to manipulate files */
@@ -482,7 +481,7 @@ static OtpError is_checksum(gchar **message, gsize len,
 		if ( (guchar) *( *message + i) != 0 ) { 
 			/* add byte to checksum */
 			calc_crc32( (guchar) *( *message + i ), &message_crc);
-			g_print("%u %u\n", (guchar) *( *message + i ), message_crc);
+//			g_print("%u %u\n", (guchar) *( *message + i ), message_crc);
 		} else { /* we found the end of the base64 encoded part */
 			if ( len - i - 1 > sizeof( guint32 ) ) {
 				/* Set the checksum_crc pointer into the message memory */
