@@ -325,7 +325,7 @@ static gboolean key_is_random(gchar** key, gsize len,
 		}
 	}
 	/* Probability for a repeat of len*/
-	repeatprob = 1.0; // TODO v.0.3: Formula needed
+	repeatprob = 1.0; // TODO v.0.4: Formula needed
 	if (repeatprob < config->msg_key_improbability_limit) {
 		/* Fail if the probability for a random key to have a repeat is smaller than the tolerance. */
 #ifdef PRINT_ERRORS
@@ -366,7 +366,7 @@ static OtpError get_encryptkey_from_file(gchar** key, struct otp* pad,
 	gchar *datpos = pad->data+position;
 
 #ifdef CHECKKEY
-	/* TODO v0.3: What should i do if the key is rejected?
+	/* TODO v0.4: What should i do if the key is rejected?
 	 * ATM it just fails and destroys the keyblock.*/
 	if ((key_is_random(key, len-1, config) == FALSE) && (pad->using_protected_pos == FALSE)) {
 		syndrome = syndrome | OTP_WARN_KEY_NOT_RANDOM;
@@ -448,14 +448,13 @@ static void base64_decode(gchar **message, gsize* plen)
 static void calc_crc32(guchar byte, guint32 * crc) {
 /* Add a byte to the CRC32 checksum 
 Note: Shift operators are endian-safe, so 0xABCD >> 8 always gives 0x00AB */
-// TODO: Ensure that this is endian-safe
 
 	gint32 bit = 0;
 	gint32 hbit;
 	int i;
 	
 	for( i = 0; i < 8; i++) {
-		bit = ( (byte)&1L << (i) );
+		bit = (byte >> i) & 1;
 		hbit = ( *crc & 0x80000000 ) ? 1 : 0;
 		if ( hbit != bit )
 			*crc = ( *crc << 1 ) ^ CRC32POLY;
@@ -471,7 +470,6 @@ static OtpError is_checksum(gchar **message, gsize len,
 /* If check_or_write is TRUE, the checksum is calculated and written into the free
  * space left over by MIN_PADDING, else it is read an compared with the 
  * message string. */
-// TODO: Ensure that this is endian-safe
 	gsize i;
 	guint32 message_crc = 0x00000000;
 	guint32* checksum_crc_pointer = NULL; /* This will point into 
@@ -484,6 +482,7 @@ static OtpError is_checksum(gchar **message, gsize len,
 		if ( (guchar) *( *message + i) != 0 ) { 
 			/* add byte to checksum */
 			calc_crc32( (guchar) *( *message + i ), &message_crc);
+			g_print("%u %u\n", (guchar) *( *message + i ), message_crc);
 		} else { /* we found the end of the base64 encoded part */
 			if ( len - i - 1 > sizeof( guint32 ) ) {
 				/* Set the checksum_crc pointer into the message memory */
@@ -662,13 +661,15 @@ OtpError otp_generate_key_pair(struct otp_config *config,
 	for(i = 0; i < 10; i++) {	
 		/* create filenames with the correct path*/
 		id = keygen_id_get();
-	// TODO
-		alice_file = (gchar *)g_strdup_printf("%s%s%s%s%s%s%.8X.entropy", 
-				otp_conf_get_path(config), PATH_DELI,
-				alice, FILE_DELI, bob, FILE_DELI, id);
-		bob_file = (gchar *)g_strdup_printf("%s%s%s%s%s%s%.8X.entropy", 
-				otp_conf_get_export_path(config), PATH_DELI,
-				bob, FILE_DELI, alice, FILE_DELI, id);
+		alice_file = (gchar *)g_strdup_printf("%s" PATH_DELI "%s" 
+				FILE_DELI "%s" FILE_DELI "%.8X" FILE_SUFFIX_DELI 
+				FILE_SUFFIX, 
+				otp_conf_get_path(config), alice, bob, id);
+
+		bob_file = (gchar *)g_strdup_printf("%s" PATH_DELI "%s" 
+				FILE_DELI "%s" FILE_DELI "%.8X" FILE_SUFFIX_DELI 
+				FILE_SUFFIX, 
+				otp_conf_get_export_path(config), bob, alice, id);
 #ifdef DEBUG
 	g_printf("%s: genkey: '%s' '%s' \n",config->client_id, alice_file, bob_file);
 #endif
