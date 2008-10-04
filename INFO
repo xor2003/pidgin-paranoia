@@ -135,19 +135,21 @@ source can either be an entropy file or a character device.
 4.1 Internal key generator
 --------------------------------------------------------------------------------
 The internal key generator takes the entropy from different sources and mixes
-them together into the entropy file. At the moment there are 4 different
-sources used:
-audio device:	Entropy is taken from the /dev/audio device and xor-ed with 
-				entropy from the /dev/urandom device to improve the quality of 
-				the entropy.
-				It is recommended to play some music during the key generation 
-				process to improve the entropy quality.
-/dev/random:	Entropy is taken from the /dev/random device and mixed directly
-				into the entropy file.
-thread timing:	The time to generate and finish 100 Threads is measured and
-				mixed into the entropy file.
-system state:	A mix out of page faults and used user and system time is 
-				converted into entropy and mixed into the entropy file.
+them together into the entropy pool. If the pool is two time filled the entropy
+is writen into the keyfile. At the moment there are 4 different sources used:
+
+audio device:	Entropy is taken from the /dev/audio device and antibiased with 
+		the improved newman algorithm to improve the quality of the entropy.
+		It is recommended to play some music during the key generation 
+		process to improve the entropy quality.
+/dev/random:	Entropy is taken from the /dev/random device and mixed into the
+		entropy pool.
+
+thread timing:	The time to generate and finish 100 Threads is measured and mixed 
+		into the entropy pool.
+
+/dev/urandom:	To improve the speed, /dev/urandom is used to mix some entropy into
+		the entropy pool.
 
 4.2 Key from entropy file
 --------------------------------------------------------------------------------
