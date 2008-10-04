@@ -1,0 +1,85 @@
+--------------------------------------------------------------------------------
+                           Hacking Pidgin-Paranoia
+--------------------------------------------------------------------------------
+
+CODING STYLE
+--------------------------------------------------------------------------------
+Linux kernel coding style:
+http://lxr.linux.no/linux/Documentation/CodingStyle
+or /usr/src/linux/Documentation/CodingStyle
+
+ANSI C
+--------------------------------------------------------------------------------
+C tutorial: http://www.galileocomputing.de/openbook/c_von_a_bis_z/
+Pointers: http://www.c-plusplus.de/forum/viewtopic-var-t-is-124532
+Casting: http://www.cpax.org.uk/prg/writings/casting.php
+Filelock: http://www.ecst.csuchico.edu/~beej/guide/ipc/flock.html
+Consistency: http://www.gnu.org/software/libc/manual/html_node/Consistency-Checking.html#Consistency-Checking
+
+LIBRARIES
+--------------------------------------------------------------------------------
+GNOMELib (glib) API: 
+	http://developer.gnome.org/doc/API/2.0/glib/index.html
+GNUlibC (glibc) - String and Array Utilities: 
+	http://www.gnu.org/software/libc/manual/html_node/String-and-Array-Utilities.html
+Libpurple:
+	http://developer.pidgin.im/doxygen/dev/html/group__core.html
+Gettext:
+	http://en.wikipedia.org/wiki/Gettext
+	http://oriya.sarovar.org/docs/gettext/
+	http://cvs.gnome.org/viewcvs/intltool/doc/I18N-HOWTO?view=markup
+
+AUTOTOOLS
+--------------------------------------------------------------------------------
+http://en.wikipedia.org/wiki/GNU_Automake
+http://sources.redhat.com/autobook/autobook/autobook_toc.html
+http://www.developingprogrammers.com/index.php/2006/01/05/autotools-tutorial/
+Functions explained: http://sourceware.org/autobook/autobook/autobook_283.html
+http://ftp.acc.umu.se/pub/GNOME/teams/marketing/en/2003/autotools/html/index.html
+
+SUBVERSION
+--------------------------------------------------------------------------------
+http://svnbook.red-bean.com/en/1.1/index.html
+
+RANDOMNUMBER GENERATOR TESTING
+--------------------------------------------------------------------------------
+http://www.stat.fsu.edu/pub/diehard/
+
+SIGNAL IMPLEMENTATION WITH GLIB
+--------------------------------------------------------------------------------
+GNOMELib (glib) API:
+	http://library.gnome.org/devel/gobject/unstable/gobject-Signals.html
+	http://library.gnome.org/devel/gobject/unstable/gobject-Closures.html
+	http://library.gnome.org/devel/gobject/unstable/gobject-Type-Information.html
+Signal creation HOWTO:
+	http://le-hacker.org/papers/gobject/ch05s03.html
+Sample Code for Marshall Functions:
+	http://www.codase.com/
+	seatch querry: "nautilus-marshal"
+	files: nautilus-marshal-guts.c and nautilus-marshal.h
+
+USING FINCH
+--------------------------------------------------------------------------------
+http://developer.pidgin.im/wiki/Using%20Finch
+
+BUILDING DEBIAN PACKAGES
+--------------------------------------------------------------------------------
+Debian New Maintainers' Guide:
+	http://www.debian.org/doc/manuals/maint-guide/index.en.html
+
+Additonally to the specified packages in INSTALL you need to install: 
+	fakeroot debhelper autotools-dev
+
+You can build the package from trunk/ using:
+	$ ./autogen.sh (since you are using the trunk)
+	$ dpkg-buildpackage -rfakeroot
+
+TESTING PARANOIA
+--------------------------------------------------------------------------------
+You can use "/otp drop" in Pidgin to drop the encryption. Your buddy will not be
+notified. You can insert something like: 
+"*** Encrypted with the Pidgin-Paranoia plugin: 38009|03699C2B|MW24qGojvBfVFAK0Y87BMwAjXd9pw51ZAtGQGq5d5WfRf/J3V5wA"
+This allows you to test for denial of service attacks.
+
+
+
