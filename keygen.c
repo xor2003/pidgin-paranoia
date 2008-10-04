@@ -343,7 +343,8 @@ OtpError keygen_keys_generate(char *alice_file, char *bob_file,
 		otp_conf_decrement_number_of_keys_in_production(config);
 		return OTP_ERR_FILE_EXISTS;
 	}
-
+	
+	/* If not the integrated keygen is used, check if the entropy source exists */
 	if(entropy_source != NULL && !g_file_query_exists(g_file_new_for_commandline_arg(entropy_source), NULL)) {
 		g_printerr("Source doesn't exist\n");
 		otp_conf_decrement_number_of_keys_in_production(config);
@@ -454,29 +455,33 @@ static gpointer keygen_main_thread(gpointer data)
 	} else {	
 		source = g_file_new_for_commandline_arg(key_data->src);
 		info = g_file_query_info(source, "*", G_FILE_QUERY_INFO_NONE, NULL, NULL);
-		switch(g_file_info_get_file_type(info)) {
-			case G_FILE_TYPE_REGULAR:
-				size = g_file_info_get_size(info);
-				if(size < key_data->size) {
-					g_printerr("Entropy File to small\n");
+		if(info == NULL) {
+			error = TRUE;
+		} else {
+			switch(g_file_info_get_file_type(info)) {
+				case G_FILE_TYPE_REGULAR:
+					size = g_file_info_get_size(info);
+					if(size < key_data->size) {
+						g_printerr("Entropy File to small\n");
+						error = TRUE;
+						break;
+					}
+					if(keys_from_source(key_data, source) != 0) {
+						g_printerr("error in entropy source\n");
+						error = TRUE;
+					}
+					break;
+				case G_FILE_TYPE_SPECIAL:
+					if(keys_from_source(key_data, source) != 0) {
+						g_printerr("error in entropy source\n");
+						error = TRUE;
+					}
+					break;
+				default:
+					g_printerr("unsupported source\n");
 					error = TRUE;
 					break;
-				}
-				if(keys_from_source(key_data, source) != 0) {
-					g_printerr("error in entropy source\n");
-					error = TRUE;
-				}
-				break;
-			case G_FILE_TYPE_SPECIAL:
-				if(keys_from_source(key_data, source) != 0) {
-					g_printerr("error in entropy source\n");
-					error = TRUE;
-				}
-				break;
-			default:
-				g_printerr("unsupported source\n");
-				error = TRUE;
-				break;
+			}
 		}
 	}
 	
