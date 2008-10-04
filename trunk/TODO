@@ -7,17 +7,16 @@ Version 0.3
 	paranoia
 	 * string freeze
 
-	libotp
-	 * keyfile entropy really checked for patterns
-
-	otp
-	 * commandline program that can use libotp for general usage
-
 Version 0.4
 ============
  	paranoia
 	 * send entropy warnings (delayed with a timer)
  	 * gettext support (translations)
+	libotp
+	 * get_ should return object
+	 * keyfile entropy really checked for patterns
+	otp
+	 * commandline program that can use libotp for general usage
  	 
 Version 0.5
 ============
