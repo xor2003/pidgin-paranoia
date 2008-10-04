@@ -55,7 +55,7 @@
 #define PARANOIA_HEADER "*** Encrypted with the Pidgin-Paranoia plugin: "
 #define PARANOIA_REQUEST "*** Request for conversation with the Pidgin-\
 Paranoia plugin (%s): I'm paranoid, please download the One-Time Pad \
-plugin (%s) to communicate encrypted."
+plugin (%s) for encrypted communication."
 #define PARANOIA_REQUEST_LEN 60
 #define PARANOIA_STATUS "&lt;otp&gt; "
 
@@ -190,17 +190,17 @@ static gboolean par_keygen_poll_result(void* data)
 			if (conv) {
 				/* write to conv if available */
 				purple_conversation_write(conv, NULL, 
-					"Key generation successfully completed.\n "
+					"Key generation completed successfully.\n "
 					"Your own key is stored in the directory '~/.paranoia'.\n"
-					"Your buddy's key is stored on your desktop. "
-					"Please send this key in a secure way to your partner.", 
+					"Your buddy's key is stored on your desktop.\n"
+					"Please send the key on your desktop in a secure way to your partner.", 
 					PURPLE_MESSAGE_NO_LOG, time(NULL));
 			} else {
 				/* show a nice pop-up */
 				msg = g_strdup_printf("%s->%s (%s), %" G_GSIZE_FORMAT " bytes\n\n"
 						"Your own key is stored in the directory '~/.paranoia'.\n"
-						"Your buddy's key is stored on your desktop. "
-						"Please send this key in a secure way to your partner.",
+						"Your buddy's key is stored on your desktop.\n"
+						"Please send the key on your desktop in a secure way to your partner.", 
 						otp_pad_get_src(keygen->new_pad),
 						otp_pad_get_dest(keygen->new_pad),
 						otp_pad_get_id(keygen->new_pad),
@@ -315,7 +315,9 @@ static gboolean par_session_check_req(const char* alice, const char* bob,
 		}
 		if (temp_key != NULL) {
 			/* here we have a matching key with entropy */
-			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Found a matching ID with entropy: %s, active = TRUE\n", otp_pad_get_id(temp_key->pad));
+			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+					"Found a matching ID with entropy: %s, active = TRUE\n",
+					otp_pad_get_id(temp_key->pad));
 			temp_key->opt->active = TRUE;
 			if(temp_key->conv == NULL) {
 				temp_key->conv = conv;
@@ -326,14 +328,16 @@ static gboolean par_session_check_req(const char* alice, const char* bob,
 				purple_conversation_write(conv, NULL, 
 						"Encryption enabled.", 
 						PURPLE_MESSAGE_NO_LOG, time(NULL));
-				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "REQUEST checked: otp_enabled = TRUE.\n");
+				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+						"REQUEST checked: otp_enabled = TRUE.\n");
 				/* Send an ACK message to confirm */
 				/* There are cases where send an encrypted request and an ACK */
 				purple_timeout_add_seconds(1, (GSourceFunc)par_session_ack_timeout, 
 						(gpointer)temp_key);
 			}
 		} else {
-			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "REQUEST failed! No key available.\n");
+			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
+					"REQUEST failed! No key available.\n");
 		}
 		return TRUE;
 	} else {
@@ -732,7 +736,7 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 /* checks and executes all otp commads */
 {
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
-			"An otp command was received. sweet!\n");
+			"An otp command was received. Sweet!\n");
 	
 	if (args[0] == NULL) {
 		par_cli_set_default_error(error);
@@ -1154,7 +1158,7 @@ static void par_im_msg_sending(PurpleAccount *account,
 				used_key->opt->active = FALSE;
 				purple_conversation_write(used_key->conv, NULL, 
 						"All your entropy has been used. Encryption disabled. "
-						"The last Message could not be sent.", 
+						"The last message could not be sent.", 
 						PURPLE_MESSAGE_NO_LOG, time(NULL));
 				// TODO: display the message in the msg too and hide the real one
 				/* delete the remaining entropy */
