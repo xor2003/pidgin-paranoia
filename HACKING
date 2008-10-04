@@ -68,7 +68,7 @@ Debian New Maintainers' Guide:
 	http://www.debian.org/doc/manuals/maint-guide/index.en.html
 
 Additonally to the specified packages in INSTALL you need to install: 
-	fakeroot debhelper
+	fakeroot debhelper autotools-dev
 
 You can build the package from trunk/ using:
 	$ ./autogen.sh (since you are using the trunk)
