@@ -21,7 +21,7 @@ Christian Wäckerlin:
  * Code cleanup and minor bug fixes
 
 Pascal Sachs:
- * Keygen: Changed I/O System from clib to GIO
+ * Keygen: Changed I/O System from glibc to GIO
  * Keygen: Better performance and less CPU usage on key generation
  * Keygen: Security Improvement through new entropy pool system
  * Keygen: Entropy source check moved from libotp to keygen
