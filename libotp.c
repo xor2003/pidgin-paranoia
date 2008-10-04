@@ -340,6 +340,9 @@ static gboolean key_is_random(gchar** key, gsize len,
 
 static OtpError get_encryptkey_from_file(gchar** key, struct otp* pad, 
 			gsize len, const struct otp_config* config)
+			
+//TODO 0.4: static gchar* get_encryptkey_from_file(OtpError *error, 
+//		struct otp* pad, gsize len, const struct otp_config* config)
 /* Gets the key to encrypt from the keyfile */
 {
 	gsize i = 0;
@@ -535,17 +538,16 @@ static OtpError decrypt(gchar** message, struct otp* pad, gsize decryptpos)
 /* Decrypt the message  */
 {
 	gsize len = (strlen(*message)+1)* sizeof(gchar);
-	gchar* space1 = ""; // TODO FIXME
-	gchar** key = &space1;
+	gchar* key;
 	base64_decode(message, &len);
 	OtpError syndrome = OTP_OK;
-	syndrome = get_decryptkey_from_file(key, pad, len, decryptpos);
+	syndrome = get_decryptkey_from_file(&key, pad, len, decryptpos);
 	if (syndrome > OTP_WARN) return syndrome;
 #ifdef DEBUG_MSG
 	printint(*message, len, "before decrypt", pad->config);
-	printint(*key, len, "decryptkey", pad->config);
+	printint(key, len, "decryptkey", pad->config);
 #endif
-	xor(message, key, len);
+	xor(message, &key, len);
 #ifdef DEBUG_MSG 
 	printint(*message,len, "decrypt-xor", pad->config);
 #endif
@@ -560,10 +562,8 @@ static OtpError encrypt(gchar** message, struct otp* pad)
 /* Encrypt the message  */
 {
 	gsize len = (strlen(*message)+1) * sizeof(gchar);
-	gchar* space1 = ""; // TODO FIXME
-	gchar** rand = &space1;
-	gchar* space2 = "";
-	gchar** key = &space2;
+	gchar* rand;
+	gchar* key;
 	gchar* msg;
 	guchar rnd;
 	OtpError syndrome = OTP_OK;
@@ -571,12 +571,12 @@ static OtpError encrypt(gchar** message, struct otp* pad)
 #ifdef RNDMSGLEN
 	if (pad->using_protected_pos == FALSE) { /* No random tail for signals */
 		/* get one byte from keyfile for random length */
-		syndrome = get_encryptkey_from_file(rand, pad, 1+1, pad->config);
+		syndrome = get_encryptkey_from_file(&rand, pad, 1+1, pad->config);
 		pad->encrypt_start_pos += 1;
 		if ( syndrome > OTP_WARN ) return syndrome;
-		rnd = (guchar)*rand[0]*pad->config->random_msg_tail_max_len/255 
+		rnd = (guchar)rand[0] * pad->config->random_msg_tail_max_len / 255 
 				+ MIN_PADDING;
-		g_free(*rand);
+		g_free(rand);
 		msg = g_malloc0(rnd+len);       /* Create a new,longer message */
 		memcpy(msg, *message, len-1);
 		g_free(*message);
@@ -584,16 +584,16 @@ static OtpError encrypt(gchar** message, struct otp* pad)
 		len += rnd;
 	}
 #endif
-	syndrome = get_encryptkey_from_file(key, pad, len, pad->config);
+	syndrome = get_encryptkey_from_file(&key, pad, len, pad->config);
 	if ( syndrome > OTP_WARN ) return syndrome;
 #ifdef DEBUG_MSG
-	printint(*key,len, "encryptkey", pad->config);
+	printint(key,len, "encryptkey", pad->config);
 #endif
 
 #ifdef CHECKMSG
 	syndrome = is_checksum(message, len, FALSE, pad->config);
 #endif
-	xor(message, key, len);
+	xor(message, &key, len);
 #ifdef DEBUG_MSG 
 	printint(*message,len, "encrypt-check", pad->config);
 #endif
@@ -612,17 +612,16 @@ OtpError otp_pad_erase_entropy(struct otp* pad)
 	if (pad == NULL) return OTP_ERR_INPUT;
 	pad->using_protected_pos = FALSE;
 	gsize len = (ERASEBLOCKSIZE+1) * sizeof(gchar);
-	gchar* space1 = "";
-	gchar** key = &space1;
+	gchar* key;
 	/* Using up all entropy */
 	OtpError syndrome = OTP_OK;
 	while (syndrome <= OTP_WARN ) {
-		syndrome = get_encryptkey_from_file(key, pad, len, pad->config);
+		syndrome = get_encryptkey_from_file(&key, pad, len, pad->config);
 	}
 	syndrome = OTP_OK;
 	len = 1+1;
 	while (syndrome <= OTP_WARN) {
-		syndrome = get_encryptkey_from_file(key, pad, len, pad->config);
+		syndrome = get_encryptkey_from_file(&key, pad, len, pad->config);
 	}
 	if (syndrome == OTP_ERR_KEY_EMPTY) syndrome = OTP_OK;
 	return syndrome;
