@@ -5,7 +5,7 @@
 #
 
 # Autoconf initialization
-AC_INIT(pidgin-paranoia, 0.3.0, [http://pidgin-paranoia.sf.net/])
+AC_INIT(pidgin-paranoia, 0.3.90, [http://pidgin-paranoia.sf.net/])
 
 # Required autoconf version
 AC_PREREQ([2.50])
