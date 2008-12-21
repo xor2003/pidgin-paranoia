@@ -25,9 +25,6 @@
 #include <glib-object.h>
 #include <glib/gi18n-lib.h>
 
-/* GNUlibc */
-#include <string.h>
-
 /* libpurple */
 #define PURPLE_PLUGINS
 #include "plugin.h"
@@ -137,7 +134,7 @@ static gboolean par_censor_internal_msg(char** message)
 }
 
 static char* par_strip_jabber_ressource(const char* acc)
-/* Strips the Jabber ressource (/home /mobile ect.) */
+/* Strips the Jabber ressource (/home /mobile etc.) */
 {
 	gchar** str_array = g_strsplit(acc, "/", 2);
 	char* acc_copy = g_utf8_strdown (str_array[0], -1);
@@ -390,9 +387,9 @@ static gboolean par_session_check_msg(struct key* used_key,
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 					"PARANOIA_START detected. otp_enabled = TRUE\n");
 			/* if the other sider has an active key and we don't (FIXME maybe removeable in 0.4) */
-			if (!used_key->opt->active) {
-				used_key->opt->active = TRUE;
-			}
+			//if (!used_key->opt->active) {
+			//	used_key->opt->active = TRUE;
+			//}
 		} else {
 			purple_conversation_write(conv, NULL, 
 					_("This buddy would like to chat encrypted."), 
