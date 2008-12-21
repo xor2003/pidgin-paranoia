@@ -1,0 +1,230 @@
+# German translations for pidgin-paranoia package.
+# Copyright (C) 2008 THE pidgin-paranoia'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the pidgin-paranoia package.
+# Simon Wenner <simon@wenner.ch>, 2008.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: pidgin-paranoia 0.3.90\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2008-12-21 22:50+0100\n"
+"PO-Revision-Date: 2008-12-21 23:07+0100\n"
+"Last-Translator: Simon Wenner <simon@wenner.ch>\n"
+"Language-Team: German\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#. write to conv if available
+#: ../paranoia.c:183
+#, c-format
+msgid "%5.2f percent of the key done."
+msgstr ""
+
+#: ../paranoia.c:194
+msgid ""
+"Key generation completed successfully.\n"
+" Your own key is stored in the directory '~/.paranoia'.\n"
+"Your buddy's key is stored on your desktop.\n"
+"Please send the key on your desktop in a secure way to your partner."
+msgstr ""
+
+#. show a nice pop-up
+#: ../paranoia.c:201
+#, c-format
+msgid ""
+"%s->%s (%s), %zu bytes\n"
+"\n"
+"Your own key is stored in the directory '~/.paranoia'.\n"
+"Your buddy's key is stored on your desktop.\n"
+"Please send the key on your desktop in a secure way to your partner."
+msgstr ""
+
+#: ../paranoia.c:209
+msgid "Paranoia Key Generator"
+msgstr ""
+
+#: ../paranoia.c:210
+msgid "A new key pair has been created!"
+msgstr ""
+
+#: ../paranoia.c:330 ../paranoia.c:365 ../paranoia.c:497 ../paranoia.c:870
+#: ../paranoia.c:1099
+msgid "Encryption enabled."
+msgstr "Verschlüsselung aktiviert."
+
+#: ../paranoia.c:378 ../paranoia.c:406
+msgid "Encryption disabled (remote)."
+msgstr ""
+
+#: ../paranoia.c:388
+msgid "Encryption enabled (remote)."
+msgstr ""
+
+#: ../paranoia.c:398
+msgid "This buddy would like to chat encrypted."
+msgstr ""
+
+#: ../paranoia.c:419
+msgid ""
+"Your converstation partner is out of entropy. Encryption disabled (remote)."
+msgstr ""
+
+#: ../paranoia.c:450
+msgid ""
+"Welcome to the One-Time Pad CLI.\n"
+"/otp help: shows this message \n"
+"/otp genkey &lt;size&gt; &lt;external entropy source&gt;: generates a key "
+"pair of &lt;size&gt; kiB\n"
+"/otp on: tries to enable the encryption\n"
+"/otp off: disables the encryption\n"
+"/otp info: shows details about the used key\n"
+"/otp list: shows all keys for this conversation\n"
+"/otp list-all: shows all available keys\n"
+"/otp reload: reloads all your key files"
+msgstr ""
+
+#: ../paranoia.c:460
+msgid "Wrong argument(s). Type '/otp help' for help."
+msgstr ""
+
+#: ../paranoia.c:461
+msgid "Your key size is too large."
+msgstr ""
+
+#: ../paranoia.c:487
+msgid "Couldn't enable the encryption. No entropy available."
+msgstr ""
+
+#: ../paranoia.c:503
+msgid "Encryption already enabled."
+msgstr ""
+
+#: ../paranoia.c:510
+msgid "Trying to enable encryption."
+msgstr ""
+
+#: ../paranoia.c:515
+msgid "Couldn't enable the encryption. No key available."
+msgstr ""
+
+#: ../paranoia.c:543 ../paranoia.c:931 ../paranoia.c:1008
+msgid "Encryption disabled."
+msgstr "Verschlüsselung deaktiviert."
+
+#: ../paranoia.c:547
+msgid "Encryption already disabled."
+msgstr ""
+
+#: ../paranoia.c:554
+msgid "Couldn't disable the encryption. No key available."
+msgstr ""
+
+#: ../paranoia.c:577
+msgid ""
+"There is %i key available for this conversation.\n"
+"Currently active key infos:\n"
+"Source:\t\t%s\n"
+"Destination:\t%s\n"
+"ID:\t\t\t%s\n"
+"Size:\t\t\t%"
+msgstr ""
+
+#: ../paranoia.c:592
+msgid ""
+"There are %i keys available for this conversation.\n"
+"Currently active key infos:\n"
+"Source:\t\t%s\n"
+"Destination:\t%s\n"
+"ID:\t\t\t%s\n"
+"Size:\t\t\t%"
+msgstr ""
+
+#: ../paranoia.c:609
+#, c-format
+msgid "There are %i keys available for this conversation, but none is active."
+msgstr ""
+
+#: ../paranoia.c:612
+msgid "There is one key available for this conversation, but it is not active."
+msgstr ""
+
+#: ../paranoia.c:615
+msgid "There is no key available for this conversation."
+msgstr ""
+
+#: ../paranoia.c:635
+msgid "All your keys:"
+msgstr ""
+
+#: ../paranoia.c:638
+msgid "All your keys for this conversation:"
+msgstr ""
+
+#: ../paranoia.c:648
+msgid ""
+"%s -> %s (%s)\n"
+"\tSize: %"
+msgstr ""
+
+#: ../paranoia.c:701
+msgid "Key files could not be generated!"
+msgstr ""
+
+#: ../paranoia.c:707
+msgid ""
+"Key generation successfully started. This will take some minutes depending "
+"on the desired key length."
+msgstr ""
+
+#: ../paranoia.c:725
+msgid "There was a warning issued!"
+msgstr ""
+
+#: ../paranoia.c:798
+#, c-format
+msgid ""
+"Key list regenerated. Number of available keys: old list %i, new list %i."
+msgstr ""
+
+#: ../paranoia.c:1062
+msgid ""
+"The last incoming message could not be decrypted. This is a serious error!"
+msgstr ""
+
+#: ../paranoia.c:1077
+msgid "The consistency check of the next message failed!"
+msgstr ""
+
+#: ../paranoia.c:1161
+msgid ""
+"All your entropy has been used. Encryption disabled. The last message could "
+"not be sent."
+msgstr ""
+
+#: ../paranoia.c:1201
+msgid "Your entropy is low! %"
+msgstr ""
+
+#: ../paranoia.c:1222
+msgid ""
+"The last outgoing message could not be encrypted. This is a serious error!"
+msgstr ""
+
+#: ../paranoia.c:1382
+msgid "otp &lt;command&gt: type /otp to get help"
+msgstr ""
+
+#: ../paranoia.c:1492
+msgid "One-Time Pad Encryption"
+msgstr "One-Time Pad Verschlüsselung"
+
+#: ../paranoia.c:1493
+msgid "Paranoia One-Time Pad Encryption Plugin"
+msgstr "Paranoia One-Time Pad Verschlüsselungs-Plugin"
+
+#: ../paranoia.c:1494
+msgid ""
+"The Paranoia plugin allows you to encrypt your messages with one-time pads."
+msgstr ""

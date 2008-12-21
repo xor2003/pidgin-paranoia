@@ -16,9 +16,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
 
+#ifdef HAVE_CONFIG_H
+#include "paranoia_config.h"
+#endif
+
 /* GNOMElib */
 #include <glib.h>
 #include <glib-object.h>
+#include <glib/gi18n-lib.h>
 
 /* GNUlibc */
 #include <string.h>
@@ -37,10 +42,6 @@
 /* Our stuff */
 #include "libotp.h"
 #include "key_management.h"
-
-#ifdef HAVE_CONFIG_H
-#include "paranoia_config.h"
-#endif
 
 // test defines
 #define SHOW_STATUS
@@ -179,7 +180,7 @@ static gboolean par_keygen_poll_result(void* data)
 				"%5.2f percent of the key done.\n", keygen->status);
 			if (conv) {
 				/* write to conv if available */
-				msg = g_strdup_printf("%5.2f percent of the key done.", keygen->status);
+				msg = g_strdup_printf(_("%5.2f percent of the key done."), keygen->status);
 				purple_conversation_write(conv, NULL, msg,
 					PURPLE_MESSAGE_NO_LOG, time(NULL));
 				g_free(msg);
@@ -190,23 +191,23 @@ static gboolean par_keygen_poll_result(void* data)
 			if (conv) {
 				/* write to conv if available */
 				purple_conversation_write(conv, NULL, 
-					"Key generation completed successfully.\n "
+					_("Key generation completed successfully.\n "
 					"Your own key is stored in the directory '~/.paranoia'.\n"
 					"Your buddy's key is stored on your desktop.\n"
-					"Please send the key on your desktop in a secure way to your partner.", 
+					"Please send the key on your desktop in a secure way to your partner."), 
 					PURPLE_MESSAGE_NO_LOG, time(NULL));
 			} else {
 				/* show a nice pop-up */
-				msg = g_strdup_printf("%s->%s (%s), %" G_GSIZE_FORMAT " bytes\n\n"
+				msg = g_strdup_printf(_("%s->%s (%s), %zu bytes\n\n"
 						"Your own key is stored in the directory '~/.paranoia'.\n"
 						"Your buddy's key is stored on your desktop.\n"
-						"Please send the key on your desktop in a secure way to your partner.", 
+						"Please send the key on your desktop in a secure way to your partner."), 
 						otp_pad_get_src(keygen->new_pad),
 						otp_pad_get_dest(keygen->new_pad),
 						otp_pad_get_id(keygen->new_pad),
 						otp_pad_get_filesize(keygen->new_pad));
-				purple_notify_info(NULL, "Paranoia Key Generator", 
-						"A new key pair has been created!", msg);
+				purple_notify_info(NULL, _("Paranoia Key Generator"), 
+						_("A new key pair has been created!"), msg);
 				g_free(msg);
 			}
 			/* cleanup */
@@ -326,7 +327,7 @@ static gboolean par_session_check_req(const char* alice, const char* bob,
 			if (temp_key->opt->auto_enable) {
 				temp_key->opt->otp_enabled = TRUE;
 				purple_conversation_write(conv, NULL, 
-						"Encryption enabled.", 
+						_("Encryption enabled."), 
 						PURPLE_MESSAGE_NO_LOG, time(NULL));
 				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 						"REQUEST checked: otp_enabled = TRUE.\n");
@@ -361,7 +362,7 @@ static gboolean par_session_check_msg(struct key* used_key,
 			used_key->opt->otp_enabled = TRUE;
 			used_key->opt->handshake_done = TRUE;
 			purple_conversation_write(conv, NULL, 
-					"Encryption enabled.", PURPLE_MESSAGE_NO_LOG, time(NULL));
+					_("Encryption enabled."), PURPLE_MESSAGE_NO_LOG, time(NULL));
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 					"PARANOIA_ACK detected! otp_enabled=TRUE\n");
 		} else {
@@ -374,7 +375,7 @@ static gboolean par_session_check_msg(struct key* used_key,
 	if (g_strcmp0(*message_decrypted, PARANOIA_EXIT) == 0) {
 		used_key->opt->otp_enabled = FALSE;
 		purple_conversation_write(conv, NULL, 
-				"Encryption disabled (remote).", 
+				_("Encryption disabled (remote)."), 
 				PURPLE_MESSAGE_NO_LOG, time(NULL));
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 				"PARANOIA_EXIT detected. otp_enabled = FALSE\n");
@@ -384,7 +385,7 @@ static gboolean par_session_check_msg(struct key* used_key,
 		if(used_key->opt->auto_enable) {
 			used_key->opt->otp_enabled = TRUE;
 			purple_conversation_write(conv, NULL, 
-					"Encryption enabled (remote).", 
+					_("Encryption enabled (remote)."), 
 					PURPLE_MESSAGE_NO_LOG, time(NULL));
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 					"PARANOIA_START detected. otp_enabled = TRUE\n");
@@ -394,7 +395,7 @@ static gboolean par_session_check_msg(struct key* used_key,
 			}
 		} else {
 			purple_conversation_write(conv, NULL, 
-					"This buddy would like to chat encrypted.", 
+					_("This buddy would like to chat encrypted."), 
 					PURPLE_MESSAGE_NO_LOG, time(NULL));
 		}
 		return TRUE;
@@ -402,7 +403,7 @@ static gboolean par_session_check_msg(struct key* used_key,
 	if (g_strcmp0(*message_decrypted, PARANOIA_STOP) == 0) {
 		used_key->opt->otp_enabled = FALSE;
 		purple_conversation_write(conv, NULL, 
-				"Encryption disabled (remote).", 
+				_("Encryption disabled (remote)."), 
 				PURPLE_MESSAGE_NO_LOG, time(NULL));
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 				"PARANOIA_STOP detected. otp_enabled = FALSE\n");
@@ -415,8 +416,8 @@ static gboolean par_session_check_msg(struct key* used_key,
 		used_key->opt->active = FALSE;
 		/* We can't destroy our key too due to the msg injection problem. */
 		purple_conversation_write(conv, NULL, 
-				"Your converstation partner is out of entropy. "
-				"Encryption disabled (remote).", 
+				_("Your converstation partner is out of entropy. "
+				"Encryption disabled (remote)."), 
 				PURPLE_MESSAGE_NO_LOG, time(NULL));
 		purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 				"PARANOIA_NO_ENTROPY detected. otp_enabled = FALSE, active = FALSE\n");
@@ -446,7 +447,7 @@ static void par_session_reset_conv(PurpleConversation *conv)
 
 PurpleCmdId par_cmd_id;
 
-#define PARANOIA_HELP_STR "Welcome to the One-Time Pad CLI.\n\
+#define PARANOIA_HELP_STR _("Welcome to the One-Time Pad CLI.\n\
 /otp help: shows this message \n\
 /otp genkey &lt;size&gt; &lt;external entropy \
 source&gt;: generates a key pair of &lt;size&gt; kiB\n\
@@ -455,9 +456,9 @@ source&gt;: generates a key pair of &lt;size&gt; kiB\n\
 /otp info: shows details about the used key\n\
 /otp list: shows all keys for this conversation\n\
 /otp list-all: shows all available keys\n\
-/otp reload: reloads all your key files"
-#define PARANOIA_ERROR_STR "Wrong argument(s). Type '/otp help' for help."
-#define PARANOIA_KEYSIZE_ERROR "Your key size is too large."
+/otp reload: reloads all your key files")
+#define PARANOIA_ERROR_STR _("Wrong argument(s). Type '/otp help' for help.")
+#define PARANOIA_KEYSIZE_ERROR _("Your key size is too large.")
 
 static void par_cli_set_default_error(gchar **error)
 /* sets the default paranoia cli error */
@@ -483,7 +484,7 @@ static gboolean par_cli_try_enable_enc(PurpleConversation *conv)
 	if (used_key != NULL) {
 		if (used_key->opt->no_entropy) {
 			purple_conversation_write(conv, NULL, 
-					"Couldn't enable the encryption. No entropy available.",
+					_("Couldn't enable the encryption. No entropy available."),
 					PURPLE_MESSAGE_NO_LOG, time(NULL));
 			return FALSE;
 		}			
@@ -493,25 +494,25 @@ static gboolean par_cli_try_enable_enc(PurpleConversation *conv)
 					PARANOIA_START, 
 					PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
 			purple_conversation_write(conv, NULL, 
-					"Encryption enabled.", 
+					_("Encryption enabled."), 
 					PURPLE_MESSAGE_NO_LOG, time(NULL));
 			return TRUE;
 		} else {
 			used_key->opt->auto_enable = TRUE;
 			purple_conversation_write(conv, NULL, 
-					"Encryption already enabled.", 
+					_("Encryption already enabled."), 
 					PURPLE_MESSAGE_NO_LOG, time(NULL));
 			return TRUE;
 		}			
 	} else {
 		if (par_session_send_request(my_acc, other_acc, conv)) {
 			purple_conversation_write(conv, NULL, 
-					"Trying to enable encryption.", 
+					_("Trying to enable encryption."), 
 					PURPLE_MESSAGE_NO_LOG, time(NULL));
 			return TRUE;
 		} else {
 			purple_conversation_write(conv, NULL, 
-					"Couldn't enable the encryption. No key available.",
+					_("Couldn't enable the encryption. No key available."),
 					PURPLE_MESSAGE_NO_LOG, time(NULL));
 		}
 	}
@@ -539,18 +540,18 @@ static gboolean par_cli_disable_enc(PurpleConversation *conv)
 			used_key->opt->otp_enabled = FALSE;
 			used_key->opt->auto_enable = FALSE;
 			purple_conversation_write(conv, NULL, 
-					"Encryption disabled.", 
+					_("Encryption disabled."), 
 					PURPLE_MESSAGE_NO_LOG, time(NULL));
 		} else {
 			purple_conversation_write(conv, NULL, 
-					"Encryption already disabled.", 
+					_("Encryption already disabled."), 
 					PURPLE_MESSAGE_NO_LOG, time(NULL));
 		}
 		return TRUE;
 	}
 	
 	purple_conversation_write(conv, NULL, 
-		"Couldn't disable the encryption. No key available.",
+		_("Couldn't disable the encryption. No key available."),
 		PURPLE_MESSAGE_NO_LOG, time(NULL));
 	return FALSE;
 }
@@ -573,12 +574,12 @@ static void par_cli_show_key_details(PurpleConversation *conv)
 
 	if(used_key != NULL) {
 		if (num == 1) {
-			disp_string = g_strdup_printf("There is %i key available for this"
+			disp_string = g_strdup_printf(_("There is %i key available for this"
 					" conversation.\nCurrently active key infos:\nSource:\t\t%s\n"
 					"Destination:\t%s\nID:\t\t\t%s\nSize:\t\t\t%" G_GSIZE_FORMAT 
 					"\nPosition:\t\t%" G_GSIZE_FORMAT "\n"
 					"Entropy:\t\t%" G_GSIZE_FORMAT "\n"
-					"OTP enabled:\t%i\nAuto enable:\t%i\nNo entropy:\t%i",
+					"OTP enabled:\t%i\nAuto enable:\t%i\nNo entropy:\t%i"),
 					num,
 					otp_pad_get_src(used_key->pad), otp_pad_get_dest(used_key->pad), 
 					otp_pad_get_id(used_key->pad), 
@@ -588,12 +589,12 @@ static void par_cli_show_key_details(PurpleConversation *conv)
 					used_key->opt->otp_enabled, used_key->opt->auto_enable, 
 					used_key->opt->no_entropy);
 		} else {
-			disp_string = g_strdup_printf("There are %i keys available for this"
+			disp_string = g_strdup_printf(_("There are %i keys available for this"
 					" conversation.\nCurrently active key infos:\nSource:\t\t%s\n"
 					"Destination:\t%s\nID:\t\t\t%s\nSize:\t\t\t%" G_GSIZE_FORMAT 
 					"\nPosition:\t\t%" G_GSIZE_FORMAT "\n"
 					"Entropy:\t\t%" G_GSIZE_FORMAT "\n"
-					"OTP enabled:\t%i\nAuto enable:\t%i\nNo entropy:\t%i", 
+					"OTP enabled:\t%i\nAuto enable:\t%i\nNo entropy:\t%i"), 
 					num,
 					otp_pad_get_src(used_key->pad), otp_pad_get_dest(used_key->pad), 
 					otp_pad_get_id(used_key->pad), 
@@ -605,13 +606,13 @@ static void par_cli_show_key_details(PurpleConversation *conv)
 		}
 	} else {
 		if (num > 1) {
-			disp_string = g_strdup_printf("There are %i keys available for this"
-					" conversation, but none is active.", num);
+			disp_string = g_strdup_printf(_("There are %i keys available for this"
+					" conversation, but none is active."), num);
 		} else if (num == 1) {
-			disp_string = g_strdup("There is one key available for this"
-					" conversation, but it is not active.");
+			disp_string = g_strdup(_("There is one key available for this"
+					" conversation, but it is not active."));
 		} else {
-			disp_string = g_strdup("There is no key available for this conversation.");
+			disp_string = g_strdup(_("There is no key available for this conversation."));
 		}
 	}
 	purple_conversation_write(conv, NULL, disp_string, 
@@ -631,10 +632,10 @@ static void par_cli_show_keys(PurpleConversation *conv, gboolean all)
 	char* dest_copy = par_strip_jabber_ressource(dest);
 	
 	if (all) {
-		purple_conversation_write(conv, NULL, "All your keys:", 
+		purple_conversation_write(conv, NULL, _("All your keys:"), 
 				PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_NO_LINKIFY, time(NULL));
 	} else {
-		purple_conversation_write(conv, NULL, "All your keys for this conversation:", 
+		purple_conversation_write(conv, NULL, _("All your keys for this conversation:"), 
 				PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_NO_LINKIFY, time(NULL));
 	}
 	
@@ -644,8 +645,8 @@ static void par_cli_show_keys(PurpleConversation *conv, gboolean all)
 		if (all || ((g_strcmp0(otp_pad_get_src(tmp_ptr->pad), src_copy) == 0) 
 					&& (g_strcmp0(otp_pad_get_dest(tmp_ptr->pad), dest_copy) == 0))) {
 			
-			nice_str = g_strdup_printf("%s -> %s (%s)\n\tSize: %" G_GSIZE_FORMAT "bytes, "
-					"Bytes left: %" G_GSIZE_FORMAT " Active: %i Enabled: %i\n",
+			nice_str = g_strdup_printf(_("%s -> %s (%s)\n\tSize: %" G_GSIZE_FORMAT "bytes, "
+					"Bytes left: %" G_GSIZE_FORMAT " Active: %i Enabled: %i\n"),
 					otp_pad_get_src(tmp_ptr->pad), 
 					otp_pad_get_dest(tmp_ptr->pad), 
 					otp_pad_get_id(tmp_ptr->pad), 
@@ -697,14 +698,14 @@ static void par_cli_init_keygen(PurpleConversation* conv, int size, gchar** para
 	if (syndrome > OTP_WARN) {
 		// TODO: tell the exact error
 		purple_conversation_write(conv, NULL, 
-				"Key files could not be generated!",
+				_("Key files could not be generated!"),
 				PURPLE_MESSAGE_NO_LOG, time(NULL));
 				purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 				"Key files could not be generated! %.8X\n", syndrome);
 	} else {
 		purple_conversation_write(conv, NULL, 
-				"Key generation successfully started. This will take some "
-				"minutes depending on the desired key length.",
+				_("Key generation successfully started. This will take some "
+				"minutes depending on the desired key length."),
 				PURPLE_MESSAGE_NO_LOG, time(NULL));
 		/* init and start polling for the result */
 		keygen = (struct kg_data *) g_malloc(sizeof(struct kg_data));
@@ -721,7 +722,7 @@ static void par_cli_init_keygen(PurpleConversation* conv, int size, gchar** para
 					"Generation of two entropy files of %ikiB size started.\n", size);
 		} else {
 			purple_conversation_write(conv, NULL,
-					"There was a warning issued!\n", //TODO: wtf?
+					_("There was a warning issued!"), //TODO: wtf?
 					PURPLE_MESSAGE_NO_LOG, time(NULL));
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, 
 					"Generation of two entropy files of %ikiB size started with a warning! %.8X\n",
@@ -794,8 +795,8 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 	else if (g_strcmp0("reload", *args) == 0) {
 		int old_count = par_keylist_count_keys(klist);
 		par_keylist_reload(otp_conf, klist);
-		char* msg = g_strdup_printf("Key list regenerated. Number of available "
-					"keys: old list %i, new list %i.", // TODO: show added/removed number of keys
+		char* msg = g_strdup_printf(_("Key list regenerated. Number of available "
+					"keys: old list %i, new list %i."), // TODO: show added/removed number of keys
 					old_count, par_keylist_count_keys(klist));
 		purple_conversation_write(conv, NULL, msg, 
 					PURPLE_MESSAGE_NO_LOG, time(NULL));
@@ -866,7 +867,7 @@ static void par_conversation_created(PurpleConversation *conv)
 		/* display a nice message if already active */
 		if (active_key->opt->otp_enabled) {
 			purple_conversation_write(conv, NULL, 
-					"Encryption enabled.", 
+					_("Encryption enabled."), 
 					PURPLE_MESSAGE_NO_LOG, time(NULL));
 		}
 		if (!active_key->opt->handshake_done && online) {
@@ -927,7 +928,7 @@ static void par_buddy_signed_off(PurpleBuddy *buddy)
 				/* notify enabled keys */
 				if (tmp_ptr->conv != NULL && tmp_ptr->opt->otp_enabled) {
 					purple_conversation_write(tmp_ptr->conv, NULL, 
-						"Encryption disabled.", 
+						_("Encryption disabled."), 
 						PURPLE_MESSAGE_NO_LOG, time(NULL));
 				}
 				// TODO: Maybe just reset active keys?
@@ -1004,7 +1005,7 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 							otp_pad_get_id(tmp_ptr->pad));
 					tmp_ptr->opt->otp_enabled = FALSE;
 					purple_conversation_write(conv, NULL, 
-							"Encryption disabled.", 
+							_("Encryption disabled."), 
 							PURPLE_MESSAGE_NO_LOG, time(NULL));
 				}
 			}
@@ -1058,7 +1059,7 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 			/* notify the user */
 			*flags = *flags | PURPLE_MESSAGE_ERROR;
 			g_free(*message);
-			*message = g_strdup("The last incoming message could not be decrypted. This is a serious error!");
+			*message = g_strdup(_("The last incoming message could not be decrypted. This is a serious error!"));
 			return FALSE;
 		} else {
 			if (syndrome != OTP_OK) {
@@ -1073,7 +1074,7 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 				purple_debug(PURPLE_DEBUG_ERROR, PARANOIA_ID, 
 						"Warning: The consistency check of the next message failed!\n");
 				purple_conversation_write(conv, NULL, 
-						"The consistency check of the next message failed!", 
+						_("The consistency check of the next message failed!"), 
 						PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_ERROR, time(NULL));
 			}
 		}
@@ -1095,7 +1096,7 @@ static gboolean par_im_msg_receiving(PurpleAccount *account,
 		if (!used_key->opt->otp_enabled && used_key->opt->auto_enable) {
 			used_key->opt->otp_enabled = TRUE;
 			purple_conversation_write(conv, NULL, 
-					"Encryption enabled.", 
+					_("Encryption enabled."), 
 					PURPLE_MESSAGE_NO_LOG, time(NULL));
 			purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "This conversation was already initialized! otp_enabled is now TRUE\n");
 			/* detect REQUEST; needed for a auto-init (was encryptet, TODO: maybe replaceble with ACK) */
@@ -1157,8 +1158,8 @@ static void par_im_msg_sending(PurpleAccount *account,
 				used_key->opt->auto_enable = FALSE;
 				used_key->opt->active = FALSE;
 				purple_conversation_write(used_key->conv, NULL, 
-						"All your entropy has been used. Encryption disabled. "
-						"The last message could not be sent.", 
+						_("All your entropy has been used. Encryption disabled. "
+						"The last message could not be sent."), 
 						PURPLE_MESSAGE_NO_LOG, time(NULL));
 				// TODO: display the message in the msg too and hide the real one
 				/* delete the remaining entropy */
@@ -1197,7 +1198,7 @@ static void par_im_msg_sending(PurpleAccount *account,
 			} else {
 				// TODO: send an entropy warning (with timer)
 				char *warning_msg = g_strdup_printf (
-						"Your entropy is low! %" G_GSIZE_FORMAT " bytes left.",
+						_("Your entropy is low! %" G_GSIZE_FORMAT " bytes left."),
 						otp_pad_get_entropy(used_key->pad));
 				purple_conversation_write(used_key->conv, NULL, 
 						warning_msg, PURPLE_MESSAGE_NO_LOG, time(NULL));
@@ -1218,8 +1219,8 @@ static void par_im_msg_sending(PurpleAccount *account,
 					"Could not encrypt the message. This is a serious error! %.8X\n", syndrome);
 			/* notify the user */
 			purple_conversation_write(used_key->conv, NULL, 
-						"The last outgoing message could not be encrypted. "
-						"This is a serious error!", 
+						_("The last outgoing message could not be encrypted. "
+						"This is a serious error!"), 
 						PURPLE_MESSAGE_ERROR, time(NULL));
 			return;
 		} else {
@@ -1378,7 +1379,7 @@ static gboolean plugin_load(PurplePlugin *plugin)
 	par_cmd_id = purple_cmd_register ("otp", "s", PURPLE_CMD_P_DEFAULT,
 			PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_ALLOW_WRONG_ARGS, NULL, 
 			PURPLE_CMD_FUNC(par_cli_check_cmd), 
-			"otp &lt;command&gt: type /otp to get help", NULL);
+			_("otp &lt;command&gt: type /otp to get help"), NULL);
 
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Plugin loaded.\n");
 	
@@ -1412,13 +1413,6 @@ gboolean plugin_unload(PurplePlugin *plugin)
 	return TRUE;
 }
 
-static void plugin_init(PurplePlugin *plugin)
-/* gets called when libpurple probes the plugin */
-{
-	return;
-}
-
-
 /* ----------------- Plugin definition & init ------------------ */
 
 static PurplePluginInfo info = {
@@ -1433,14 +1427,14 @@ static PurplePluginInfo info = {
                                    PURPLE_PRIORITY_HIGHEST or
                                    PURPLE_PRIORITY_LOWEST */
     PARANOIA_ID,     			/* plugin id */
-    "One-Time Pad Encryption",  /* plugin name */
+    NULL, /* set in plugin_init due to translation */ /* plugin name */
     PARANOIA_VERSION,           /* version */
-    "Paranoia One-Time Pad Encryption Plugin",   
+    NULL, /* set in plugin_init due to translation */
 							/* This is the summary of your plugin.  It
                                    should be a short little blurb.  The UI
                                    determines where, if at all, to display
                                    this. */
-    "The Paranoia plugin allows you to encrypt your messages with one-time pads.",   
+    NULL, /* set in plugin_init due to translation */
 							/* This is the description of your plugin. It
                                    can be as long and as descriptive as you
                                    like.  And like the summary, it's up to the
@@ -1486,5 +1480,20 @@ static PurplePluginInfo info = {
     NULL,
     NULL
 };
+
+
+static void plugin_init(PurplePlugin *plugin)
+/* gets called when libpurple probes the plugin */
+{
+#ifdef ENABLE_NLS
+    bindtextdomain(GETTEXT_PACKAGE, LOCALEDIR);
+    bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8");
+#endif /* ENABLE_NLS */
+    info.name        = _("One-Time Pad Encryption");
+    info.summary     = _("Paranoia One-Time Pad Encryption Plugin");
+    info.description = _("The Paranoia plugin allows you to encrypt your messages with one-time pads.");
+
+	return;
+}
 
 PURPLE_INIT_PLUGIN(paranoia, plugin_init, info)
