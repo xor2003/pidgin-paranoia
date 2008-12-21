@@ -33,8 +33,15 @@ AC_PATH_PROG(sedpath, sed)
 AM_PROG_LIBTOOL
 LIBTOOL+=" --silent"
 
-#TODO: AM_GLIB_GNU_GETTEXT
-#TODO: AC_PROG_INTLTOOL
+#
+# Internationalisation stuff
+#
+AC_PROG_INTLTOOL
+GETTEXT_PACKAGE=$PACKAGE
+AC_SUBST(GETTEXT_PACKAGE)
+AC_DEFINE_UNQUOTED(GETTEXT_PACKAGE, ["$GETTEXT_PACKAGE"], [0.16])
+ALL_LINGUAS=""
+AM_GLIB_GNU_GETTEXT
 
 #
 # Additional paranoia_config.h entries
@@ -84,6 +91,7 @@ AC_OUTPUT([
 	Makefile
 	VERSION
 	tools/Makefile
+	po/Makefile.in
 	])
 
 echo;

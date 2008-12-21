@@ -1,4 +1,4 @@
-SUBDIRS = tools
+SUBDIRS = tools po
 
 paranoia_LTLIBRARIES = paranoia.la
 
