@@ -5,6 +5,7 @@ Version 0.4.0
 --------------------------------------------------------------------------------
 Simon Wenner:
  * Paranoia: gettext support added
+ * Paranoia: all glibc dependencies removed
 
 Version 0.3.0
 --------------------------------------------------------------------------------
