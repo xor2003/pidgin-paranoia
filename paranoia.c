@@ -188,7 +188,7 @@ static gboolean par_keygen_poll_result(void* data)
 			if (conv) {
 				/* write to conv if available */
 				purple_conversation_write(conv, NULL, 
-					_("Key generation completed successfully.\n "
+					_("Key generation completed successfully.\n"
 					"Your own key is stored in the directory '~/.paranoia'.\n"
 					"Your buddy's key is stored on your desktop.\n"
 					"Please send the key on your desktop in a secure way to your partner."), 
@@ -573,9 +573,9 @@ static void par_cli_show_key_details(PurpleConversation *conv)
 		if (num == 1) {
 			disp_string = g_strdup_printf(_("There is %i key available for this"
 					" conversation.\nCurrently active key infos:\nSource:\t\t%s\n"
-					"Destination:\t%s\nID:\t\t\t%s\nSize:\t\t\t%" G_GSIZE_FORMAT 
-					"\nPosition:\t\t%" G_GSIZE_FORMAT "\n"
-					"Entropy:\t\t%" G_GSIZE_FORMAT "\n"
+					"Destination:\t%s\nID:\t\t\t%s\nSize:\t\t\t%zu\n"
+					"Position:\t\t%zu\n"
+					"Entropy:\t\t%zu\n"
 					"OTP enabled:\t%i\nAuto enable:\t%i\nNo entropy:\t%i"),
 					num,
 					otp_pad_get_src(used_key->pad), otp_pad_get_dest(used_key->pad), 
@@ -588,9 +588,9 @@ static void par_cli_show_key_details(PurpleConversation *conv)
 		} else {
 			disp_string = g_strdup_printf(_("There are %i keys available for this"
 					" conversation.\nCurrently active key infos:\nSource:\t\t%s\n"
-					"Destination:\t%s\nID:\t\t\t%s\nSize:\t\t\t%" G_GSIZE_FORMAT 
-					"\nPosition:\t\t%" G_GSIZE_FORMAT "\n"
-					"Entropy:\t\t%" G_GSIZE_FORMAT "\n"
+					"Destination:\t%s\nID:\t\t\t%s\nSize:\t\t\t%zu\n"
+					"Position:\t\t%zu\n"
+					"Entropy:\t\t%zu\n"
 					"OTP enabled:\t%i\nAuto enable:\t%i\nNo entropy:\t%i"), 
 					num,
 					otp_pad_get_src(used_key->pad), otp_pad_get_dest(used_key->pad), 
@@ -642,8 +642,8 @@ static void par_cli_show_keys(PurpleConversation *conv, gboolean all)
 		if (all || ((g_strcmp0(otp_pad_get_src(tmp_ptr->pad), src_copy) == 0) 
 					&& (g_strcmp0(otp_pad_get_dest(tmp_ptr->pad), dest_copy) == 0))) {
 			
-			nice_str = g_strdup_printf(_("%s -> %s (%s)\n\tSize: %" G_GSIZE_FORMAT "bytes, "
-					"Bytes left: %" G_GSIZE_FORMAT " Active: %i Enabled: %i\n"),
+			nice_str = g_strdup_printf(_("%s -> %s (%s)\n\tSize: %zu bytes, "
+					"Bytes left: %zu Active: %i Enabled: %i\n"),
 					otp_pad_get_src(tmp_ptr->pad), 
 					otp_pad_get_dest(tmp_ptr->pad), 
 					otp_pad_get_id(tmp_ptr->pad), 
@@ -1195,7 +1195,7 @@ static void par_im_msg_sending(PurpleAccount *account,
 			} else {
 				// TODO: send an entropy warning (with timer)
 				char *warning_msg = g_strdup_printf (
-						_("Your entropy is low! %" G_GSIZE_FORMAT " bytes left."),
+						_("Your entropy is low! %zu bytes left."),
 						otp_pad_get_entropy(used_key->pad));
 				purple_conversation_write(used_key->conv, NULL, 
 						warning_msg, PURPLE_MESSAGE_NO_LOG, time(NULL));
