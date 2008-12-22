@@ -54,7 +54,7 @@ Comments:
       # aptitude install subversion
 
     3.b.2: Get the tools needed for autoconf
-      # aptitude install libtool autoconf
+      # aptitude install libtool autoconf intltool
 
     3.b.3: Get the source code from SVN:
       $ svn co https://pidgin-paranoia.svn.sourceforge.net/svnroot/pidgin-paranoia/trunk pidgin-paranoia
