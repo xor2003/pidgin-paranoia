@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pidgin-paranoia 0.3.90\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2008-12-22 19:37+0100\n"
+"POT-Creation-Date: 2008-12-22 20:24+0100\n"
 "PO-Revision-Date: 2008-12-21 23:07+0100\n"
 "Last-Translator: Simon Wenner <simon@wenner.ch>\n"
 "Language-Team: German\n"
@@ -227,7 +227,7 @@ msgid ""
 msgstr ""
 
 #: ../paranoia.c:1379
-msgid "otp &lt;command&gt: type /otp to get help"
+msgid "otp &lt;command&gt: type '/otp help' to get help"
 msgstr ""
 
 #: ../paranoia.c:1489

@@ -1376,7 +1376,7 @@ static gboolean plugin_load(PurplePlugin *plugin)
 	par_cmd_id = purple_cmd_register ("otp", "s", PURPLE_CMD_P_DEFAULT,
 			PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_ALLOW_WRONG_ARGS, NULL, 
 			PURPLE_CMD_FUNC(par_cli_check_cmd), 
-			_("otp &lt;command&gt: type /otp to get help"), NULL);
+			_("otp &lt;command&gt: type '/otp help' to get help"), NULL);
 
 	purple_debug(PURPLE_DEBUG_INFO, PARANOIA_ID, "Plugin loaded.\n");
 	
