@@ -6,7 +6,6 @@ Version 0.4
 ============
  	paranoia
 	 * send entropy warnings (delayed with a timer)
- 	 * gettext support (translations)
  	 
 	libotp
 	 * get_ should return object

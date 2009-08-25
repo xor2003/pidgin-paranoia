@@ -20,12 +20,12 @@ paranoia_la_SOURCES = \
 	paranoia.c
 
 paranoia_la_CPPFLAGS = \
-	$(GLIB_CFLAGS) \
-	$(PURPLE_CFLAGS) \
 	-DVERSION=\"$(VERSION)\" \
-	-DLIBDIR=\"$(PURPLE_LIBDIR)/purple-2/\" \
+	-DLIBDIR=\"$(PURPLE_LIBDIR)/purple-2\" \
 	-DDATADIR=\"$(PURPLE_DATADIR)\" \
-	-DLOCALEDIR=\"$(PURPLE_DATADIR)/locale\"
+	-DLOCALEDIR=\"$(PURPLE_DATADIR)/locale\" \
+	$(GLIB_CFLAGS) \
+	$(PURPLE_CFLAGS)
 
 BUILT_SOURCES = paranoia_config.h
 

@@ -7,6 +7,9 @@ Simon Wenner:
  * Paranoia: gettext support added
  * Paranoia: all glibc dependencies removed
 
+Pascal Sachs:
+ * German translation
+
 Version 0.3.0
 --------------------------------------------------------------------------------
 Simon Wenner:

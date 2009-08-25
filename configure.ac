@@ -20,14 +20,14 @@ AC_CANONICAL_SYSTEM
 AC_DISABLE_STATIC
 
 # Automake standard initialization
-AM_INIT_AUTOMAKE()
+AM_INIT_AUTOMAKE
 
 #
 # Check for tools we need
 #
 AM_PROG_CC_STDC
 AM_PROG_CC_C_O
-CFLAGS+=" -Wall"
+CFLAGS+=" -Wall -Werror"
 AC_CHECK_LIB(m, cos)
 AC_PATH_PROG(sedpath, sed)
 AM_PROG_LIBTOOL
@@ -40,45 +40,43 @@ AC_PROG_INTLTOOL
 GETTEXT_PACKAGE=$PACKAGE
 AC_SUBST(GETTEXT_PACKAGE)
 AC_DEFINE_UNQUOTED(GETTEXT_PACKAGE, ["$GETTEXT_PACKAGE"], [0.16])
+ALL_LINGUAS="de fr"
 AM_GLIB_GNU_GETTEXT
 
 #
 # Additional paranoia_config.h entries
 #
-AC_DEFINE_UNQUOTED(PARANOIA_WEBSITE, "http://pidgin-paranoia.sourceforge.net/", [Pidgin-Paranoia's Website])
-AC_DEFINE_UNQUOTED(PARANOIA_AUTHORS, "Simon Wenner <simon@wenner.ch> Christian Wäckerlin <christian@waeckerlin.com>", [Pidgin-Paranoia's Authors])
-AC_DEFINE_UNQUOTED(PARANOIA_ID, "core-paranoia", [Pidgin-Paranoia Plugin ID])
+AC_DEFINE_UNQUOTED(PARANOIA_WEBSITE, 
+    "http://pidgin-paranoia.sourceforge.net/", 
+    [Pidgin-Paranoia's Website])
+AC_DEFINE_UNQUOTED(PARANOIA_AUTHORS, 
+    "Simon Wenner <simon@wenner.ch> Christian Wäckerlin <christian@waeckerlin.com>", 
+    [Pidgin-Paranoia's Authors])
+AC_DEFINE_UNQUOTED(PARANOIA_ID, 
+    "core-paranoia", 
+    [Pidgin-Paranoia Plugin ID])
 
 #
-# Check for glib2.0
+# Check for glib-2.0
 #
-AM_PATH_GLIB_2_0(2.16.0,, AC_MSG_ERROR([
-*** GLib 2.16.0 is required to build pidgin-paranoia;  The latest version of 
-*** GLib is always available at http://www.gtk.org/.]))
-
-PKG_CHECK_MODULES(GTHREAD, gthread-2.0,, [AC_MSG_ERROR([unable to find the GThread library])])
-PKG_CHECK_MODULES(GOBJECT, gobject-2.0,, [AC_MSG_ERROR([unable to find the GObject library])])
-PKG_CHECK_MODULES(GIO, gio-2.0,, [AC_MSG_ERROR([unable to find the GIO library])])
-
-GLIB_LIBS+="`pkg-config --libs gthread-2.0 gobject-2.0 gio-2.0`"
-GLIB_CFLAGS+="`pkg-config --cflags gthread-2.0 gobject-2.0 gio-2.0`"
+PKG_CHECK_MODULES(GLIB,
+  [  glib-2.0 >= 2.16,
+     gthread-2.0 >= 2.10,
+     gio-2.0 >= 2.16
+  ]
+)
 
 #
 # Check for libpurple
 #
 PKG_CHECK_MODULES(PURPLE, purple >= 2.2.0,, AC_MSG_ERROR([
-*** Lib Purple >= 2.2.0 is required to build pidgin-paranoia.
+*** LibPurple >= 2.2.0 is required to build pidgin-paranoia.
 *** The purple header files are available at http://www.pidgin.im/.]))
 
-# Maybe a better solution in the future:
+# Alternative:
 #AM_PATH_PURPLE(2.2.0,, AC_MSG_ERROR([
 #*** LibPurple 2.2.0 is required to build pidgin-paranoia.
 #*** Available at http://www.pidgin.im/.]))
-
-PURPLE_LIBDIR=`pkg-config --variable=libdir purple`
-PURPLE_DATADIR=`pkg-config --variable=datadir purple`
-AC_SUBST(PURPLE_LIBDIR)
-AC_SUBST(PURPLE_DATADIR)
 
 #
 # Finish up
@@ -91,7 +89,7 @@ AC_OUTPUT([
 	VERSION
 	tools/Makefile
 	po/Makefile.in
-	])
+])
 
 echo;
 echo Configuration complete
