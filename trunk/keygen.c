@@ -386,10 +386,12 @@ OtpError keygen_keys_generate(char *alice_file, char *bob_file,
 	
 	/* Try to create alice file */
 	alice_base = g_path_get_basename(key_data->alice);
+
 	tmp_file = g_strconcat(g_get_tmp_dir(), G_DIR_SEPARATOR_S, alice_base, NULL);
 
 	key_data->fp_alice = (GOutputStream *)g_file_create(g_file_new_for_commandline_arg(tmp_file), 
 															G_FILE_CREATE_PRIVATE, NULL, NULL);
+
 	g_free(tmp_file);
 	g_free(alice_base);
 	

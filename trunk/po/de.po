@@ -20,7 +20,7 @@ msgstr ""
 #: ../paranoia.c:180
 #, c-format
 msgid "%5.2f percent of the key done."
-msgstr ""
+msgstr "%5.2f Prozent des Schlüssels sind fertiggestellt."
 
 #: ../paranoia.c:191
 msgid ""
@@ -29,6 +29,10 @@ msgid ""
 "Your buddy's key is stored on your desktop.\n"
 "Please send the key on your desktop in a secure way to your partner."
 msgstr ""
+"Der Schlüssel wurde erfolgreich fertiggestellt.\n"
+"Ihr eigener Schlüssel wurde im Verzeichnis '~/.paranoia' abgelegt.\n"
+"Der Schlüssel Ihres Kommunikationspartners befindet sich auf Ihrem Desktop.\n"
+"Bitte übermitteln sie den Schlüssel auf Ihrem Desktop auf sicherem Wege an Ihren Kommunikationspartner."
 
 #. show a nice pop-up
 #: ../paranoia.c:198
@@ -40,14 +44,19 @@ msgid ""
 "Your buddy's key is stored on your desktop.\n"
 "Please send the key on your desktop in a secure way to your partner."
 msgstr ""
+"%s->%s (%s), %zu bytes\n"
+"\n"
+"Ihr eigener Schlüssel wurde im Verzeichnis '~/.paranoia' abgelegt.\n"
+"Der Schlüssel Ihres Kommunikationspartners befindet sich auf Ihrem Desktop.\n"
+"Bitte übermitteln sie den Schlüssel auf Ihrem Desktop auf sicherem Wege an Ihren Kommunikationspartner."
 
 #: ../paranoia.c:206
 msgid "Paranoia Key Generator"
-msgstr ""
+msgstr "Paranoia Schlüsselersteller"
 
 #: ../paranoia.c:207
 msgid "A new key pair has been created!"
-msgstr ""
+msgstr "Ein neues Schlüsselpaar wurde erstellt!"
 
 #: ../paranoia.c:327 ../paranoia.c:362 ../paranoia.c:494 ../paranoia.c:867
 #: ../paranoia.c:1096
@@ -56,20 +65,21 @@ msgstr "Verschlüsselung aktiviert."
 
 #: ../paranoia.c:375 ../paranoia.c:403
 msgid "Encryption disabled (remote)."
-msgstr ""
+msgstr "Verschlüsselung deaktiviert (entfernt)"
 
 #: ../paranoia.c:385
 msgid "Encryption enabled (remote)."
-msgstr ""
+msgstr "Verschlüsselung aktiviert (entfernt)"
 
 #: ../paranoia.c:395
 msgid "This buddy would like to chat encrypted."
-msgstr ""
+msgstr "Dieser Kommunikationspartner würde gerne verschlüsselt kommunizieren."
 
 #: ../paranoia.c:416
 msgid ""
 "Your converstation partner is out of entropy. Encryption disabled (remote)."
 msgstr ""
+"Ihr Kommunikationspartner hat keine Entropie mehr. Verschlüsselung deaktiviert (entfernt)"
 
 #: ../paranoia.c:447
 msgid ""
@@ -84,30 +94,40 @@ msgid ""
 "/otp list-all: shows all available keys\n"
 "/otp reload: reloads all your key files"
 msgstr ""
+"Wilkommen bei der One-Time Pad CLI.\n"
+"/otp help: zeigt diese Nachricht\n"
+"/otp genkey &lt;Grösse&gt; &lt;externe Entropiequelle&gt;: generiert ein Schlüsselpaar "
+"der Grösse &lt;Grösse&gt; kiB\n"
+"/otp on: versucht die Verschlüsselung zu aktivieren\n"
+"/otp off: deaktiviert die Verschlüsselung\n"
+"/otp info: zeigt Details des gerade benutzten Schlüssels\n"
+"/otp list: zeigt alle Schlüssel für diese Konversation\n"
+"/otp list-all: zeigt alle verfügbaren Schlüssel\n"
+"/otp reload: ladet alle Ihre Schlüsseldateien neu"
 
 #: ../paranoia.c:457
 msgid "Wrong argument(s). Type '/otp help' for help."
-msgstr ""
+msgstr "Falsche(s) Argument(e). Tippen Sie '/otp help' für Hilfe."
 
 #: ../paranoia.c:458
 msgid "Your key size is too large."
-msgstr ""
+msgstr "Ihre Schlüsselgrösse ist zu gross."
 
 #: ../paranoia.c:484
 msgid "Couldn't enable the encryption. No entropy available."
-msgstr ""
+msgstr "Konnte die Verschlüsselung nicht aktivieren. Keine Entropie verfügbar."
 
 #: ../paranoia.c:500
 msgid "Encryption already enabled."
-msgstr ""
+msgstr "Verschlüsselung wurde schon aktiviert."
 
 #: ../paranoia.c:507
 msgid "Trying to enable encryption."
-msgstr ""
+msgstr "Es wird versucht die Verschlüsselung zu aktivieren."
 
 #: ../paranoia.c:512
 msgid "Couldn't enable the encryption. No key available."
-msgstr ""
+msgstr "Die Verschlüsselung konnte nicht aktiviert werden. Kein Schlüssel verfügbar."
 
 #: ../paranoia.c:540 ../paranoia.c:928 ../paranoia.c:1005
 msgid "Encryption disabled."
@@ -115,11 +135,11 @@ msgstr "Verschlüsselung deaktiviert."
 
 #: ../paranoia.c:544
 msgid "Encryption already disabled."
-msgstr ""
+msgstr "Verschlüsselung wurde schon deaktiviert."
 
 #: ../paranoia.c:551
 msgid "Couldn't disable the encryption. No key available."
-msgstr ""
+msgstr "Konnte die Verschlüsselung nicht deaktivieren. Kein Schlüssel verfügbar."
 
 #: ../paranoia.c:574
 #, c-format
@@ -136,6 +156,17 @@ msgid ""
 "Auto enable:\t%i\n"
 "No entropy:\t%i"
 msgstr ""
+"Es ist %i Schlüssel für diese Konversation verfügbar.\n"
+"Informationen über den momentan aktiven Schlüssel:\n"
+"Quelle:\t\t%s\n"
+"Ziel:\t%s\n"
+"ID:\t\t\t%s\n"
+"Grösse:\t\t\t%zu\n"
+"Position:\t\t%zu\n"
+"Entropie:\t\t%zu\n"
+"OTP aktiv:\t%i\n"
+"Automatisch aktivieren:\t%i\n"
+"Keine Entropie:\t%i"
 
 #: ../paranoia.c:589
 #, c-format
@@ -152,83 +183,101 @@ msgid ""
 "Auto enable:\t%i\n"
 "No entropy:\t%i"
 msgstr ""
+"Es sind %i Schlüssel für diese Konversation verfügbar.\n"
+"Informationen über den momentan aktiven Schlüssel:\n"
+"Quelle:\t\t%s\n"
+"Ziel:\t%s\n"
+"ID:\t\t\t%s\n"
+"Grösse:\t\t\t%zu\n"
+"Position:\t\t%zu\n"
+"Entropie:\t\t%zu\n"
+"OTP aktiv:\t%i\n"
+"Automatisch aktivieren:\t%i\n"
+"Keine Entropie:\t%i"
 
 #: ../paranoia.c:606
 #, c-format
 msgid "There are %i keys available for this conversation, but none is active."
-msgstr ""
+msgstr "Es sind %i Schlüssel verfügbar für diese Konversation, jedoch ist keiner aktiv."
 
 #: ../paranoia.c:609
 msgid "There is one key available for this conversation, but it is not active."
-msgstr ""
+msgstr "Es ist ein Schlüssel verfügbar für diese Konversation, jedoch ist dieser nicht aktiv."
 
 #: ../paranoia.c:612
 msgid "There is no key available for this conversation."
-msgstr ""
+msgstr "Es ist kein Schlüssel verfügbar für diese Konversation."
 
 #: ../paranoia.c:632
 msgid "All your keys:"
-msgstr ""
+msgstr "All Ihre Schlüssel:"
 
 #: ../paranoia.c:635
 msgid "All your keys for this conversation:"
-msgstr ""
+msgstr "All Ihre Schlüssel für diese Konversation:"
 
 #: ../paranoia.c:645
 #, c-format
 msgid ""
 "%s -> %s (%s)\n"
 "\tSize: %zu bytes, Bytes left: %zu Active: %i Enabled: %i\n"
-msgstr ""
+msgstr "\tGrösse: %zu bytes, Bytes übrig: %zu Aktiv: %i Aktiviert: %i\n"
 
 #: ../paranoia.c:698
 msgid "Key files could not be generated!"
-msgstr ""
+msgstr "Schlüsseldatei konnte nicht erstellt werden!"
 
 #: ../paranoia.c:704
 msgid ""
 "Key generation successfully started. This will take some minutes depending "
 "on the desired key length."
 msgstr ""
+"Schlüsselgeneration wurde erfolgreich gestartet. Dies dauert je nach "
+"gewünschter Schlüsselgrösse einige Minuten."
 
 #: ../paranoia.c:722
 msgid "There was a warning issued!"
-msgstr ""
+msgstr "Es wurde eine Warnung ausgegeben."
 
 #: ../paranoia.c:795
 #, c-format
 msgid ""
 "Key list regenerated. Number of available keys: old list %i, new list %i."
 msgstr ""
+"Schlüsselliste wurde aktualisiert. Anzahl verfügbarer Schlüssel: alte Liste: %i, neue Liste: %i."
 
 #: ../paranoia.c:1059
 msgid ""
 "The last incoming message could not be decrypted. This is a serious error!"
 msgstr ""
+"Die letzte ankommende Nachricht konnte nicht entschlüsselt werden. Dies ist ein schwerwiegender Fehler!"
 
 #: ../paranoia.c:1074
 msgid "The consistency check of the next message failed!"
-msgstr ""
+msgstr "Die Konsistenzprüfung der letzten Nachricht ist fehlgeschlagen!"
 
 #: ../paranoia.c:1158
 msgid ""
 "All your entropy has been used. Encryption disabled. The last message could "
 "not be sent."
 msgstr ""
+"All Ihre Entropie wurde aufgebraucht. Verschlüsselung wurde deaktiviert. "
+"Die letzte Nachricht konnte nicht gesendet werden."
 
 #: ../paranoia.c:1198
 #, c-format
 msgid "Your entropy is low! %zu bytes left."
-msgstr ""
+msgstr "Ihre Entropie geht aus! %zu bytes übrig."
 
 #: ../paranoia.c:1219
 msgid ""
 "The last outgoing message could not be encrypted. This is a serious error!"
 msgstr ""
+"Die letzte ausgehende Nachricht konnte nicht verschlüsselt werden. Dies ist ein schwerwiegender Fehler!"
 
 #: ../paranoia.c:1379
 msgid "otp &lt;command&gt: type '/otp help' to get help"
-msgstr ""
+msgstr "otp &lt;Befehl&gt: Tippen Sie '/otp help' für Hilfe"
 
 #: ../paranoia.c:1489
 msgid "One-Time Pad Encryption"
