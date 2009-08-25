@@ -40,3 +40,10 @@ EXTRA_DIST = \
 
 DISTCLEANFILES= \
 	paranoia_config.h
+
+MAINTAINERCLEANFILES = \
+	Makefile.in pre_config.h.in aclocal.m4 \
+	intltool-extract.in intltool-update.in intltool-merge.in \
+	configure depcomp compile missing install-sh ltmain.sh \
+	config.guess config.sub
+

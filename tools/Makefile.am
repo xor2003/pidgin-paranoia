@@ -39,3 +39,6 @@ nodist_otp_SOURCES = \
 otp_CPPFLAGS = $(GLIB_CFLAGS)
 
 otp_LDADD = $(GLIB_LIBS)
+
+MAINTAINERCLEANFILES = \
+	Makefile.in
