@@ -19,9 +19,10 @@ AC_CANONICAL_SYSTEM
 # not be built by default. (*.a files)
 AC_DISABLE_STATIC
 
-# Automake standard initialization and config
+# Automake standard initialization
 AM_INIT_AUTOMAKE
-AM_MAINTAINER_MODE
+
+# config stuff
 AC_CONFIG_HEADER(pre_config.h)
 AC_CONFIG_SRCDIR([paranoia.c])
 AC_CONFIG_MACRO_DIR([m4])
