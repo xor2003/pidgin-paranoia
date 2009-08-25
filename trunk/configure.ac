@@ -19,18 +19,22 @@ AC_CANONICAL_SYSTEM
 # not be built by default. (*.a files)
 AC_DISABLE_STATIC
 
-# Automake standard initialization
+# Automake standard initialization and config
 AM_INIT_AUTOMAKE
+AM_MAINTAINER_MODE
+AC_CONFIG_HEADER(pre_config.h)
+AC_CONFIG_SRCDIR([paranoia.c])
+AC_CONFIG_MACRO_DIR([m4])
 
 #
 # Check for tools we need
 #
-AM_PROG_CC_STDC
+AC_PROG_CC_STDC
 AM_PROG_CC_C_O
 CFLAGS+=" -Wall -Werror"
 AC_CHECK_LIB(m, cos)
 AC_PATH_PROG(sedpath, sed)
-AM_PROG_LIBTOOL
+AC_PROG_LIBTOOL
 LIBTOOL+=" --silent"
 
 #
@@ -81,9 +85,6 @@ PKG_CHECK_MODULES(PURPLE, purple >= 2.2.0,, AC_MSG_ERROR([
 #
 # Finish up
 #
-
-AM_CONFIG_HEADER(pre_config.h)
-
 AC_OUTPUT([
 	Makefile
 	VERSION
