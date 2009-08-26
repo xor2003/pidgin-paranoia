@@ -74,9 +74,9 @@ PKG_CHECK_MODULES(GLIB,
 #
 # Check for libpurple
 #
-PKG_CHECK_MODULES(PURPLE, purple >= 2.2.0,, AC_MSG_ERROR([
-*** LibPurple >= 2.2.0 is required to build pidgin-paranoia.
-*** The purple header files are available at http://www.pidgin.im/.]))
+#PKG_CHECK_MODULES(PURPLE, purple >= 2.2.0,, AC_MSG_ERROR([
+#*** LibPurple >= 2.2.0 is required to build pidgin-paranoia.
+#*** The purple header files are available at http://www.pidgin.im/.]))
 
 AM_PATH_PURPLE(2.2.0,, AC_MSG_ERROR([
 *** LibPurple 2.2.0 is required to build pidgin-paranoia.
