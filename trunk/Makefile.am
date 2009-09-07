@@ -1,5 +1,7 @@
 SUBDIRS = tools po
 
+ACLOCAL_AMFLAGS = -I m4
+
 paranoia_LTLIBRARIES = paranoia.la
 
 paranoiadir = $(PURPLE_LIBDIR)/purple-2

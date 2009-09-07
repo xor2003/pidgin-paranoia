@@ -40,9 +40,10 @@
 #include "libotp.h"
 #include "key_management.h"
 
-// test defines
+// debug defines
 #define SHOW_STATUS
 #define CENSORSHIP
+//#define DROP_CMD
 
 /* Requires GNOMElib > 2.14! Bob's keyfile is placed onto the desktop. 
  * If not set, the file is placed in the home directory. */
@@ -751,8 +752,8 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 	else if (g_strcmp0("off", *args) == 0) {
 		par_cli_disable_enc(conv);
 	}
+#ifdef DROP_CMD // REMOVE ME (just for testing!)
 	else if (g_strcmp0("drop", *args) == 0) {
-	// REMOVE ME (just for testing!)
 		const char* my_acc = purple_account_get_username(
 				purple_conversation_get_account(conv));
 		const char* other_acc = purple_conversation_get_name(conv);
@@ -779,7 +780,8 @@ static PurpleCmdRet par_cli_check_cmd(PurpleConversation *conv,
 					"Couldn't drop the encryption. No key available.",
 					PURPLE_MESSAGE_NO_LOG, time(NULL));	
 		}
-	} // REMOVE ME end
+	}
+#endif // REMOVE ME end
 	else if (g_strcmp0("info", *args) == 0) {
 		par_cli_show_key_details(conv);
 	}
@@ -1482,13 +1484,11 @@ static PurplePluginInfo info = {
 static void plugin_init(PurplePlugin *plugin)
 /* gets called when libpurple probes the plugin */
 {
-#ifdef ENABLE_NLS
-    bindtextdomain(GETTEXT_PACKAGE, LOCALEDIR);
-    bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8");
-#endif /* ENABLE_NLS */
-    info.name        = _("One-Time Pad Encryption");
-    info.summary     = _("Paranoia One-Time Pad Encryption Plugin");
-    info.description = _("The Paranoia plugin allows you to encrypt your messages with one-time pads.");
+  bindtextdomain(GETTEXT_PACKAGE, LOCALEDIR);
+  bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8");
+  info.name        = _("One-Time Pad Encryption");
+  info.summary     = _("Paranoia One-Time Pad Encryption Plugin");
+  info.description = _("The Paranoia plugin allows you to encrypt your messages with one-time pads.");
 
 	return;
 }

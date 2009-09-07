@@ -1,18 +1,6 @@
 -----------------------------------------------------------------------
                               TODO list
 -----------------------------------------------------------------------
-
-Version 0.4
-============
- 	paranoia
-	 * send entropy warnings (delayed with a timer)
- 	 
-	libotp
-	 * get_ should return object
-	 * keyfile entropy really checked for patterns
-	 
-	otp
-	 * commandline program that can use libotp for general usage
  	 
 Version 0.5
 ============
@@ -20,6 +8,14 @@ Version 0.5
  	 * No pop-up at the beginning of a conversation
  	 	maybe through invisible conversations, needs changes in libpurple
 	 * optimize key list (hashtables)
+	 * send entropy warnings (delayed with a timer)
+
+	libotp
+	 * get_ should return object
+	 * keyfile entropy really checked for patterns
+	 
+	otp
+	 * commandline program that can use libotp for general usage
 
 Version 1.0
 ============
