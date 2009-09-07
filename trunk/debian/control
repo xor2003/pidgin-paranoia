@@ -9,8 +9,8 @@ Homepage: http://pidgin-paranoia.sourceforge.net
 Package: pidgin-paranoia
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, libpurple0 (>= 2.2.0)
-Recommends: pidgin | finch
-Enhances: pidgin | finch
+Recommends: pidgin, finch
+Enhances: pidgin, finch
 Description: pidgin plugin that provides encryption using one-time pads
  Provides information-theoretically secure encryped conversations in pidgin
  using one-time-pads. 
