@@ -36,7 +36,7 @@ Comments:
 2: Install the tools needed to compile Pidgin-paranoia:
 
   2.1: Install compilers and stuff:
-    # aptitude install build-essential automake libtool
+    # aptitude install build-essential automake libtool intltool
 
   2.2: Install the headers for libpurple and gnomelib:
     # aptitude install libpurple-dev libglib2.0-dev
