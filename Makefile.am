@@ -37,7 +37,6 @@ paranoia_config.h: pre_config.h
 	$(sedpath) 's/\#define PACKAGE/\#define PARANOIA/g' pre_config.h > $@
 
 EXTRA_DIST = \
-	HACKING \
 	INFO
 
 DISTCLEANFILES= \
