@@ -1,0 +1,36 @@
+Pidgin-Paranoia - The one-time pad plugin for people who really care about privacy
+
+0.4.0 (07-09-2009):
+	In this release we added translation support. A German translation is 
+	available and is simple to add additional translations. Contributions 
+	are very welcome.
+
+	The plugin is now well tested and suitable for everyday use.
+
+0.3.0 (04-10-2008):
+	Our third release focuses on stability and usability improvements.
+	Session handshake can be expected to work _all_ the time, the user
+	gets live feedback about the current state during key generation and the 
+	consistency of received messages is checked. 
+	In addition, 0.3 provides performance improvements that allow the 
+	software to scale better then ever with the increasing number of paranoid 
+	people in your contact who all have an increasing number of concurrent 
+	keys. The performance of the key generator has also been greatly improved.
+
+	We consider the software to be in beta stage and suitable for everyday use.
+
+	For your convenience Debian/Ubuntu packages are supplied for i386 and amd64.
+
+0.2.0 (26-03-2008):
+	Our second release brings many new features like support for multiple keys 
+	per buddy, a new threaded keygen and better handling of the keyfiles.
+	We think it is pretty stable and consider it in late alpha stage since
+	it is not 100% feature complete. We consider it suitable for everyday use.
+
+	For your convenience Debian/Ubuntu packages are supplied for i386/amd64.
+
+0.1.0 (30-12-2007):
+	Enjoy our first release! Basic functionality of information-theoretically 
+	secure encrypted instant messaging and key generation is provided. We 
+	consider it alpha quality, but it should not SIGSEGV :-)
+

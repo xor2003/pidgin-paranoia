@@ -1,0 +1,58 @@
+--------------------------------------------------------------------------------
+                     General information about the software
+--------------------------------------------------------------------------------
+
+1. Aim of the software
+--------------------------------------------------------------------------------
+
+The plug-in allows to use one-time-pads
+(see: http://de.wikipedia.org/wiki/One-Time-Pad) to encrypt conversations in
+the IM-client Pidgin.
+The plug-in is written in C and released under the GPL (version 3).
+The plug-in aims to give 'perfect' security with a encryption system that is a
+simple as possible and easy to understand.
+
+Please read the file INFO for futher details.
+
+2. Installation
+--------------------------------------------------------------------------------
+
+Please read the file INSTALL.
+
+3. General advices
+--------------------------------------------------------------------------------
+
+Plase note that when not correctly used, many things can go wrong.
+Keeping your keyfiles secret and using good entropy-sources will help!
+If you do not pass any source argument to the '/otp genkey' command, the 
+internal keygenerator will be used. This entropy source should be sufficiant, 
+but if you habe a better entropy source use it instead. Do not use /dev/urandom.
+Read "INFO" for detailed information about the internal keygenerator and how 
+the encryption and decryption exactly works.
+
+4. Command line interface in pidgin
+--------------------------------------------------------------------------------
+
+Commands are entered by typing a message beginning with /otp.
+
+/otp help: shows this message 
+/otp genkey <size> <external entropy source>: generates a key pair of <size> kiB
+/otp on: tries to enable the encryption
+/otp off: disables the encryption
+/otp info: shows details about the used key
+/otp list: shows all keys for this conversation
+/otp list-all: shows all available keys
+/otp reload: reloads all your key files
+
+5. Usage of the otptester
+--------------------------------------------------------------------------------
+You can use tools/otptester to test most aspects of libotp. 
+See $ ./otptester --help
+
+To create a key and use it until it is empty:
+	$ ./otptester -vr --genusekey --keysize=1000
+
+6. Known bugs, limitations and planned features
+--------------------------------------------------------------------------------
+
+Please read the file TODO.

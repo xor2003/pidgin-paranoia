@@ -1,0 +1,164 @@
+--------------------------------------------------------------------------------
+                     Informations how the plugin works 
+--------------------------------------------------------------------------------
+
+1. Introduction 
+--------------------------------------------------------------------------------
+
+The plug-in allows to use one-time pads 
+(see: http://en.wikipedia.org/wiki/One-Time_Pad) to provide information-
+theoretically secure encrypted conversations in the IM-client Pidgin.
+A key file with random content is created by Alice. Alice also creates the byte 
+wise reverse version of its key file and transferes it in a secure way to Bob. 
+Alice and Bob both use the first half of their key file to encrypt and use the 
+second part of their key file to decrypt. The message is encrypted and decrypted
+ by XOR-ing it with the random bytes taken from the key file. The encrypted 
+message is encoded in Base64 and transmitted together with the starting point 
+of the bytes used in the key file. 
+The plug-in is written in C and released under the GPL (version 3).
+The plug-in aims to give 'perfect' security with a encryption system that is a 
+simple as possible and easy to understand.
+
+1.1 The security of One-time pads
+--------------------------------------------------------------------------------
+
+A cryptosystem is information-theoretically secure if the ciphertext (and the 
+algorithm) does not give the adversary enough information to find the 
+plaintext. Since a one-time pad uses a key that has the same length as the 
+plaintext, every ciphertext with a certain length can decrypt to any plaintext,
+if decrypted with the appropriate key. If truly random keys are used and not 
+repeated, the interception of ciphertext does not give the adversary information
+about the plaintext (except information about the length of the 
+plaintext in some implementations).
+Other cryptosystems like symmetric and asymmetric encryption are computationally
+secure but not information-theoretically secure since the adversary has the 
+information in theory needed to recover the plaintext but is limited in practice
+by the required computation time. With faster computers, better algorithms or 
+maybe quantum computers those cryptosystems could be broken.
+
+2. Description of the encryption/decryption protocol implemented in libotp library:
+--------------------------------------------------------------------------------
+
+This section describes libotp and it is independent of the application the 
+library is used in.
+
+2.1 The key files:
+--------------------------------------------------------------------------------
+Alice creates a file consisting of perfectly random numbers (very hard to 
+implement, (-;) of a size of i.e 1MB. Alice generates a random 8 characters
+ long hexadecimal number (the ID), i.e: "34EF4588". This number must not be 
+derived from the key file, because this would weaken the cryptosystem (at 
+least in theory)! Alice calls her file 
+"alice@jabber.org bob@jabber.org 34EF4588.entropy". 
+Alice creates the byte wise reverse version of its key file and calls it 
+"bob@jabber.org alice@jabber.org 34EF4588.entropy".
+
+Alice calls its own key file "alice@jabber.org bob@jabber.org 34EF4588.entropy" 
+because this key file will be used by her to communicate with Bob.
+
+Alice transfers Bob's key file "bob@jabber.org alice@jabber.org 34EF4588.entropy" 
+to Bob over a secure channel, i.e on CD. Alice does not need Bob's key file 
+anymore and can delete it.
+
+Both Alice and Bob can use the first half of their key file for encryption. 
+The second part of the key file is used to decrypt the message.
+
+2.2 Encryption:
+--------------------------------------------------------------------------------
+Alice finds the first byte in her key file that is not \0. Alice takes one byte 
+from the key file for every byte of her message and creates her encrypted 
+message using byte wise XOR. Alice writes \0 into the key file at the position 
+were the pad was used to encrypt the message. This ensures that every part of 
+the pad is only used once and the encryption is therefore secure! The encrypted 
+message is converted into Base64 (i.e. "M+Rla2w=") to ensure compatibility with 
+different transport layers.
+
+A string formed like "3234|34EF4588|M+Rla2w=" is transmitted.
+ * "3233" is the position (base 10) where Alice started reading 
+   in her key file.
+ * "34EF4588" is the ID used to check if both have compatible key files.
+ * "M+Rla2w=" is the Base64 encoded encrypted message.
+
+To prevent the adversary from knowing the exact length of the message, a random
+length tail of \0-bytes is added and encrypted.
+To know that the message has not been modified (by the adversary or due to some 
+other reason like some server truncating long messages), a CRC32 checksum is 
+written into the \0-tail at position 1-4 (4 bytes unsigned integer, 
+little endian). The user gets a warning if the checksum is not correct.
+
+
+2.3 Decryption:
+--------------------------------------------------------------------------------
+Bob decodes the Base64 encoded message and decrypts it with that bytes read 
+from the key file in reverse order at the position (counting from the end of 
+the key file) described in the transmitted string.
+
+
+3. Description of the Pidgin one-time-pad plugin
+--------------------------------------------------------------------------------
+This section describes the Pidgin plugin that uses libotp.
+
+3.1 Key and session management:
+--------------------------------------------------------------------------------
+At the plugin start a key list gets initialized depeding on the available key 
+files. The data is stord in a linked list containing an otp (libotp.h) and an 
+options (paranoia.c) struct. Every time the user wants to send a message or 
+receives a message the plugin searches for a matching key in the key list.
+
+3.2 Initialisation:
+--------------------------------------------------------------------------------
+When a conversation starts and at least one matching key is available, the 
+plugin sends a special request message: "*** Request for conversation with the 
+Pidgin-Paranoia plugin ($(comma separated IDs)) I'm paranoid, please download 
+the One-Time Pad plugin for encrypted communication.". If the receiving user has 
+the plugin and a matching key this message won't be displayed entirely. Instead 
+the plugin automatically sends an encrypted acknowledge message.
+If the plugin is able to decrypt this message, it activates the encryption for 
+this key id. All following messages are automatically encrypted and have the 
+following structure: "*** Encrypted with the Pidgin-Paranoia plugin: " + the 
+encrypted message.
+
+If a buddy goes offline the session gets closed and a new initialisation is 
+needed. 
+If the opposite client sends an unencypted message, our plugin stops 
+sending encrypted messages too.
+
+
+4 Key generation
+--------------------------------------------------------------------------------
+This section describes the key generation procedure and the possible options.
+with /otp genkey <size> <source> one can generate a new key. If no source is 
+given, the key is generated with the internal key generator. Furthermore the
+source can either be an entropy file or a character device.
+
+4.1 Internal key generator
+--------------------------------------------------------------------------------
+The internal key generator takes the entropy from different sources and mixes
+them together into the entropy pool. If the pool is two time filled, the entropy
+is writen into the keyfile. At the moment there are 4 different sources used:
+
+audio device:	Entropy is taken from the /dev/audio device and antibiased with 
+		the improved newman algorithm to improve the quality of the entropy.
+		It is recommended to play some music during the key generation 
+		process to improve the entropy quality.
+
+/dev/random:	Entropy is taken from the /dev/random device and mixed into the
+		entropy pool.
+
+thread timing:	The time to generate and finish 100 Threads is measured and mixed 
+		into the entropy pool.
+
+/dev/urandom:	To improve the speed, /dev/urandom is used to mix some entropy into
+		the entropy pool.
+
+4.2 Key from entropy file
+--------------------------------------------------------------------------------
+The entropy file has to be a standart unformated file with entropy. The user
+is responsible for the quality of the entropy in this file. The file must be
+long enough, else the key doesn't get generated.
+
+4.3 Key from entropy device
+--------------------------------------------------------------------------------
+The entropy device must be a character device. The quality of this device is not
+checked by the key generator, so the user is responsible that the entropy source
+is good enough. The generation time depends on the entropy source.

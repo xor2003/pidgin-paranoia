@@ -1,0 +1,42 @@
+-----------------------------------------------------------------------
+                              TODO list
+-----------------------------------------------------------------------
+ 	 
+Version 0.5
+============
+ 	paranoia
+ 	 * No pop-up at the beginning of a conversation
+ 	 	maybe through invisible conversations, needs changes in libpurple
+	 * optimize key list (hashtables)
+	 * send entropy warnings (delayed with a timer)
+
+	libotp
+	 * get_ should return object
+	 * keyfile entropy really checked for patterns
+	 
+	otp
+	 * commandline program that can use libotp for general usage
+
+Version 1.0
+============
+ 	paranoia
+ 	 * no conversation windows that pop-up independently
+	 * all pidgin protocols are tested and work
+	 * all major languages are available
+
+Misc
+ * Test all the less common protocols (Gadu-Gadu, QQ, SIMPLE...)
+ * ensure that the protocol is stable
+
+Ideas
+ * Entropy pool file
+ * Encrypted file transfer
+ * Pass controle messages over invisible conversations. Needs changes in purple.
+
+Known bugs
+ * There are some anomalies if both set /otp off and one user tries to reenable.
+ * Finch eats our <otp> markers.
+ * If your system has no audio device, key generation can take much longer.
+ * If you use the history plugin, the 'encryption enabled' messages are placed 
+   above the history (pidgin/history.so). (wontfix)
+ 
